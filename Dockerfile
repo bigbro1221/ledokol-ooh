@@ -13,17 +13,20 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build-time args (not secrets, just placeholders for Next.js compilation)
+# Build-time args
 ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
 ARG NEXTAUTH_URL="http://localhost:3000"
+ARG NEXT_PUBLIC_MAPBOX_TOKEN=""
 
 RUN NEXTAUTH_SECRET=build-placeholder \
     DATABASE_URL=${DATABASE_URL} \
     NEXTAUTH_URL=${NEXTAUTH_URL} \
+    NEXT_PUBLIC_MAPBOX_TOKEN=${NEXT_PUBLIC_MAPBOX_TOKEN} \
     npx prisma generate && \
     NEXTAUTH_SECRET=build-placeholder \
     DATABASE_URL=${DATABASE_URL} \
     NEXTAUTH_URL=${NEXTAUTH_URL} \
+    NEXT_PUBLIC_MAPBOX_TOKEN=${NEXT_PUBLIC_MAPBOX_TOKEN} \
     npm run build
 
 # Runner
