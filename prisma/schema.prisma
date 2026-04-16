@@ -1,0 +1,142 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+enum Language {
+  RU
+  EN
+  UZ
+  TR
+}
+
+enum ScreenType {
+  LED
+  STATIC
+  STOP
+  AIRPORT
+  BUS
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  DRAFT
+}
+
+enum DataSource {
+  XLSX
+  API
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  enabled      Boolean  @default(true)
+  language     Language @default(RU)
+  clientId     String?
+  client       Client?  @relation(fields: [clientId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Client {
+  id            String     @id @default(uuid())
+  name          String
+  contactPerson String?
+  users         User[]
+  campaigns     Campaign[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Campaign {
+  id             String         @id @default(uuid())
+  clientId       String
+  client         Client         @relation(fields: [clientId], references: [id])
+  name           String
+  project        String?
+  periodStart    DateTime
+  periodEnd      DateTime
+  status         CampaignStatus @default(DRAFT)
+  sourceFileUrl  String?
+  yandexMapUrl   String?
+  totalBudgetUzs BigInt?
+  totalBudgetRub BigInt?
+  screens        Screen[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model Screen {
+  id          String          @id @default(uuid())
+  campaignId  String
+  campaign    Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  externalId  String?
+  type        ScreenType
+  city        String
+  address     String
+  lat         Float?
+  lng         Float?
+  size        String?
+  resolution  String?
+  photoUrl    String?
+  pricing     ScreenPricing?
+  metrics     ScreenMetrics?
+  impressions Impression[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([campaignId])
+  @@index([city])
+  @@index([type])
+}
+
+model ScreenPricing {
+  id             String   @id @default(uuid())
+  screenId       String   @unique
+  screen         Screen   @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  priceUnit      BigInt?
+  priceDiscounted BigInt?
+  priceTotal     BigInt?
+  priceRub       BigInt?
+  commissionPct  Decimal?
+  productionCost BigInt?
+}
+
+model ScreenMetrics {
+  id       String     @id @default(uuid())
+  screenId String     @unique
+  screen   Screen     @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  ots      Int?
+  rating   Decimal?
+  universe Int?
+  source   DataSource @default(XLSX)
+}
+
+model Impression {
+  id       String     @id @default(uuid())
+  screenId String
+  screen   Screen     @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  date     DateTime
+  count    Int
+  source   DataSource @default(API)
+
+  @@unique([screenId, date])
+  @@index([date])
+}

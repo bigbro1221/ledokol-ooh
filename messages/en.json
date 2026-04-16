@@ -1,0 +1,32 @@
+{
+  "common": {
+    "appName": "OOH Dashboard",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "logout": "Log out"
+  },
+  "auth": {
+    "login": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "loginTitle": "Sign in",
+    "loginDescription": "Enter your credentials",
+    "invalidCredentials": "Invalid email or password"
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "clients": "Clients",
+    "campaigns": "Campaigns",
+    "dashboard": "Overview"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "myCampaigns": "My Campaigns",
+    "selectCampaign": "Select a campaign"
+  }
+}

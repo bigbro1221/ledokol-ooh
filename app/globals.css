@@ -1,0 +1,215 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap');
+
+@layer base {
+  /* ─── LIGHT MODE (default) ─── */
+  :root, [data-theme="light"] {
+    --brand-primary: #FF6B2C;
+    --brand-primary-hover: #FF8555;
+    --brand-primary-active: #E55A1F;
+    --brand-primary-subtle: rgba(255, 107, 44, 0.12);
+
+    --success: #10B981;
+    --warning: #EAB308;
+    --danger: #EF4444;
+    --info: #3B82F6;
+
+    --bg: #FAFAF8;
+    --surface: #FFFFFF;
+    --surface-2: #F5F5F2;
+    --surface-3: #ECECE8;
+
+    --border: #E5E5E0;
+    --border-hi: #D4D4CE;
+    --border-em: #1A1A1F;
+
+    --text: #1A1A1F;
+    --text-2: #525255;
+    --text-3: #8A8A8C;
+    --text-4: #B5B5B7;
+
+    --chart-1: #FF6B2C;
+    --chart-2: #3B82F6;
+    --chart-3: #8B5CF6;
+    --chart-4: #10B981;
+    --chart-5: #F59E0B;
+    --chart-6: #EC4899;
+    --chart-7: #06B6D4;
+    --chart-8: #84CC16;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.12);
+
+    --tooltip-bg: #12121A;
+    --tooltip-text: #EDEDF0;
+    --tooltip-border: #2A2A38;
+  }
+
+  /* ─── DARK MODE ─── */
+  [data-theme="dark"] {
+    --brand-primary: #FF6B2C;
+    --brand-primary-hover: #FF8555;
+    --brand-primary-active: #E55A1F;
+    --brand-primary-subtle: rgba(255, 107, 44, 0.15);
+
+    --success: #34D399;
+    --warning: #FBBF24;
+    --danger: #F87171;
+    --info: #60A5FA;
+
+    --bg: #0A0A0F;
+    --surface: #12121A;
+    --surface-2: #1A1A24;
+    --surface-3: #242430;
+
+    --border: #2A2A38;
+    --border-hi: #3A3A48;
+    --border-em: #FFFFFF;
+
+    --text: #EDEDF0;
+    --text-2: #A0A0A8;
+    --text-3: #6D6D75;
+    --text-4: #45454D;
+
+    --chart-1: #FF6B2C;
+    --chart-2: #60A5FA;
+    --chart-3: #A78BFA;
+    --chart-4: #34D399;
+    --chart-5: #FBBF24;
+    --chart-6: #F472B6;
+    --chart-7: #22D3EE;
+    --chart-8: #A3E635;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.6);
+
+    --tooltip-bg: #FAFAF8;
+    --tooltip-text: #1A1A1F;
+    --tooltip-border: #E5E5E0;
+  }
+
+  /* ─── SHARED TOKENS ─── */
+  :root {
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-mono: var(--font-geist-mono, ui-monospace, monospace);
+
+    --radius-none: 0;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 9999px;
+
+    --shadow-glow: 0 0 0 1px var(--brand-primary), 0 0 20px var(--brand-primary-subtle);
+
+    --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --ease-out-sharp: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+    --duration-fast: 120ms;
+    --duration-base: 200ms;
+    --duration-slow: 320ms;
+    --duration-slower: 500ms;
+  }
+
+  /* ─── BASE STYLES ─── */
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-feature-settings: "ss01", "cv11";
+    transition:
+      background-color 150ms var(--ease-out-soft),
+      color 150ms var(--ease-out-soft);
+  }
+
+  /* ─── FOCUS RINGS ─── */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-glow);
+  }
+
+  input:focus-visible, select:focus-visible, textarea:focus-visible {
+    border-color: var(--border-em);
+    box-shadow: 0 0 0 3px var(--brand-primary-subtle);
+  }
+
+  /* ─── SCROLLBAR (subtle) ─── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
+
+  /* ─── SELECTION ─── */
+  ::selection {
+    background: var(--brand-primary-subtle);
+    color: var(--text);
+  }
+
+  /* ─── REDUCED MOTION ─── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ─── KEYFRAMES ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ─── RECHARTS TOOLTIP OVERRIDE ─── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--tooltip-bg) !important;
+  border: 1px solid var(--tooltip-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  color: var(--tooltip-text) !important;
+  font-size: 12px !important;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip .recharts-tooltip-label {
+  color: var(--tooltip-text) !important;
+  font-family: var(--font-mono) !important;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip .recharts-tooltip-item {
+  color: var(--tooltip-text) !important;
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── MAPBOX POPUP OVERRIDE ─── */
+.mapboxgl-popup-content {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+  color: var(--text) !important;
+  padding: 12px !important;
+}
+
+.mapboxgl-popup-tip {
+  border-top-color: var(--surface) !important;
+}
+
+.mapboxgl-popup-close-button {
+  color: var(--text-3) !important;
+  font-size: 18px !important;
+  padding: 4px 8px !important;
+}

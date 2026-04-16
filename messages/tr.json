@@ -1,0 +1,32 @@
+{
+  "common": {
+    "appName": "",
+    "loading": "",
+    "error": "",
+    "save": "",
+    "cancel": "",
+    "delete": "",
+    "edit": "",
+    "back": "",
+    "logout": ""
+  },
+  "auth": {
+    "login": "",
+    "email": "",
+    "password": "",
+    "loginTitle": "",
+    "loginDescription": "",
+    "invalidCredentials": ""
+  },
+  "admin": {
+    "title": "",
+    "clients": "",
+    "campaigns": "",
+    "dashboard": ""
+  },
+  "dashboard": {
+    "title": "",
+    "myCampaigns": "",
+    "selectCampaign": ""
+  }
+}

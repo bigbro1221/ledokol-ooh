@@ -1,0 +1,32 @@
+{
+  "common": {
+    "appName": "OOH Dashboard",
+    "loading": "Загрузка...",
+    "error": "Произошла ошибка",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "back": "Назад",
+    "logout": "Выйти"
+  },
+  "auth": {
+    "login": "Войти",
+    "email": "Электронная почта",
+    "password": "Пароль",
+    "loginTitle": "Вход в систему",
+    "loginDescription": "Введите данные для входа",
+    "invalidCredentials": "Неверный email или пароль"
+  },
+  "admin": {
+    "title": "Панель администратора",
+    "clients": "Клиенты",
+    "campaigns": "Кампании",
+    "dashboard": "Обзор"
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "myCampaigns": "Мои кампании",
+    "selectCampaign": "Выберите кампанию"
+  }
+}
