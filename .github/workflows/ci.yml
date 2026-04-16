@@ -44,6 +44,9 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4

@@ -13,13 +13,18 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# These are needed at build time for Next.js but not used at runtime
-ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
-ENV NEXTAUTH_SECRET="build-time-secret"
-ENV NEXTAUTH_URL="http://localhost:3000"
+# Build-time args (not secrets, just placeholders for Next.js compilation)
+ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ARG NEXTAUTH_URL="http://localhost:3000"
 
-RUN npx prisma generate
-RUN npm run build
+RUN NEXTAUTH_SECRET=build-placeholder \
+    DATABASE_URL=${DATABASE_URL} \
+    NEXTAUTH_URL=${NEXTAUTH_URL} \
+    npx prisma generate && \
+    NEXTAUTH_SECRET=build-placeholder \
+    DATABASE_URL=${DATABASE_URL} \
+    NEXTAUTH_URL=${NEXTAUTH_URL} \
+    npm run build
 
 # Runner
 FROM base AS runner
