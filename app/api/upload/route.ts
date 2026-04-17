@@ -17,6 +17,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'File and campaignId are required' }, { status: 400 });
   }
 
+  // Size limit: 50MB
+  const MAX_FILE_SIZE = 50 * 1024 * 1024;
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: 'File too large. Maximum size is 50MB.' },
+      { status: 413 }
+    );
+  }
+
+  // MIME type validation
+  const allowedMimeTypes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'application/octet-stream', // some browsers send this for .xlsx
+  ];
+  if (file.type && !allowedMimeTypes.includes(file.type)) {
+    return NextResponse.json(
+      { error: 'Invalid file type. Only .xlsx files are accepted.' },
+      { status: 400 }
+    );
+  }
+
+  // Extension validation (belt and suspenders)
+  const lowerName = file.name.toLowerCase();
+  if (!lowerName.endsWith('.xlsx') && !lowerName.endsWith('.xls')) {
+    return NextResponse.json(
+      { error: 'Invalid file extension. Only .xlsx files are accepted.' },
+      { status: 400 }
+    );
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
 
   // Store original in MinIO
