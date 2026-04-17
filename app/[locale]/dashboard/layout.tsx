@@ -4,6 +4,7 @@ import { UserNav } from '@/components/ui/user-nav';
 import { useTranslations } from 'next-intl';
 import { auth } from '@/lib/auth';
 import Link from 'next/link';
+import { Shield } from 'lucide-react';
 
 export default async function DashboardLayout({
   children,
@@ -19,7 +20,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       <DashboardNav locale={locale} isAdmin={isAdmin} />
-      <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8 sm:py-12">{children}</main>
+      <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-8 sm:py-12">{children}</main>
     </div>
   );
 }
@@ -29,12 +30,12 @@ function DashboardNav({ locale, isAdmin }: { locale: string; isAdmin: boolean })
 
   return (
     <header
-      className="sticky top-0 z-10 h-16 border-b border-[var(--border)] bg-[var(--surface)]"
+      className="sticky top-0 z-10 h-14 border-b border-[var(--border)] bg-[var(--surface)] sm:h-16"
       style={{ transition: 'background-color 150ms var(--ease-out-soft), border-color 150ms var(--ease-out-soft)' }}
     >
-      <div className="mx-auto flex h-full max-w-[1440px] items-center gap-4 px-4 sm:px-8">
+      <div className="mx-auto flex h-full max-w-[1440px] items-center gap-2 px-3 sm:gap-4 sm:px-8">
         <div
-          className="text-[22px] font-semibold tracking-tight"
+          className="text-[18px] font-semibold tracking-tight sm:text-[22px]"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           Ledokol<span className="text-[var(--brand-primary)]">.</span>
@@ -43,9 +44,12 @@ function DashboardNav({ locale, isAdmin }: { locale: string; isAdmin: boolean })
         {isAdmin && (
           <Link
             href={`/${locale}/admin`}
-            className="rounded-[var(--radius-md)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            aria-label="Админ панель"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1 text-[12px] font-medium text-[var(--text-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] sm:min-h-0"
           >
-            Админ панель
+            <Shield size={16} strokeWidth={1.5} />
+            {/* mobile: <640px — hide label */}
+            <span className="hidden sm:inline">Админ панель</span>
           </Link>
         )}
 
