@@ -237,8 +237,8 @@ async function main() {
               : undefined,
             metrics: {
               create: {
-                ots: Math.round(3000 + Math.random() * 7000),
-                rating: Number((Math.random() * 5).toFixed(2)),
+                otsPlan: Math.round(3000 + Math.random() * 7000),
+                ratingPlan: Number((Math.random() * 5).toFixed(2)),
                 universe: Math.round(50000 + Math.random() * 200000),
                 source: 'XLSX',
               },

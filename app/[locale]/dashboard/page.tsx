@@ -4,25 +4,9 @@ import { redirect } from 'next/navigation';
 import { DashboardClient } from './dashboard-client';
 import type { ScreenType } from '@prisma/client';
 
-function generateDailyImpressions(start: Date, end: Date, totalOts: number) {
-  const days: { date: string; impressions: number }[] = [];
-  const d = new Date(start);
-  const dayCount = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000));
-  const baseDaily = Math.round(totalOts / dayCount);
-  while (d <= end) {
-    const i = days.length;
-    const ramp = Math.min(1, i / 7);
-    const v = 0.85 + Math.sin(i * 1.3) * 0.15 + Math.cos(i * 0.7) * 0.1;
-    days.push({ date: `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`, impressions: Math.round(baseDaily * ramp * v) });
-    d.setDate(d.getDate() + 1);
-  }
-  return days;
-}
-
-function generateHourly(totalOts: number) {
-  const w = [0.01,0.005,0.003,0.003,0.005,0.01,0.03,0.06,0.08,0.07,0.06,0.055,0.05,0.05,0.055,0.06,0.07,0.08,0.075,0.06,0.04,0.03,0.02,0.015];
-  return w.map((wt, i) => ({ hour: String(i), impressions: Math.round(totalOts * wt) }));
-}
+const TYPE_LABELS: Record<string, string> = {
+  LED: 'LED экраны', STATIC: 'Статика', STOP: 'LED остановки', AIRPORT: 'Аэропорт', BUS: 'Транспорт',
+};
 
 export default async function DashboardPage({
   params,
@@ -69,15 +53,15 @@ export default async function DashboardPage({
     where: { id: selectedId },
     select: {
       id: true, name: true, status: true, periodStart: true, periodEnd: true,
-      totalBudgetUzs: true, totalBudgetRub: true,
+      totalBudgetUzs: true, totalBudgetRub: true, heatmapUrl: true,
       client: { select: { name: true } },
       screens: {
         where: Object.keys(screenWhere).length > 0 ? screenWhere : undefined,
         select: {
           id: true, externalId: true, type: true, city: true, address: true,
           size: true, resolution: true, photoUrl: true, lat: true, lng: true,
-          metrics: { select: { ots: true, rating: true } },
-          pricing: { select: { priceUnit: true, priceDiscounted: true } },
+          metrics: { select: { otsPlan: true, ratingPlan: true, otsFact: true, ratingFact: true } },
+          pricing: { select: { priceUnit: true, priceDiscounted: true, priceTotal: true } },
         },
       },
     },
@@ -94,43 +78,96 @@ export default async function DashboardPage({
   });
 
   const totalScreens = campaign.screens.length;
-  const totalOts = campaign.screens.reduce((s, sc) => s + (sc.metrics?.ots || 0), 0);
+  const totalOts = campaign.screens.reduce((s, sc) => s + (sc.metrics?.otsPlan || 0), 0);
+  const totalOtsFact = campaign.screens.reduce((s, sc) => s + (sc.metrics?.otsFact || 0), 0);
   const totalBudget = campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : 0;
   const cities = new Set(campaign.screens.map(s => s.city.trim()));
 
-  // Donut by type
-  const byType: Record<string, number> = {};
-  for (const s of campaign.screens) { byType[s.type] = (byType[s.type] || 0) + (s.metrics?.ots || 0); }
-  const tl: Record<string, string> = { LED: 'LED экраны', STATIC: 'Статика', STOP: 'LED остановки', AIRPORT: 'Аэропорт', BUS: 'Транспорт' };
-  const donutData = Object.entries(byType).map(([t, v]) => ({ name: tl[t] || t, value: v })).sort((a, b) => b.value - a.value);
+  // Helper: effective price per screen (priceTotal > priceDiscounted > priceUnit)
+  const screenPrice = (s: { pricing?: { priceTotal: bigint | null; priceDiscounted: bigint | null; priceUnit: bigint | null } | null }): number => {
+    if (!s.pricing) return 0;
+    if (s.pricing.priceTotal) return Number(s.pricing.priceTotal);
+    if (s.pricing.priceDiscounted) return Number(s.pricing.priceDiscounted);
+    if (s.pricing.priceUnit) return Number(s.pricing.priceUnit);
+    return 0;
+  };
 
-  // City breakdown
-  const cityMap: Record<string, { screens: number; ots: number }> = {};
+  // By type: OTS plan, OTS fact, budget share, screens count
+  const byTypeMap: Record<string, { plan: number; fact: number; budget: number; screens: number }> = {};
+  for (const s of campaign.screens) {
+    const key = s.type;
+    if (!byTypeMap[key]) byTypeMap[key] = { plan: 0, fact: 0, budget: 0, screens: 0 };
+    byTypeMap[key].plan   += s.metrics?.otsPlan || 0;
+    byTypeMap[key].fact   += s.metrics?.otsFact || 0;
+    byTypeMap[key].budget += screenPrice(s);
+    byTypeMap[key].screens++;
+  }
+
+  // OTS donut by type (plan)
+  const donutData = Object.entries(byTypeMap)
+    .map(([t, v]) => ({ name: TYPE_LABELS[t] || t, value: v.plan }))
+    .filter(d => d.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  // Plan-vs-fact by type
+  const planVsFactByType = Object.entries(byTypeMap)
+    .map(([t, v]) => ({ label: TYPE_LABELS[t] || t, plan: v.plan, fact: v.fact }))
+    .filter(d => d.plan > 0)
+    .sort((a, b) => b.plan - a.plan);
+
+  // Budget share by type
+  const budgetByType = Object.entries(byTypeMap)
+    .map(([t, v]) => ({ name: TYPE_LABELS[t] || t, value: v.budget }))
+    .filter(d => d.value > 0)
+    .sort((a, b) => b.value - a.value);
+  const totalBudgetFromScreens = budgetByType.reduce((s, d) => s + d.value, 0);
+
+  // By city: plan, fact, screens
+  const byCityMap: Record<string, { plan: number; fact: number; screens: number }> = {};
   for (const s of campaign.screens) {
     const c = s.city.trim();
-    if (!cityMap[c]) cityMap[c] = { screens: 0, ots: 0 };
-    cityMap[c].screens++;
-    cityMap[c].ots += s.metrics?.ots || 0;
+    if (!byCityMap[c]) byCityMap[c] = { plan: 0, fact: 0, screens: 0 };
+    byCityMap[c].plan += s.metrics?.otsPlan || 0;
+    byCityMap[c].fact += s.metrics?.otsFact || 0;
+    byCityMap[c].screens++;
   }
-  const cityBreakdown = Object.entries(cityMap)
-    .map(([city, d]) => ({ city, ...d }))
+
+  // CityBreakdown (legacy shape): city, screens, ots (plan)
+  const cityBreakdown = Object.entries(byCityMap)
+    .map(([city, d]) => ({ city, screens: d.screens, ots: d.plan }))
     .sort((a, b) => b.ots - a.ots);
 
-  // Top screens
+  // Plan-vs-fact by city
+  const planVsFactByCity = Object.entries(byCityMap)
+    .map(([city, d]) => ({ label: city, plan: d.plan, fact: d.fact }))
+    .filter(d => d.plan > 0)
+    .sort((a, b) => b.plan - a.plan);
+
+  // Top screens by plan OTS (still useful for identifying hotspots)
   const topScreens = campaign.screens
-    .map(s => ({ address: s.address, ots: s.metrics?.ots || 0 }))
+    .map(s => ({ address: s.address, ots: s.metrics?.otsPlan || 0 }))
+    .filter(s => s.ots > 0)
     .sort((a, b) => b.ots - a.ots).slice(0, 10);
 
-  const dailyImpressions = generateDailyImpressions(campaign.periodStart, campaign.periodEnd, totalOts || totalScreens * 6000);
-  const hourlyData = generateHourly(totalOts || totalScreens * 6000);
-
   const tableScreens = campaign.screens
-    .map(s => ({ id: s.id, externalId: s.externalId, type: s.type, city: s.city.trim(), address: s.address, size: s.size, photoUrl: s.photoUrl, ots: s.metrics?.ots || null }))
+    .map(s => ({ id: s.id, externalId: s.externalId, type: s.type, city: s.city.trim(), address: s.address, size: s.size, photoUrl: s.photoUrl, ots: s.metrics?.otsPlan || null }))
     .sort((a, b) => (b.ots || 0) - (a.ots || 0));
 
   const mapScreens = campaign.screens
     .filter(s => s.lat && s.lng)
-    .map(s => ({ id: s.id, lat: s.lat!, lng: s.lng!, type: s.type, address: s.address, city: s.city.trim(), size: s.size, ots: s.metrics?.ots || null, photoUrl: s.photoUrl }));
+    .map(s => ({ id: s.id, lat: s.lat!, lng: s.lng!, type: s.type, address: s.address, city: s.city.trim(), size: s.size, ots: s.metrics?.otsPlan || null, otsFact: s.metrics?.otsFact || null, photoUrl: s.photoUrl }));
+
+  // Derive Foursquare Studio embed URL. Foursquare's embed format is:
+  //   https://studio.foursquare.com/map/public/{id}/embed
+  // Users typically paste the view URL (no /embed suffix), so we append it.
+  // If the URL already ends with /embed (trailing slash optional), pass through.
+  function toEmbedUrl(url: string): string {
+    const stripped = url.replace(/\/+$/, '');
+    if (stripped.endsWith('/embed')) return stripped;
+    if (stripped.includes('/map/public/')) return `${stripped}/embed`;
+    return url; // unknown format — let user paste whatever works
+  }
+  const heatmapEmbedUrl = campaign.heatmapUrl ? toEmbedUrl(campaign.heatmapUrl) : null;
 
   const fmt = (n: number) => n >= 1e9 ? `${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `${(n/1e6).toFixed(0)}M` : n.toLocaleString('ru-RU');
   const period = `${campaign.periodStart.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })} — ${campaign.periodEnd.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })}`;
@@ -141,16 +178,19 @@ export default async function DashboardPage({
       campaigns={allCampaigns}
       selectedCampaignId={selectedId}
       campaign={{ name: campaign.name, clientName: campaign.client.name, period, status: campaign.status }}
-      kpis={{ totalOts: totalOts || totalScreens * 6000, totalScreens, cities: cities.size, totalBudget, formatBudget: fmt(totalBudget) }}
+      kpis={{ totalOtsPlan: totalOts, totalOtsFact, totalScreens, cities: cities.size, totalBudget, formatBudget: fmt(totalBudget) }}
       donutData={donutData}
-      dailyImpressions={dailyImpressions}
-      hourlyData={hourlyData}
+      budgetByType={budgetByType}
+      totalBudgetFromScreens={totalBudgetFromScreens}
+      planVsFactByCity={planVsFactByCity}
+      planVsFactByType={planVsFactByType}
       topScreens={topScreens}
       tableScreens={tableScreens}
       mapScreens={mapScreens}
       cityBreakdown={cityBreakdown}
       allCities={allCities.map(c => c.city.trim())}
       filters={{ city: cityFilter || '', type: typeFilter || '' }}
+      heatmapEmbedUrl={heatmapEmbedUrl}
     />
   );
 }

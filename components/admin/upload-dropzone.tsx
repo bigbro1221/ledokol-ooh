@@ -5,6 +5,7 @@ import { Upload, FileSpreadsheet, Check, AlertTriangle } from 'lucide-react';
 
 interface ParsePreview {
   campaignId: string;
+  periodId: string | null;
   minioKey: string;
   campaign: { clientName: string; yandexMapUrl: string | null; totalBudgetUzs: number | null; totalBudgetRub: number | null };
   screens: Record<string, unknown>[];
@@ -22,7 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
   BUS: 'Транспорт',
 };
 
-export function UploadDropzone({ campaignId, locale }: { campaignId: string; locale: string }) {
+export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: string; locale: string; periodId?: string | null }) {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -42,6 +43,7 @@ export function UploadDropzone({ campaignId, locale }: { campaignId: string; loc
     const fd = new FormData();
     fd.append('file', file);
     fd.append('campaignId', campaignId);
+    if (periodId) fd.append('periodId', periodId);
 
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
     setUploading(false);
@@ -63,6 +65,7 @@ export function UploadDropzone({ campaignId, locale }: { campaignId: string; loc
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         screens: preview.screens,
+        periodId: preview.periodId || null,
         minioKey: preview.minioKey,
         yandexMapUrl: preview.campaign.yandexMapUrl,
         totalBudgetUzs: preview.campaign.totalBudgetUzs,

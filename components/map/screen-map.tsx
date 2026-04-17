@@ -33,15 +33,10 @@ interface MapScreen {
   city: string;
   size: string | null;
   ots: number | null;
+  otsFact: number | null;
   photoUrl: string | null;
 }
 
-function normalizePhotoUrl(url: string | null): string | null {
-  if (!url) return null;
-  const match = url.match(/\/file\/d\/([^/]+)/);
-  if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
-  return url;
-}
 
 export function ScreenMap({ screens }: { screens: MapScreen[] }) {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -78,7 +73,6 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
       // Add markers
       for (const s of screensWithCoords) {
         const color = TYPE_COLORS[s.type] || '#888';
-        const thumbUrl = normalizePhotoUrl(s.photoUrl);
 
         const el = document.createElement('div');
         el.style.width = '14px';
@@ -90,12 +84,20 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
         el.style.cursor = 'pointer';
 
         const popup = new mapboxgl.Popup({ offset: 15, maxWidth: '260px' }).setHTML(`
-          <div style="font-family:var(--font-sans);font-size:13px;">
-            ${thumbUrl ? `<img src="${thumbUrl}" style="width:100%;height:120px;object-fit:cover;border-radius:8px 8px 0 0;margin:-10px -10px 8px -10px;width:calc(100% + 20px);" loading="lazy" />` : ''}
-            <strong>${s.address}</strong>
-            <div style="color:var(--text-2);font-size:11px;margin-top:4px;">${s.city} · ${TYPE_LABELS[s.type] || s.type}</div>
-            ${s.size ? `<div style="color:var(--text-3);font-size:11px;">Размер: ${s.size}</div>` : ''}
-            ${s.ots ? `<div style="font-family:var(--font-mono);font-size:12px;margin-top:4px;">OTS: ${s.ots.toLocaleString('ru-RU')}</div>` : ''}
+          <div style="font-family:var(--font-sans);font-size:13px;line-height:1.4;">
+            <div style="font-weight:600;margin-bottom:6px;">${s.address}</div>
+            <div style="color:#888;font-size:11px;margin-bottom:6px;">${s.city} · ${TYPE_LABELS[s.type] || s.type}${s.size ? ` · ${s.size}` : ''}</div>
+            ${s.otsFact != null
+              ? `<div style="display:flex;align-items:baseline;gap:6px;">
+                   <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#888;">Показы</span>
+                   <span style="font-family:monospace;font-size:13px;font-weight:600;">${s.otsFact.toLocaleString('ru-RU')}</span>
+                 </div>`
+              : s.ots != null
+                ? `<div style="display:flex;align-items:baseline;gap:6px;">
+                     <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#888;">OTS план</span>
+                     <span style="font-family:monospace;font-size:13px;font-weight:600;">${s.ots.toLocaleString('ru-RU')}</span>
+                   </div>`
+                : ''}
           </div>
         `);
 

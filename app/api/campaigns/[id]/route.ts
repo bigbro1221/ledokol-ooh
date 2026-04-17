@@ -8,6 +8,9 @@ const UpdateCampaignSchema = z.object({
   status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED']).optional(),
   periodStart: z.string().transform(s => new Date(s)).optional(),
   periodEnd: z.string().transform(s => new Date(s)).optional(),
+  splitByPeriods: z.boolean().optional(),
+  heatmapUrl: z.string().url().optional().nullable(),
+  yandexMapUrl: z.string().url().optional().nullable(),
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {

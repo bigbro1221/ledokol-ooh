@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OOH Dashboard — Design Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root[data-theme="light"] {
+    --brand-primary: #FF6B2C;
+    --brand-primary-hover: #FF8555;
+    --brand-primary-subtle: rgba(255, 107, 44, 0.12);
+    --success: #10B981;
+    --warning: #EAB308;
+    --danger: #EF4444;
+
+    --bg: #FAFAF8;
+    --surface: #FFFFFF;
+    --surface-2: #F5F5F2;
+    --surface-3: #ECECE8;
+    --border: #E5E5E0;
+    --border-hi: #D4D4CE;
+    --border-em: #1A1A1F;
+
+    --text: #1A1A1F;
+    --text-2: #525255;
+    --text-3: #8A8A8C;
+    --text-4: #B5B5B7;
+
+    --chart-1: #FF6B2C;
+    --chart-2: #3B82F6;
+    --chart-3: #8B5CF6;
+    --chart-4: #10B981;
+    --chart-5: #F59E0B;
+    --chart-6: #EC4899;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+  }
+
+  :root[data-theme="dark"] {
+    --brand-primary: #FF6B2C;
+    --brand-primary-hover: #FF8555;
+    --brand-primary-subtle: rgba(255, 107, 44, 0.15);
+    --success: #10B981;
+    --warning: #EAB308;
+    --danger: #EF4444;
+
+    --bg: #0A0A0F;
+    --surface: #12121A;
+    --surface-2: #1A1A24;
+    --surface-3: #242430;
+    --border: #2A2A38;
+    --border-hi: #3A3A48;
+    --border-em: #FFFFFF;
+
+    --text: #EDEDF0;
+    --text-2: #A0A0A8;
+    --text-3: #6D6D75;
+    --text-4: #45454D;
+
+    --chart-1: #FF6B2C;
+    --chart-2: #60A5FA;
+    --chart-3: #A78BFA;
+    --chart-4: #34D399;
+    --chart-5: #FBBF24;
+    --chart-6: #F472B6;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  }
+
+  :root {
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 9999px;
+
+    --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --ease-out-sharp: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 180ms var(--ease-out-soft), color 180ms var(--ease-out-soft);
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  /* ─── TOP NAV ─── */
+  .topnav {
+    height: 64px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .logo em { color: var(--brand-primary); font-style: normal; }
+
+  .nav-links {
+    display: flex;
+    gap: 4px;
+    margin-left: 16px;
+  }
+  .nav-link {
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all 120ms var(--ease-out-soft);
+  }
+  .nav-link:hover { background: var(--surface-2); color: var(--text); }
+  .nav-link.active {
+    background: var(--brand-primary-subtle);
+    color: var(--brand-primary);
+    font-weight: 500;
+  }
+
+  .nav-spacer { flex: 1; }
+
+  .campaign-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 120ms;
+  }
+  .campaign-selector:hover { border-color: var(--border-hi); }
+  .campaign-selector .chev { color: var(--text-3); font-size: 10px; }
+
+  .date-range {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-2);
+  }
+
+  .theme-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 120ms;
+  }
+  .theme-toggle:hover { background: var(--surface-2); border-color: var(--border-hi); }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--brand-primary), #FFB88C);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  /* ─── MAIN ─── */
+  main {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+
+  /* ─── CAMPAIGN HERO ─── */
+  .campaign-hero {
+    margin-bottom: 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 32px;
+  }
+
+  .hero-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hero-meta {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 44px;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    font-variation-settings: "opsz" 80;
+  }
+
+  .hero-details {
+    display: flex;
+    gap: 24px;
+    margin-top: 6px;
+    align-items: center;
+  }
+
+  .hero-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+
+  .hero-detail .mono {
+    font-family: var(--font-mono);
+    color: var(--text);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px 3px 8px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success);
+  }
+  .status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    animation: pulse 2s var(--ease-in-out) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 120ms var(--ease-out-soft);
+    border: 1px solid transparent;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--brand-primary);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--brand-primary-hover); }
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .btn-secondary:hover { background: var(--surface-2); border-color: var(--border-hi); }
+
+  /* ─── KPI GRID ─── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: all 200ms var(--ease-out-soft);
+    opacity: 0;
+    animation: fadeInUp 500ms var(--ease-out-sharp) forwards;
+  }
+  .kpi-card:nth-child(1) { animation-delay: 0ms; }
+  .kpi-card:nth-child(2) { animation-delay: 80ms; }
+  .kpi-card:nth-child(3) { animation-delay: 160ms; }
+  .kpi-card:nth-child(4) { animation-delay: 240ms; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-card:hover {
+    border-color: var(--border-hi);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .kpi-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    font-weight: 500;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .kpi-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+  .kpi-value {
+    font-family: var(--font-sans);
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+
+  .kpi-value .unit {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-3);
+    margin-left: 4px;
+    letter-spacing: 0;
+  }
+
+  .kpi-trend {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+  }
+  .kpi-trend.up { color: var(--success); }
+  .kpi-trend.down { color: var(--danger); }
+  .kpi-trend .neutral { color: var(--text-3); }
+
+  /* ─── CHART GRID ─── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+  }
+
+  .chart-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .chart-subtitle {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+
+  .chart-toggle {
+    display: flex;
+    background: var(--surface-2);
+    border-radius: var(--radius-md);
+    padding: 2px;
+    gap: 1px;
+  }
+  .chart-toggle button {
+    padding: 4px 10px;
+    font-size: 11px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-3);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 120ms;
+  }
+  .chart-toggle button.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Donut chart */
+  .donut-container {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .donut {
+    width: 180px;
+    height: 180px;
+    flex-shrink: 0;
+  }
+
+  .donut circle {
+    fill: none;
+    stroke-width: 24;
+    transition: stroke-width 200ms;
+  }
+  .donut circle:hover { stroke-width: 28; }
+
+  .donut-center {
+    text-anchor: middle;
+    font-family: var(--font-mono);
+  }
+  .donut-center .total-label {
+    font-size: 9px;
+    fill: var(--text-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .donut-center .total-value {
+    font-size: 18px;
+    fill: var(--text);
+    font-weight: 600;
+    font-family: var(--font-sans);
+  }
+
+  .legend {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    transition: background 120ms;
+    cursor: pointer;
+  }
+  .legend-row:hover { background: var(--surface-2); }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .legend-name {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+
+  .legend-value {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .legend-pct {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+    width: 42px;
+    text-align: right;
+  }
+
+  /* Area chart */
+  .area-chart {
+    width: 100%;
+    height: 180px;
+  }
+  .area-chart .grid-line { stroke: var(--border); stroke-width: 1; }
+  .area-chart .axis-text {
+    fill: var(--text-3);
+    font-size: 10px;
+    font-family: var(--font-mono);
+  }
+  .area-chart .area-fill { fill: url(#areaGradient); }
+  .area-chart .area-line { fill: none; stroke: var(--brand-primary); stroke-width: 2; }
+  .area-chart .data-point {
+    fill: var(--surface);
+    stroke: var(--brand-primary);
+    stroke-width: 2;
+  }
+
+  /* ─── MAP PLACEHOLDER ─── */
+  .map-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+
+  .map-placeholder {
+    height: 320px;
+    background: linear-gradient(135deg, var(--surface-2), var(--surface-3));
+    border-radius: var(--radius-lg);
+    position: relative;
+    overflow: hidden;
+    margin-top: 16px;
+  }
+
+  .map-placeholder::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.5;
+  }
+
+  .map-pin {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform 120ms;
+  }
+  .map-pin:hover { transform: translate(-50%, -50%) scale(1.3); }
+  .map-pin::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    opacity: 0.3;
+    background: inherit;
+  }
+
+  .map-label {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-2);
+    box-shadow: var(--shadow-sm);
+    z-index: 2;
+  }
+
+  .map-legend {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: var(--shadow-sm);
+    z-index: 2;
+  }
+  .map-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .map-legend-row .swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* ─── TABLE ─── */
+  .table-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .table-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    background: var(--surface-2);
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0; /* sharp for tables */
+  }
+  th.num { text-align: right; }
+
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface-2); }
+
+  td.num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--text);
+  }
+
+  td.id {
+    font-family: var(--font-mono);
+    color: var(--text-3);
+    font-size: 12px;
+  }
+
+  .type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .type-led { background: rgba(255, 107, 44, 0.12); color: var(--chart-1); }
+  .type-static { background: rgba(59, 130, 246, 0.12); color: var(--chart-2); }
+  .type-stop { background: rgba(139, 92, 246, 0.12); color: var(--chart-3); }
+
+  .address {
+    color: var(--text-2);
+    max-width: 340px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ─── FOOTER NOTE ─── */
+  .design-note {
+    margin-top: 64px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-size: 12px;
+    color: var(--text-3);
+    line-height: 1.7;
+  }
+  .design-note strong { color: var(--text); font-weight: 500; }
+  .design-note code {
+    font-family: var(--font-mono);
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    color: var(--text-2);
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 1024px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    main { padding: 24px 16px 64px; }
+    .campaign-hero { flex-direction: column; align-items: flex-start; }
+    .hero-title { font-size: 32px; }
+    .kpi-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="logo">Ledokol<em>.</em></div>
+  <div class="nav-links">
+    <div class="nav-link active">Dashboard</div>
+    <div class="nav-link">Campaigns</div>
+    <div class="nav-link">Reports</div>
+  </div>
+  <div class="nav-spacer"></div>
+
+  <div class="campaign-selector">
+    Paynet 80 Jan–Feb
+    <span class="chev">▼</span>
+  </div>
+
+  <div class="date-range">
+    09 Jan — 08 Feb 2026
+  </div>
+
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">◐</button>
+
+  <div class="user-avatar">TB</div>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+  <!-- CAMPAIGN HERO -->
+  <div class="campaign-hero">
+    <div class="hero-info">
+      <div class="hero-meta">T-Bank · Campaign 2026-0014</div>
+      <h1 class="hero-title">Paynet 80 Jan–Feb</h1>
+      <div class="hero-details">
+        <div class="status-badge">Active</div>
+        <div class="hero-detail">Period <span class="mono">09.01.26 — 08.02.26</span></div>
+        <div class="hero-detail">Budget <span class="mono">587 224 230 UZS</span></div>
+      </div>
+    </div>
+    <div class="hero-actions">
+      <button class="btn btn-secondary">Export report</button>
+      <button class="btn btn-primary">Share dashboard</button>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">
+        Total impressions
+        <div class="kpi-icon">◉</div>
+      </div>
+      <div class="kpi-value">496,173</div>
+      <div class="kpi-trend up">↑ 12.4% vs plan</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">
+        Surfaces
+        <div class="kpi-icon">◱</div>
+      </div>
+      <div class="kpi-value">80<span class="unit">screens</span></div>
+      <div class="kpi-trend"><span class="neutral">Across 1 city</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">
+        Plan completion
+        <div class="kpi-icon">◔</div>
+      </div>
+      <div class="kpi-value">101<span class="unit">%</span></div>
+      <div class="kpi-trend up">↑ Above target</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">
+        Budget spent
+        <div class="kpi-icon">₴</div>
+      </div>
+      <div class="kpi-value">412M<span class="unit">UZS</span></div>
+      <div class="kpi-trend"><span class="neutral">70% of 587M</span></div>
+    </div>
+  </div>
+
+  <!-- CHART GRID -->
+  <div class="chart-grid">
+
+    <!-- DONUT -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Impressions by operator</div>
+          <div class="chart-subtitle">Distribution across 7 media owners</div>
+        </div>
+      </div>
+      <div class="donut-container">
+        <svg class="donut" viewBox="0 0 100 100">
+          <!-- Using stroke-dasharray trick for donut segments -->
+          <circle cx="50" cy="50" r="38" stroke="var(--chart-5)" stroke-dasharray="70.4 238.4" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+          <circle cx="50" cy="50" r="38" stroke="var(--chart-4)" stroke-dasharray="55.8 252.9" stroke-dashoffset="-70.4" transform="rotate(-90 50 50)"/>
+          <circle cx="50" cy="50" r="38" stroke="var(--chart-1)" stroke-dasharray="54 254.7" stroke-dashoffset="-126.2" transform="rotate(-90 50 50)"/>
+          <circle cx="50" cy="50" r="38" stroke="var(--chart-2)" stroke-dasharray="17.8 290.9" stroke-dashoffset="-180.2" transform="rotate(-90 50 50)"/>
+          <circle cx="50" cy="50" r="38" stroke="var(--chart-3)" stroke-dasharray="17.3 291.4" stroke-dashoffset="-198" transform="rotate(-90 50 50)"/>
+          <circle cx="50" cy="50" r="38" stroke="var(--chart-6)" stroke-dasharray="11 297.7" stroke-dashoffset="-215.3" transform="rotate(-90 50 50)"/>
+          <g class="donut-center">
+            <text x="50" y="47" class="total-label">Total</text>
+            <text x="50" y="58" class="total-value">496,173</text>
+          </g>
+        </svg>
+        <div class="legend">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background: var(--chart-5);"></div>
+            <div class="legend-name">Media Lux</div>
+            <div class="legend-value">146 471</div>
+            <div class="legend-pct">29.5%</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background: var(--chart-4);"></div>
+            <div class="legend-name">Gelikon</div>
+            <div class="legend-value">116 134</div>
+            <div class="legend-pct">23.4%</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background: var(--chart-1);"></div>
+            <div class="legend-name">Apex Media</div>
+            <div class="legend-value">112 365</div>
+            <div class="legend-pct">22.6%</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background: var(--chart-2);"></div>
+            <div class="legend-name">Seven Media</div>
+            <div class="legend-value">37 213</div>
+            <div class="legend-pct">7.5%</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background: var(--chart-3);"></div>
+            <div class="legend-name">M-Exclusive</div>
+            <div class="legend-value">37 064</div>
+            <div class="legend-pct">7.5%</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background: var(--chart-6);"></div>
+            <div class="legend-name">Others</div>
+            <div class="legend-value">46 926</div>
+            <div class="legend-pct">9.5%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AREA CHART -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Impressions by day</div>
+          <div class="chart-subtitle">Last 31 days</div>
+        </div>
+        <div class="chart-toggle">
+          <button class="active">Day</button>
+          <button>Week</button>
+          <button>Month</button>
+        </div>
+      </div>
+      <svg class="area-chart" viewBox="0 0 600 180" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--brand-primary)" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="var(--brand-primary)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Gridlines -->
+        <line class="grid-line" x1="40" y1="30" x2="580" y2="30"/>
+        <line class="grid-line" x1="40" y1="70" x2="580" y2="70"/>
+        <line class="grid-line" x1="40" y1="110" x2="580" y2="110"/>
+        <line class="grid-line" x1="40" y1="150" x2="580" y2="150"/>
+
+        <!-- Y-axis labels -->
+        <text class="axis-text" x="35" y="33" text-anchor="end">18k</text>
+        <text class="axis-text" x="35" y="73" text-anchor="end">12k</text>
+        <text class="axis-text" x="35" y="113" text-anchor="end">6k</text>
+        <text class="axis-text" x="35" y="153" text-anchor="end">0</text>
+
+        <!-- Data: realistic daily impressions ramping up -->
+        <path class="area-fill" d="M 40 150 L 40 144 L 58 138 L 76 132 L 94 125 L 112 118 L 130 105 L 148 88 L 166 70 L 184 62 L 202 55 L 220 48 L 238 50 L 256 52 L 274 48 L 292 44 L 310 42 L 328 45 L 346 43 L 364 40 L 382 38 L 400 36 L 418 38 L 436 35 L 454 32 L 472 30 L 490 32 L 508 30 L 526 28 L 544 30 L 562 32 L 580 30 L 580 150 Z"/>
+        <path class="area-line" d="M 40 144 L 58 138 L 76 132 L 94 125 L 112 118 L 130 105 L 148 88 L 166 70 L 184 62 L 202 55 L 220 48 L 238 50 L 256 52 L 274 48 L 292 44 L 310 42 L 328 45 L 346 43 L 364 40 L 382 38 L 400 36 L 418 38 L 436 35 L 454 32 L 472 30 L 490 32 L 508 30 L 526 28 L 544 30 L 562 32 L 580 30"/>
+
+        <!-- X-axis labels -->
+        <text class="axis-text" x="40" y="172">Jan 9</text>
+        <text class="axis-text" x="220" y="172">Jan 18</text>
+        <text class="axis-text" x="400" y="172">Jan 27</text>
+        <text class="axis-text" x="580" y="172" text-anchor="end">Feb 8</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- MAP CARD -->
+  <div class="map-container">
+    <div class="chart-header">
+      <div>
+        <div class="chart-title">Screen locations</div>
+        <div class="chart-subtitle">80 surfaces across Tashkent</div>
+      </div>
+      <div class="chart-toggle">
+        <button class="active">Markers</button>
+        <button>Heatmap</button>
+      </div>
+    </div>
+    <div class="map-placeholder">
+      <div class="map-label">Tashkent · 80 screens</div>
+      <!-- Scattered pins with different colors -->
+      <div class="map-pin" style="background: var(--chart-1); left: 45%; top: 40%;"></div>
+      <div class="map-pin" style="background: var(--chart-2); left: 52%; top: 35%;"></div>
+      <div class="map-pin" style="background: var(--chart-1); left: 48%; top: 50%;"></div>
+      <div class="map-pin" style="background: var(--chart-3); left: 55%; top: 45%;"></div>
+      <div class="map-pin" style="background: var(--chart-4); left: 42%; top: 55%;"></div>
+      <div class="map-pin" style="background: var(--chart-1); left: 58%; top: 48%;"></div>
+      <div class="map-pin" style="background: var(--chart-5); left: 50%; top: 60%;"></div>
+      <div class="map-pin" style="background: var(--chart-2); left: 46%; top: 46%;"></div>
+      <div class="map-pin" style="background: var(--chart-1); left: 53%; top: 52%;"></div>
+      <div class="map-pin" style="background: var(--chart-4); left: 49%; top: 42%;"></div>
+      <div class="map-pin" style="background: var(--chart-3); left: 60%; top: 55%;"></div>
+      <div class="map-pin" style="background: var(--chart-6); left: 44%; top: 62%;"></div>
+      <div class="map-pin" style="background: var(--chart-1); left: 56%; top: 38%;"></div>
+      <div class="map-pin" style="background: var(--chart-2); left: 40%; top: 48%;"></div>
+      <div class="map-pin" style="background: var(--chart-1); left: 62%; top: 50%;"></div>
+      <div class="map-pin" style="background: var(--chart-5); left: 47%; top: 57%;"></div>
+      <div class="map-pin" style="background: var(--chart-4); left: 54%; top: 41%;"></div>
+      <div class="map-pin" style="background: var(--chart-1); left: 51%; top: 47%;"></div>
+
+      <div class="map-legend">
+        <div class="map-legend-row">
+          <div class="swatch" style="background: var(--chart-1);"></div>LED
+        </div>
+        <div class="map-legend-row">
+          <div class="swatch" style="background: var(--chart-2);"></div>Static
+        </div>
+        <div class="map-legend-row">
+          <div class="swatch" style="background: var(--chart-3);"></div>Bus stops
+        </div>
+        <div class="map-legend-row">
+          <div class="swatch" style="background: var(--chart-4);"></div>Airport
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-container">
+    <div class="table-header">
+      <div>
+        <div class="chart-title">Screens</div>
+        <div class="chart-subtitle">Top performing surfaces by impressions</div>
+      </div>
+      <button class="btn btn-secondary">View all 80</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Address</th>
+          <th>Operator</th>
+          <th class="num">OTS</th>
+          <th class="num">Impressions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id">255</td>
+          <td><span class="type-badge type-led">LED</span></td>
+          <td class="address">ул. Нукусская, другая сторона Госпитального рынка</td>
+          <td>Media Lux</td>
+          <td class="num">72 184</td>
+          <td class="num">9 588</td>
+        </tr>
+        <tr>
+          <td class="id">117553</td>
+          <td><span class="type-badge type-led">LED</span></td>
+          <td class="address">улица Ниязбек</td>
+          <td>Apex Media</td>
+          <td class="num">71 622</td>
+          <td class="num">9 569</td>
+        </tr>
+        <tr>
+          <td class="id">101</td>
+          <td><span class="type-badge type-led">LED</span></td>
+          <td class="address">Ул. Бобура и ул. Нукусская</td>
+          <td>Media Lux</td>
+          <td class="num">71 501</td>
+          <td class="num">9 554</td>
+        </tr>
+        <tr>
+          <td class="id">7146</td>
+          <td><span class="type-badge type-static">Static</span></td>
+          <td class="address">Пересечение улиц «Нурафшон» и «Фараби»</td>
+          <td>M-Exclusive</td>
+          <td class="num">71 280</td>
+          <td class="num">9 540</td>
+        </tr>
+        <tr>
+          <td class="id">236</td>
+          <td><span class="type-badge type-led">LED</span></td>
+          <td class="address">ул. Шахрисабзская, ор. бывший Детский мир</td>
+          <td>Media Lux</td>
+          <td class="num">70 990</td>
+          <td class="num">9 519</td>
+        </tr>
+        <tr>
+          <td class="id">19975</td>
+          <td><span class="type-badge type-stop">Stop</span></td>
+          <td class="address">Мечеть Сузук-Ота, ул. Кукча дарвоза, Сузук-ота</td>
+          <td>Apex Media</td>
+          <td class="num">70 986</td>
+          <td class="num">9 516</td>
+        </tr>
+        <tr>
+          <td class="id">201</td>
+          <td><span class="type-badge type-led">LED</span></td>
+          <td class="address">ул. Новосергелийская, Машинный рынок</td>
+          <td>Media Lux</td>
+          <td class="num">70 941</td>
+          <td class="num">9 513</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- DESIGN NOTES -->
+  <div class="design-note">
+    <strong>This is a preview of the design system in action.</strong> Key elements demonstrated:
+    Fraunces display serif on the <code>Paynet 80 Jan–Feb</code> title (campaign-as-document feel).
+    Geist sans for all UI. Geist Mono with <code>tabular-nums</code> for table numbers and dates so columns align perfectly.
+    Sharp corners on table cells, soft <code>radius-lg</code> on cards, mixed intentionally.
+    Brand orange used sparingly (active nav, primary CTA, one chart accent, one trend indicator).
+    Status dot pulses subtly. KPI cards stagger-animate on load (80ms delay each).
+    Theme toggle in top right — try both modes. Colors are token-based: change the brand color once, everything cascades.
+  </div>
+
+</main>
+
+<script>
+  function toggleTheme() {
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    document.getElementById('themeBtn').textContent = next === 'dark' ? '◑' : '◐';
+    localStorage.setItem('theme', next);
+  }
+
+  // Init from storage or system preference
+  (function() {
+    const stored = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = stored || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+    document.getElementById('themeBtn').textContent = theme === 'dark' ? '◑' : '◐';
+  })();
+</script>
+
+</body>
+</html>

@@ -8,6 +8,9 @@ const CreateCampaignSchema = z.object({
   clientId: z.string().uuid('Invalid client'),
   periodStart: z.string().transform(s => new Date(s)),
   periodEnd: z.string().transform(s => new Date(s)),
+  splitByPeriods: z.boolean().optional().default(false),
+  heatmapUrl: z.string().url().optional().nullable(),
+  yandexMapUrl: z.string().url().optional().nullable(),
 });
 
 export async function GET() {
@@ -28,12 +31,20 @@ export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
-  const body = await request.json();
-  const parsed = CreateCampaignSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
-  }
+  try {
+    const body = await request.json();
+    const parsed = CreateCampaignSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
+    }
 
-  const campaign = await prisma.campaign.create({ data: parsed.data });
-  return NextResponse.json(campaign, { status: 201 });
+    const campaign = await prisma.campaign.create({ data: parsed.data });
+    return NextResponse.json(campaign, { status: 201 });
+  } catch (err) {
+    console.error('POST /api/campaigns failed:', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }

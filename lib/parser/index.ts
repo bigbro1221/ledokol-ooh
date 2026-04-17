@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
-import { detectSheetType, isTotalSheet } from './sheets';
-import { findHeaderRow, buildColumnMap } from './columns';
+import { detectSheetType, isPeriodSheet, isTotalSheet, typeFromColumnValue } from './sheets';
+import { findHeaderRow, buildColumnMap, buildPlanFactMap } from './columns';
 import { ScreenRowSchema, type ParseResult, type ScreenRow, type ParseError, type ParseWarning, type CampaignData } from './schemas';
 
 function parseNum(val: unknown): number | null {
@@ -23,12 +23,9 @@ function parseTotalSheet(sheet: XLSX.WorkSheet): CampaignData {
   let totalBudgetUzs: number | null = null;
   let totalBudgetRub: number | null = null;
 
-  // Row 1: client name at col 3
   if (data[1]) clientName = String((data[1] as unknown[])[3] || '').trim();
-  // Row 2: project at col 3
   if (data[2]) project = String((data[2] as unknown[])[3] || '').trim() || null;
 
-  // Yandex URL: scan rows 0-10, cols 0-10 for any Yandex Maps link
   outer:
   for (let r = 0; r <= Math.min(10, data.length - 1); r++) {
     for (let c = 0; c <= 10; c++) {
@@ -39,7 +36,6 @@ function parseTotalSheet(sheet: XLSX.WorkSheet): CampaignData {
     }
   }
 
-  // Budget: row 10, cols 11 (UZS) and 12 (RUB)
   if (data[10]) {
     const row = data[10] as unknown[];
     totalBudgetUzs = parseNum(row[11]);
@@ -49,13 +45,93 @@ function parseTotalSheet(sheet: XLSX.WorkSheet): CampaignData {
   return { clientName, project, yandexMapUrl, totalBudgetUzs, totalBudgetRub };
 }
 
+function parseScreenSheet(
+  sheetName: string,
+  sheet: XLSX.WorkSheet,
+  fixedType: import('@prisma/client').ScreenType | null,
+  errors: ParseError[],
+  warnings: ParseWarning[],
+): ScreenRow[] {
+  const screens: ScreenRow[] = [];
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
+  const headerIdx = findHeaderRow(data);
+  const headerRow = (data[headerIdx] || []) as string[];
+  const colMap = buildColumnMap(headerRow);
+  const pfMap = buildPlanFactMap(data, headerIdx, headerRow);
+
+  if (colMap.city === undefined && colMap.address === undefined) {
+    warnings.push({ sheet: sheetName, message: 'Could not detect city or address columns' });
+    return screens;
+  }
+
+  for (let r = headerIdx + 1; r < data.length; r++) {
+    const row = data[r] as unknown[];
+    if (!row) continue;
+
+    const city = colMap.city !== undefined ? String(row[colMap.city] || '').trim() : '';
+    const address = colMap.address !== undefined ? String(row[colMap.address] || '').trim() : '';
+    if (!city && !address) continue;
+
+    const firstCol = String(row[0] || '').trim().toLowerCase();
+    if (firstCol.includes('итого') || firstCol.includes('total') || firstCol.includes('ledokol')) continue;
+
+    // For period sheets, derive type from the type column; otherwise use the fixed sheet type
+    let screenType: import('@prisma/client').ScreenType | null = fixedType;
+    if (!screenType && colMap.type !== undefined) {
+      screenType = typeFromColumnValue(String(row[colMap.type] || ''));
+    }
+    if (!screenType) {
+      // Skip rows where we can't determine type
+      continue;
+    }
+
+    const photoUrl = getHyperlink(sheet, r, 1);
+    const size = colMap.size !== undefined ? String(row[colMap.size] || '').trim() || null : null;
+    let resolution = colMap.resolution !== undefined ? String(row[colMap.resolution] || '').trim() || null : null;
+    if (resolution === 'х' || resolution === 'x') resolution = null;
+
+    const rawRow = {
+      type: screenType,
+      city: city || 'Ташкент',
+      address: address || `${sheetName} — строка ${r + 1}`,
+      size,
+      resolution,
+      externalId: colMap.externalId !== undefined ? String(row[colMap.externalId] || '').trim() || null : null,
+      photoUrl,
+      priceUnit: colMap.priceUnit !== undefined ? parseNum(row[colMap.priceUnit]) : null,
+      priceDiscounted: colMap.priceDiscounted !== undefined ? parseNum(row[colMap.priceDiscounted]) : null,
+      priceTotal: colMap.priceTotal !== undefined ? parseNum(row[colMap.priceTotal]) : null,
+      priceRub: colMap.priceRub !== undefined ? parseNum(row[colMap.priceRub]) : null,
+      commissionPct: colMap.commissionPct !== undefined ? parseNum(row[colMap.commissionPct]) : null,
+      agencyFeeAmt: colMap.agencyFeeAmt !== undefined ? parseNum(row[colMap.agencyFeeAmt]) : null,
+      productionCost: colMap.productionCost !== undefined ? parseNum(row[colMap.productionCost]) : null,
+      otsPlan: pfMap.otsPlan !== undefined ? parseNum(row[pfMap.otsPlan]) : null,
+      ratingPlan: pfMap.ratingPlan !== undefined ? parseNum(row[pfMap.ratingPlan]) : null,
+      otsFact: pfMap.otsFact !== undefined ? parseNum(row[pfMap.otsFact]) : null,
+      ratingFact: pfMap.ratingFact !== undefined ? parseNum(row[pfMap.ratingFact]) : null,
+      universe: pfMap.universe !== undefined ? parseNum(row[pfMap.universe]) : null,
+    };
+
+    const result = ScreenRowSchema.safeParse(rawRow);
+    if (result.success) {
+      screens.push(result.data);
+    } else {
+      for (const issue of result.error.issues) {
+        errors.push({ sheet: sheetName, row: r + 1, field: issue.path.join('.'), message: issue.message });
+      }
+      screens.push(rawRow as ScreenRow);
+    }
+  }
+
+  return screens;
+}
+
 export function parseMediaPlan(buffer: Buffer): ParseResult {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const errors: ParseError[] = [];
   const warnings: ParseWarning[] = [];
   const screens: ScreenRow[] = [];
 
-  // Parse Total sheet first
   let campaign: CampaignData = {
     clientName: '',
     project: null,
@@ -64,6 +140,7 @@ export function parseMediaPlan(buffer: Buffer): ParseResult {
     totalBudgetRub: null,
   };
 
+  // Parse Total sheet
   for (const sheetName of workbook.SheetNames) {
     if (isTotalSheet(sheetName)) {
       campaign = parseTotalSheet(workbook.Sheets[sheetName]);
@@ -71,72 +148,23 @@ export function parseMediaPlan(buffer: Buffer): ParseResult {
     }
   }
 
-  // Parse screen sheets
+  // Parse screen sheets — both type-named sheets and period sheets
   for (const sheetName of workbook.SheetNames) {
-    const screenType = detectSheetType(sheetName);
-    if (!screenType) continue;
+    if (isTotalSheet(sheetName)) continue;
 
-    const sheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
-    const headerIdx = findHeaderRow(data);
-    const headerRow = (data[headerIdx] || []) as string[];
-    const colMap = buildColumnMap(headerRow);
+    const fixedType = detectSheetType(sheetName);    // e.g. "LED Ташкент" → LED
+    const isPeriod = isPeriodSheet(sheetName);       // e.g. "Первый месяц"
 
-    if (colMap.city === undefined && colMap.address === undefined) {
-      warnings.push({ sheet: sheetName, message: 'Could not detect city or address columns' });
-      continue;
-    }
+    if (!fixedType && !isPeriod) continue; // skip unrecognised sheets (flowchart, справочник, etc.)
 
-    for (let r = headerIdx + 1; r < data.length; r++) {
-      const row = data[r] as unknown[];
-      if (!row) continue;
-
-      const city = colMap.city !== undefined ? String(row[colMap.city] || '').trim() : '';
-      const address = colMap.address !== undefined ? String(row[colMap.address] || '').trim() : '';
-      if (!city && !address) continue;
-
-      // Skip summary rows
-      const firstCol = String(row[0] || '').trim().toLowerCase();
-      if (firstCol.includes('итого') || firstCol.includes('total') || firstCol.includes('ledokol')) continue;
-
-      const photoUrl = getHyperlink(sheet, r, 1); // Photo always in col B
-      const size = colMap.size !== undefined ? String(row[colMap.size] || '').trim() || null : null;
-      let resolution = colMap.resolution !== undefined ? String(row[colMap.resolution] || '').trim() || null : null;
-      if (resolution === 'х' || resolution === 'x') resolution = null;
-
-      const rawRow = {
-        type: screenType,
-        city: city || 'Ташкент',
-        address: address || `${sheetName} — строка ${r + 1}`,
-        size,
-        resolution,
-        externalId: colMap.externalId !== undefined ? String(row[colMap.externalId] || '').trim() || null : null,
-        photoUrl,
-        priceUnit: colMap.priceUnit !== undefined ? parseNum(row[colMap.priceUnit]) : null,
-        priceDiscounted: colMap.priceDiscounted !== undefined ? parseNum(row[colMap.priceDiscounted]) : null,
-        priceRub: colMap.priceRub !== undefined ? parseNum(row[colMap.priceRub]) : null,
-        productionCost: colMap.productionCost !== undefined ? parseNum(row[colMap.productionCost]) : null,
-        ots: colMap.ots !== undefined ? parseNum(row[colMap.ots]) : null,
-        rating: colMap.rating !== undefined ? parseNum(row[colMap.rating]) : null,
-        universe: colMap.universe !== undefined ? parseNum(row[colMap.universe]) : null,
-      };
-
-      const result = ScreenRowSchema.safeParse(rawRow);
-      if (result.success) {
-        screens.push(result.data);
-      } else {
-        for (const issue of result.error.issues) {
-          errors.push({
-            sheet: sheetName,
-            row: r + 1,
-            field: issue.path.join('.'),
-            message: issue.message,
-          });
-        }
-        // Still add the row with raw data (best effort)
-        screens.push(rawRow as ScreenRow);
-      }
-    }
+    const sheetScreens = parseScreenSheet(
+      sheetName,
+      workbook.Sheets[sheetName],
+      fixedType, // null for period sheets → type comes from column
+      errors,
+      warnings,
+    );
+    screens.push(...sheetScreens);
   }
 
   if (screens.length === 0) {

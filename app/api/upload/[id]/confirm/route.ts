@@ -15,10 +15,15 @@ interface ScreenData {
   lng?: number | null;
   priceUnit?: number | null;
   priceDiscounted?: number | null;
+  priceTotal?: number | null;
   priceRub?: number | null;
+  commissionPct?: number | null;
+  agencyFeeAmt?: number | null;
   productionCost?: number | null;
-  ots?: number | null;
-  rating?: number | null;
+  otsPlan?: number | null;
+  ratingPlan?: number | null;
+  otsFact?: number | null;
+  ratingFact?: number | null;
   universe?: number | null;
 }
 
@@ -29,29 +34,37 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id: campaignId } = await params;
   const body = await req.json() as {
     screens: ScreenData[];
+    periodId?: string | null;
     minioKey?: string;
     yandexMapUrl?: string | null;
     totalBudgetUzs?: number | null;
     totalBudgetRub?: number | null;
   };
 
-  // Verify campaign exists
   const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
-  if (!campaign) {
-    return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
+
+  // If periodId provided, verify it belongs to this campaign
+  if (body.periodId) {
+    const period = await prisma.campaignPeriod.findFirst({ where: { id: body.periodId, campaignId } });
+    if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 });
   }
 
-  // Transactional: delete existing screens, insert new ones, update campaign
   try {
     await prisma.$transaction(async (tx) => {
-      // Clear existing screens
-      await tx.screen.deleteMany({ where: { campaignId } });
+      if (body.periodId) {
+        // Period upload: delete only screens for this period, then insert new ones
+        await tx.screen.deleteMany({ where: { campaignId, periodId: body.periodId } });
+      } else {
+        // Mono campaign upload: delete all screens (no periodId), then insert new ones
+        await tx.screen.deleteMany({ where: { campaignId, periodId: null } });
+      }
 
-      // Insert all screens
       for (const s of body.screens) {
         await tx.screen.create({
           data: {
             campaignId,
+            periodId: body.periodId || null,
             externalId: s.externalId || null,
             type: s.type,
             city: s.city,
@@ -61,20 +74,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             photoUrl: s.photoUrl || null,
             lat: s.lat || null,
             lng: s.lng || null,
-            pricing: (s.priceUnit || s.priceDiscounted || s.priceRub || s.productionCost)
+            pricing: (s.priceUnit || s.priceDiscounted || s.priceTotal || s.priceRub || s.productionCost || s.agencyFeeAmt || s.commissionPct)
               ? {
                   create: {
                     priceUnit: s.priceUnit ? BigInt(Math.round(s.priceUnit)) : null,
                     priceDiscounted: s.priceDiscounted ? BigInt(Math.round(s.priceDiscounted)) : null,
+                    priceTotal: s.priceTotal ? BigInt(Math.round(s.priceTotal)) : null,
                     priceRub: s.priceRub ? BigInt(Math.round(s.priceRub)) : null,
+                    commissionPct: s.commissionPct != null ? s.commissionPct : null,
+                    agencyFeeAmt: s.agencyFeeAmt ? BigInt(Math.round(s.agencyFeeAmt)) : null,
                     productionCost: s.productionCost ? BigInt(Math.round(s.productionCost)) : null,
                   },
                 }
               : undefined,
             metrics: {
               create: {
-                ots: s.ots ? Math.round(s.ots) : null,
-                rating: s.rating ? Number(s.rating.toFixed(2)) : null,
+                otsPlan: s.otsPlan ? Math.round(s.otsPlan) : null,
+                ratingPlan: s.ratingPlan != null ? Number(s.ratingPlan.toFixed(4)) : null,
+                otsFact: s.otsFact ? Math.round(s.otsFact) : null,
+                ratingFact: s.ratingFact != null ? Number(s.ratingFact.toFixed(4)) : null,
                 universe: s.universe ? Math.round(s.universe) : null,
                 source: 'XLSX',
               },
@@ -83,16 +101,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         });
       }
 
-      // Update campaign metadata
-      await tx.campaign.update({
-        where: { id: campaignId },
-        data: {
-          sourceFileUrl: body.minioKey || undefined,
-          yandexMapUrl: body.yandexMapUrl || undefined,
-          totalBudgetUzs: body.totalBudgetUzs ? BigInt(Math.round(body.totalBudgetUzs)) : undefined,
-          totalBudgetRub: body.totalBudgetRub ? BigInt(Math.round(body.totalBudgetRub)) : undefined,
-        },
-      });
+      if (body.periodId) {
+        // Update period's sourceFileUrl
+        await tx.campaignPeriod.update({
+          where: { id: body.periodId },
+          data: { sourceFileUrl: body.minioKey || undefined },
+        });
+      } else {
+        // Mono campaign: update campaign metadata
+        await tx.campaign.update({
+          where: { id: campaignId },
+          data: {
+            sourceFileUrl: body.minioKey || undefined,
+            yandexMapUrl: body.yandexMapUrl || undefined,
+            totalBudgetUzs: body.totalBudgetUzs ? BigInt(Math.round(body.totalBudgetUzs)) : undefined,
+            totalBudgetRub: body.totalBudgetRub ? BigInt(Math.round(body.totalBudgetRub)) : undefined,
+          },
+        });
+      }
     });
 
     const updated = await prisma.campaign.findUnique({
@@ -100,7 +126,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       include: { _count: { select: { screens: true } } },
     });
 
-    // BigInt can't be serialized to JSON — convert to number
     return NextResponse.json({
       ok: true,
       campaign: updated ? {

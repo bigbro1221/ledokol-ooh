@@ -4,12 +4,13 @@ import dynamic from 'next/dynamic';
 import { Monitor, LayoutGrid, Target, Banknote } from 'lucide-react';
 import { KPICard } from '@/components/charts/kpi-card';
 import { ImpressionsDonut } from '@/components/charts/impressions-donut';
-import { ImpressionsArea } from '@/components/charts/impressions-area';
-import { HourlyChart } from '@/components/charts/hourly-chart';
 import { TopScreensBar } from '@/components/charts/top-screens-bar';
 import { ScreensTable } from '@/components/charts/screens-table';
 import { CityBreakdown } from '@/components/charts/city-breakdown';
-import { BudgetBar } from '@/components/charts/budget-bar';
+import { PlanFactBar } from '@/components/charts/plan-fact-bar';
+import { PlanFactBreakdown } from '@/components/charts/plan-fact-breakdown';
+import { BudgetByType } from '@/components/charts/budget-by-type';
+import { EfficiencyStrip } from '@/components/charts/efficiency-strip';
 import { CampaignSelector } from '@/components/ui/campaign-selector';
 import { FilterBar } from '@/components/ui/filter-bar';
 
@@ -31,24 +32,48 @@ interface Props {
   campaigns: { id: string; name: string; status: string }[];
   selectedCampaignId: string;
   campaign: { name: string; clientName: string; period: string; status: string };
-  kpis: { totalOts: number; totalScreens: number; cities: number; totalBudget: number; formatBudget: string };
+  kpis: { totalOtsPlan: number; totalOtsFact: number; totalScreens: number; cities: number; totalBudget: number; formatBudget: string };
   donutData: { name: string; value: number }[];
-  dailyImpressions: { date: string; impressions: number }[];
-  hourlyData: { hour: string; impressions: number }[];
+  budgetByType: { name: string; value: number }[];
+  totalBudgetFromScreens: number;
+  planVsFactByCity: { label: string; plan: number; fact: number }[];
+  planVsFactByType: { label: string; plan: number; fact: number }[];
   topScreens: { address: string; ots: number }[];
   tableScreens: { id: string; externalId: string | null; type: string; city: string; address: string; size: string | null; photoUrl: string | null; ots: number | null }[];
-  mapScreens: { id: string; lat: number; lng: number; type: string; address: string; city: string; size: string | null; ots: number | null; photoUrl: string | null }[];
+  mapScreens: { id: string; lat: number; lng: number; type: string; address: string; city: string; size: string | null; ots: number | null; otsFact: number | null; photoUrl: string | null }[];
   cityBreakdown: { city: string; screens: number; ots: number }[];
   allCities: string[];
   filters: { city: string; type: string };
+  heatmapEmbedUrl: string | null;
 }
 
 export function DashboardClient({
   locale, campaigns, selectedCampaignId, campaign, kpis,
-  donutData, dailyImpressions, hourlyData, topScreens,
-  tableScreens, mapScreens, cityBreakdown, allCities, filters,
+  donutData, budgetByType, totalBudgetFromScreens,
+  planVsFactByCity, planVsFactByType,
+  topScreens, tableScreens, mapScreens, cityBreakdown, allCities, filters,
+  heatmapEmbedUrl,
 }: Props) {
   const donutTotal = donutData.reduce((s, d) => s + d.value, 0);
+  const hasFact = kpis.totalOtsFact > 0;
+  // "Всего показов" — prefer fact when available, fall back to plan
+  const impressionsValue = hasFact ? kpis.totalOtsFact : kpis.totalOtsPlan;
+  const impressionsLabel = hasFact ? 'Показы (факт)' : 'Показы (план)';
+  // Completion %
+  const completionPct = kpis.totalOtsPlan > 0 && hasFact
+    ? Math.round((kpis.totalOtsFact / kpis.totalOtsPlan) * 100)
+    : null;
+  const completionDir = completionPct === null
+    ? 'neutral'
+    : completionPct >= 100 ? 'up' : completionPct < 80 ? 'down' : 'neutral';
+  const completionTrend = completionPct === null
+    ? 'Нет факт. данных'
+    : completionPct >= 100 ? 'Выше плана'
+    : completionPct >= 80  ? 'В процессе'
+    :                        'Ниже плана';
+
+  // Budget source: use screen-level sum if no explicit campaign total; else prefer campaign total
+  const budgetForWidgets = kpis.totalBudget > 0 ? kpis.totalBudget : totalBudgetFromScreens;
 
   return (
     <>
@@ -87,34 +112,121 @@ export function DashboardClient({
       )}
 
       {/* KPI Cards */}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KPICard label="Всего показов" value={kpis.totalOts.toLocaleString('ru-RU')} trend={{ label: 'OTS', direction: 'neutral' }} icon={<Monitor size={14} strokeWidth={1.5} />} delay={0} />
-        <KPICard label="Поверхности" value={String(kpis.totalScreens)} unit="экр." trend={{ label: `${kpis.cities} гор.`, direction: 'neutral' }} icon={<LayoutGrid size={14} strokeWidth={1.5} />} delay={80} />
-        <KPICard label="Выполнение" value="101" unit="%" trend={{ label: 'Выше плана', direction: 'up' }} icon={<Target size={14} strokeWidth={1.5} />} delay={160} />
-        <KPICard label="Бюджет" value={kpis.formatBudget} unit="UZS" icon={<Banknote size={14} strokeWidth={1.5} />} delay={240} />
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KPICard
+          label={impressionsLabel}
+          value={impressionsValue.toLocaleString('ru-RU')}
+          trend={hasFact
+            ? { label: `План: ${kpis.totalOtsPlan.toLocaleString('ru-RU')}`, direction: 'neutral' }
+            : { label: 'OTS план', direction: 'neutral' }}
+          icon={<Monitor size={14} strokeWidth={1.5} />}
+          delay={0}
+        />
+        <KPICard
+          label="Поверхности"
+          value={String(kpis.totalScreens)}
+          unit="экр."
+          trend={{ label: `${kpis.cities} гор.`, direction: 'neutral' }}
+          icon={<LayoutGrid size={14} strokeWidth={1.5} />}
+          delay={80}
+        />
+        <KPICard
+          label="Выполнение"
+          value={completionPct !== null ? String(completionPct) : '—'}
+          unit={completionPct !== null ? '%' : undefined}
+          trend={{ label: completionTrend, direction: completionDir }}
+          icon={<Target size={14} strokeWidth={1.5} />}
+          delay={160}
+        />
+        <KPICard
+          label="Бюджет"
+          value={kpis.formatBudget}
+          unit="UZS"
+          icon={<Banknote size={14} strokeWidth={1.5} />}
+          delay={240}
+        />
       </div>
 
-      {/* Row: Budget bar + Donut */}
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {kpis.totalBudget > 0 && <BudgetBar total={kpis.totalBudget} spent={kpis.totalBudget * 0.7} />}
-        <ImpressionsDonut data={donutData} total={donutTotal} />
+      {/* Efficiency strip — CPM, avg OTS/screen, avg budget/screen */}
+      <div className="mb-6">
+        <EfficiencyStrip
+          totalBudget={budgetForWidgets}
+          totalOtsPlan={kpis.totalOtsPlan}
+          totalOtsFact={kpis.totalOtsFact}
+          totalScreens={kpis.totalScreens}
+          totalCities={kpis.cities}
+        />
       </div>
 
-      {/* Row: Area + Hourly */}
+      {/* Row: Plan/Fact overall bar + OTS-by-type donut */}
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ImpressionsArea data={dailyImpressions} />
-        <HourlyChart data={hourlyData} />
+        <PlanFactBar plan={kpis.totalOtsPlan} fact={kpis.totalOtsFact} />
+        {donutTotal > 0 && <ImpressionsDonut data={donutData} total={donutTotal} />}
       </div>
+
+      {/* Row: Plan vs Fact by Type + Budget by Type donut */}
+      {(planVsFactByType.length > 0 || budgetByType.length > 0) && (
+        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {planVsFactByType.length > 0 && (
+            <PlanFactBreakdown
+              title="План и факт по типам"
+              subtitle="Сравнение плановых и фактических показов"
+              data={planVsFactByType}
+            />
+          )}
+          {budgetByType.length > 0 && (
+            <BudgetByType data={budgetByType} total={totalBudgetFromScreens} />
+          )}
+        </div>
+      )}
+
+      {/* Plan vs Fact by City — full width since cities can be many */}
+      {planVsFactByCity.length > 0 && (
+        <div className="mb-6">
+          <PlanFactBreakdown
+            title="План и факт по городам"
+            subtitle="Выполнение плана в разрезе городов"
+            data={planVsFactByCity}
+          />
+        </div>
+      )}
 
       {/* Map */}
       <div className="mb-6">
         <ScreenMap screens={mapScreens} />
       </div>
 
+      {/* Heatmap (Foursquare Studio) */}
+      {heatmapEmbedUrl && (
+        <div className="mb-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">Тепловая карта аудитории</h2>
+            <a
+              href={heatmapEmbedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-[var(--text-3)] underline hover:text-[var(--text)]"
+            >
+              Открыть в новой вкладке ↗
+            </a>
+          </div>
+          <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)]" style={{ height: 480 }}>
+            <iframe
+              src={heatmapEmbedUrl}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              allow="fullscreen; geolocation"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Heatmap"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Row: City breakdown + Top screens */}
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CityBreakdown data={cityBreakdown} />
-        <TopScreensBar data={topScreens} />
+        {topScreens.length > 0 && <TopScreensBar data={topScreens} />}
       </div>
 
       {/* Screens Table */}

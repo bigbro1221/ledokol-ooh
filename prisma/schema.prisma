@@ -63,30 +63,57 @@ model Client {
 }
 
 model Campaign {
-  id             String         @id @default(uuid())
+  id             String           @id @default(uuid())
   clientId       String
-  client         Client         @relation(fields: [clientId], references: [id])
+  client         Client           @relation(fields: [clientId], references: [id])
   name           String
   project        String?
   periodStart    DateTime
   periodEnd      DateTime
-  status         CampaignStatus @default(DRAFT)
+  status         CampaignStatus   @default(DRAFT)
+  splitByPeriods Boolean          @default(false)
   sourceFileUrl  String?
   yandexMapUrl   String?
+  heatmapUrl     String?
   totalBudgetUzs BigInt?
   totalBudgetRub BigInt?
+  productionCost BigInt?
+  agencyFeePct   Decimal?
+  totalFinal     BigInt?
   screens        Screen[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  periods        CampaignPeriod[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([clientId])
   @@index([status])
+}
+
+model CampaignPeriod {
+  id             String   @id @default(uuid())
+  campaignId     String
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name           String
+  periodStart    DateTime
+  periodEnd      DateTime
+  sourceFileUrl  String?
+  totalBudgetUzs BigInt?
+  productionCost BigInt?
+  agencyFeePct   Decimal?
+  totalFinal     BigInt?
+  screens        Screen[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([campaignId])
 }
 
 model Screen {
   id          String          @id @default(uuid())
   campaignId  String
   campaign    Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  periodId    String?
+  period      CampaignPeriod? @relation(fields: [periodId], references: [id])
   externalId  String?
   type        ScreenType
   city        String
@@ -103,30 +130,34 @@ model Screen {
   updatedAt   DateTime        @updatedAt
 
   @@index([campaignId])
+  @@index([periodId])
   @@index([city])
   @@index([type])
 }
 
 model ScreenPricing {
-  id             String   @id @default(uuid())
-  screenId       String   @unique
-  screen         Screen   @relation(fields: [screenId], references: [id], onDelete: Cascade)
-  priceUnit      BigInt?
+  id              String   @id @default(uuid())
+  screenId        String   @unique
+  screen          Screen   @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  priceUnit       BigInt?
   priceDiscounted BigInt?
-  priceTotal     BigInt?
-  priceRub       BigInt?
-  commissionPct  Decimal?
-  productionCost BigInt?
+  priceTotal      BigInt?
+  priceRub        BigInt?
+  commissionPct   Decimal?   // AK% — agency fee percentage
+  agencyFeeAmt    BigInt?    // AK сумма — agency fee absolute amount
+  productionCost  BigInt?
 }
 
 model ScreenMetrics {
-  id       String     @id @default(uuid())
-  screenId String     @unique
-  screen   Screen     @relation(fields: [screenId], references: [id], onDelete: Cascade)
-  ots      Int?
-  rating   Decimal?
-  universe Int?
-  source   DataSource @default(XLSX)
+  id         String     @id @default(uuid())
+  screenId   String     @unique
+  screen     Screen     @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  otsPlan    Int?
+  ratingPlan Decimal?
+  otsFact    Int?
+  ratingFact Decimal?
+  universe   Int?
+  source     DataSource @default(XLSX)
 }
 
 model Impression {

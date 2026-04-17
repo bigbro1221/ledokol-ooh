@@ -4,6 +4,7 @@ import { uploadFile } from '@/lib/minio';
 import { fetchYandexPins } from '@/lib/parser/yandex';
 import { matchPinsToRows } from '@/lib/parser/matcher';
 import { requireAdmin } from '@/lib/api-auth';
+import { prisma } from '@/lib/db';
 
 export async function POST(request: Request) {
   const auth = await requireAdmin();
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get('file') as File | null;
   const campaignId = formData.get('campaignId') as string | null;
+  const periodId = formData.get('periodId') as string | null;
 
   if (!file || !campaignId) {
     return NextResponse.json({ error: 'File and campaignId are required' }, { status: 400 });
@@ -61,6 +63,17 @@ export async function POST(request: Request) {
   // Parse XLSX
   const result = parseMediaPlan(buffer);
 
+  // Resolve Yandex map URL: prefer value parsed from XLSX, fall back to campaign DB record
+  if (!result.campaign.yandexMapUrl) {
+    const dbCampaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { yandexMapUrl: true },
+    });
+    if (dbCampaign?.yandexMapUrl) {
+      result.campaign.yandexMapUrl = dbCampaign.yandexMapUrl;
+    }
+  }
+
   // Fetch Yandex pins and match if URL present
   let unmatchedPins: { lat: number; lng: number; city: string; label: string }[] = [];
   let matchedCount = 0;
@@ -83,6 +96,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     campaignId,
+    periodId: periodId || null,
     minioKey: key,
     campaign: result.campaign,
     screens: result.screens,

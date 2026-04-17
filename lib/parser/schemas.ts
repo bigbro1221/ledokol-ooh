@@ -10,10 +10,15 @@ export const ScreenRowSchema = z.object({
   photoUrl: z.string().url().nullable().or(z.literal(null)),
   priceUnit: z.number().nullable(),
   priceDiscounted: z.number().nullable(),
+  priceTotal: z.number().nullable(),
   priceRub: z.number().nullable(),
+  commissionPct: z.number().nullable(),
+  agencyFeeAmt: z.number().nullable(),
   productionCost: z.number().nullable(),
-  ots: z.number().nullable(),
-  rating: z.number().nullable(),
+  otsPlan: z.number().nullable(),
+  ratingPlan: z.number().nullable(),
+  otsFact: z.number().nullable(),
+  ratingFact: z.number().nullable(),
   universe: z.number().nullable(),
 });
 
