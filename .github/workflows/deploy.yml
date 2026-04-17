@@ -46,12 +46,21 @@ jobs:
               exit 1
             fi
 
-            # Wait for health
-            sleep 8
-            curl -sf http://localhost:3000/api/health || {
-              echo "Health check failed"
-              docker compose logs app --tail 20
-              exit 1
-            }
+            # Wait for health — poll for up to 60s
+            echo "Waiting for app to become healthy..."
+            HEALTH_URL="http://localhost:3100/api/health"
+            for i in $(seq 1 30); do
+              if curl -sf "$HEALTH_URL" > /dev/null 2>&1; then
+                echo "App is healthy after ${i}x2s"
+                curl -s "$HEALTH_URL"
+                echo ""
+                echo "Deploy successful"
+                exit 0
+              fi
+              sleep 2
+            done
 
-            echo "Deploy successful"
+            echo "Health check failed after 60s"
+            docker compose ps
+            docker compose logs app --tail 40
+            exit 1
