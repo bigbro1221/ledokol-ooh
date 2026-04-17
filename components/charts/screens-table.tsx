@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Screen {
   id: string;
@@ -38,7 +39,7 @@ export function ScreensTable({ screens }: { screens: Screen[] }) {
 
   return (
     <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-5">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-4 sm:px-6 sm:py-5">
         <div>
           <h3 className="text-[15px] font-semibold tracking-tight">Поверхности</h3>
           <p className="mt-0.5 text-xs text-[var(--text-3)]">
@@ -46,7 +47,34 @@ export function ScreensTable({ screens }: { screens: Screen[] }) {
           </p>
         </div>
       </div>
-      <div className="overflow-x-auto">
+
+      {/* mobile: <640px — card-per-row layout */}
+      <div className="divide-y divide-[var(--border)] sm:hidden">
+        {pageScreens.map((s) => (
+          <div key={s.id} className="px-4 py-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] ${TYPE_STYLES[s.type] || ''}`}>
+                {TYPE_LABELS[s.type] || s.type}
+              </span>
+              <span className="text-[12px] font-medium text-[var(--text)]">{s.city}</span>
+            </div>
+            <div className="mb-2 line-clamp-2 text-[13px] leading-snug text-[var(--text-2)]">
+              {s.address}
+            </div>
+            <div className="flex items-center justify-between text-[12px]" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+              <span className="text-[var(--text-3)]">
+                {s.size || '—'}
+              </span>
+              <span className="text-[var(--text)]">
+                OTS: {s.ots ? s.ots.toLocaleString('ru-RU') : '—'}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-[var(--surface-2)]">
@@ -98,25 +126,52 @@ export function ScreensTable({ screens }: { screens: Screen[] }) {
           </tbody>
         </table>
       </div>
+
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 border-t border-[var(--border)] px-6 py-3">
-          {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => (
+        <>
+          {/* mobile: <640px — prev/next + "Page X of Y" */}
+          <div className="flex items-center justify-between border-t border-[var(--border)] px-4 py-3 sm:hidden">
             <button
-              key={i}
-              onClick={() => setPage(i)}
-              className={`flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-xs transition-colors ${
-                page === i
-                  ? 'bg-[var(--brand-primary-subtle)] font-medium text-[var(--brand-primary)]'
-                  : 'text-[var(--text-3)] hover:bg-[var(--surface-2)]'
-              }`}
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0}
+              aria-label="Previous page"
+              className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-2)] disabled:opacity-30 hover:bg-[var(--surface-2)]"
             >
-              {i + 1}
+              <ChevronLeft size={18} strokeWidth={1.5} />
             </button>
-          ))}
-          {totalPages > 8 && (
-            <span className="text-xs text-[var(--text-4)]">… {totalPages}</span>
-          )}
-        </div>
+            <span className="text-[12px] text-[var(--text-3)]">
+              Стр. <span className="font-medium text-[var(--text)]">{page + 1}</span> из {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+              disabled={page === totalPages - 1}
+              aria-label="Next page"
+              className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-2)] disabled:opacity-30 hover:bg-[var(--surface-2)]"
+            >
+              <ChevronRight size={18} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Desktop: numbered pagination */}
+          <div className="hidden items-center justify-center gap-2 border-t border-[var(--border)] px-6 py-3 sm:flex">
+            {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i)}
+                className={`flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-xs transition-colors ${
+                  page === i
+                    ? 'bg-[var(--brand-primary-subtle)] font-medium text-[var(--brand-primary)]'
+                    : 'text-[var(--text-3)] hover:bg-[var(--surface-2)]'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            {totalPages > 8 && (
+              <span className="text-xs text-[var(--text-4)]">… {totalPages}</span>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
