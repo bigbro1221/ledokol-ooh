@@ -10,11 +10,12 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    // Log real error server-side, return generic response to client
+    console.error('[health] Database check failed:', error);
     return NextResponse.json(
       {
         status: 'error',
         database: 'disconnected',
-        error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString(),
       },
       { status: 503 }
