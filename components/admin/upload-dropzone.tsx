@@ -1,14 +1,42 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Upload, FileSpreadsheet, Check, AlertTriangle } from 'lucide-react';
+import { Upload, FileSpreadsheet, Check, AlertTriangle, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+
+interface PinSuggestion {
+  lat: number;
+  lng: number;
+  label: string;
+  score: number;
+}
+
+interface ScreenGeoInfo {
+  matched: boolean;
+  suggestions: PinSuggestion[];
+}
+
+interface ScreenRow {
+  type: string;
+  city: string;
+  address: string;
+  size?: string | null;
+  otsPlan?: number | null;
+  otsFact?: number | null;
+  priceTotal?: number | null;
+  priceDiscounted?: number | null;
+  priceUnit?: number | null;
+  lat?: number | null;
+  lng?: number | null;
+  [key: string]: unknown;
+}
 
 interface ParsePreview {
   campaignId: string;
   periodId: string | null;
   minioKey: string;
   campaign: { clientName: string; yandexMapUrl: string | null; totalBudgetUzs: number | null; totalBudgetRub: number | null };
-  screens: Record<string, unknown>[];
+  screens: ScreenRow[];
+  screenGeo: ScreenGeoInfo[];
   errors: { sheet: string; row: number; field: string; message: string }[];
   warnings: { sheet: string; message: string }[];
   geocoding: { matchedCount: number; unmatchedPins: unknown[]; totalPins: number };
@@ -16,20 +44,91 @@ interface ParsePreview {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  LED: 'LED экраны',
+  LED: 'LED',
   STATIC: 'Статика',
-  STOP: 'Остановки',
+  STOP: 'Остановка',
   AIRPORT: 'Аэропорт',
   BUS: 'Транспорт',
 };
+
+const TYPE_COLORS: Record<string, string> = {
+  LED: 'bg-blue-100 text-blue-700',
+  STATIC: 'bg-purple-100 text-purple-700',
+  STOP: 'bg-green-100 text-green-700',
+  AIRPORT: 'bg-sky-100 text-sky-700',
+  BUS: 'bg-orange-100 text-orange-700',
+};
+
+function fmtOts(n: number | null | undefined) {
+  if (!n) return '—';
+  return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n.toLocaleString('ru-RU');
+}
+
+function fmtPrice(s: ScreenRow) {
+  const v = s.priceTotal ?? s.priceDiscounted ?? s.priceUnit ?? null;
+  if (!v) return '—';
+  const n = Number(v);
+  return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n.toLocaleString('ru-RU');
+}
+
+function SuggestionPicker({
+  suggestions,
+  onPick,
+}: {
+  suggestions: PinSuggestion[];
+  onPick: (s: PinSuggestion) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (suggestions.length === 0) {
+    return <span className="text-[10px] text-[var(--text-4)]">нет пинов</span>;
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-amber-600 hover:bg-amber-50"
+      >
+        <span>Выбрать пин</span>
+        {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-[var(--radius-md)] border border-[var(--border)] bg-white shadow-lg">
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => { onPick(s); setOpen(false); }}
+              className="flex w-full items-start gap-2 border-b border-[var(--border)] px-3 py-2 text-left last:border-0 hover:bg-[var(--surface-2)]"
+            >
+              <MapPin size={11} className="mt-0.5 shrink-0 text-[var(--brand-primary)]" strokeWidth={1.5} />
+              <div className="min-w-0">
+                <p className="truncate text-xs">{s.label}</p>
+                <p className="text-[10px] text-[var(--text-3)]">
+                  {s.lat.toFixed(5)}, {s.lng.toFixed(5)}
+                  {' · '}
+                  <span className={s.score >= 50 ? 'text-green-600' : s.score >= 25 ? 'text-amber-500' : 'text-[var(--text-4)]'}>
+                    {s.score}%
+                  </span>
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: string; locale: string; periodId?: string | null }) {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [preview, setPreview] = useState<ParsePreview | null>(null);
+  const [screenGeo, setScreenGeo] = useState<ScreenGeoInfo[]>([]);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [showTable, setShowTable] = useState(true);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
@@ -53,8 +152,21 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
       return;
     }
 
-    setPreview(await res.json());
-  }, [campaignId]);
+    const data: ParsePreview = await res.json();
+    setPreview(data);
+    setScreenGeo(data.screenGeo || data.screens.map(() => ({ matched: false, suggestions: [] })));
+  }, [campaignId, periodId]);
+
+  // Allow user to manually assign coordinates from a suggestion
+  function pickCoords(screenIdx: number, suggestion: PinSuggestion) {
+    if (!preview) return;
+    const updatedScreens = [...preview.screens];
+    updatedScreens[screenIdx] = { ...updatedScreens[screenIdx], lat: suggestion.lat, lng: suggestion.lng };
+    const updatedGeo = [...screenGeo];
+    updatedGeo[screenIdx] = { matched: true, suggestions: [] };
+    setPreview({ ...preview, screens: updatedScreens });
+    setScreenGeo(updatedGeo);
+  }
 
   const handleConfirm = async () => {
     if (!preview) return;
@@ -98,6 +210,8 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
       </div>
     );
   }
+
+  const unmatchedCount = screenGeo.filter(g => !g.matched).length;
 
   return (
     <div className="space-y-6">
@@ -143,78 +257,140 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
       {/* Preview */}
       {preview && (
         <div className="space-y-4">
-          <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
-            <h3 className="mb-4 text-[15px] font-semibold">Результат парсинга</h3>
+          {/* Summary row */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="text-2xl font-semibold">{preview.summary.totalScreens}</div>
+              <div className="text-xs text-[var(--text-3)]">Поверхностей</div>
+            </div>
+            <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className={`text-2xl font-semibold ${preview.errors.length > 0 ? 'text-[var(--warning)]' : ''}`}>
+                {preview.errors.length}
+              </div>
+              <div className="text-xs text-[var(--text-3)]">Ошибок</div>
+            </div>
+            <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className={`text-2xl font-semibold ${unmatchedCount > 0 ? 'text-amber-500' : 'text-[var(--success)]'}`}>
+                {preview.geocoding.matchedCount}/{preview.geocoding.totalPins}
+              </div>
+              <div className="text-xs text-[var(--text-3)]">Пинов совпало</div>
+            </div>
+            <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className={`text-2xl font-semibold ${unmatchedCount > 0 ? 'text-amber-500' : 'text-[var(--success)]'}`}>
+                {unmatchedCount}
+              </div>
+              <div className="text-xs text-[var(--text-3)]">Без координат</div>
+            </div>
+          </div>
 
-            {/* Summary */}
-            <div className="mb-4 grid grid-cols-3 gap-4">
-              <div className="rounded-[var(--radius-md)] bg-[var(--surface-2)] p-4">
-                <div className="text-2xl font-semibold">{preview.summary.totalScreens}</div>
-                <div className="text-xs text-[var(--text-3)]">Поверхностей</div>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--surface-2)] p-4">
-                <div className="text-2xl font-semibold">{preview.errors.length}</div>
-                <div className="text-xs text-[var(--text-3)]">Ошибок</div>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--surface-2)] p-4">
-                <div className="text-2xl font-semibold">{preview.geocoding.matchedCount}/{preview.geocoding.totalPins}</div>
-                <div className="text-xs text-[var(--text-3)]">Пинов совпало</div>
+          {/* Type breakdown */}
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(preview.summary.byType).map(([type, count]) => (
+              <span key={type} className={`rounded-full px-3 py-1 text-xs font-medium ${TYPE_COLORS[type] || 'bg-gray-100 text-gray-600'}`}>
+                {TYPE_LABELS[type] || type}: {count}
+              </span>
+            ))}
+          </div>
+
+          {/* Errors */}
+          {preview.errors.length > 0 && (
+            <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-4">
+              <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                <AlertTriangle size={13} /> Ошибки валидации ({preview.errors.length})
+              </h4>
+              <div className="max-h-32 overflow-y-auto text-xs text-amber-800">
+                {preview.errors.slice(0, 15).map((err, i) => (
+                  <div key={i}>{err.sheet} строка {err.row}: {err.field} — {err.message}</div>
+                ))}
+                {preview.errors.length > 15 && <div className="mt-1 opacity-60">…ещё {preview.errors.length - 15}</div>}
               </div>
             </div>
+          )}
 
-            {/* By type */}
-            <div className="mb-4">
-              <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">По типам</h4>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(preview.summary.byType).map(([type, count]) => (
-                  <span key={type} className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs">
-                    {TYPE_LABELS[type] || type}: <strong>{count}</strong>
+          {/* Screen table */}
+          <div className="rounded-[var(--radius-lg)] border border-[var(--border)]">
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+              <h3 className="text-sm font-semibold">
+                Таблица поверхностей
+                {unmatchedCount > 0 && (
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                    {unmatchedCount} без координат
                   </span>
-                ))}
-              </div>
+                )}
+              </h3>
+              <button
+                onClick={() => setShowTable(v => !v)}
+                className="flex items-center gap-1 text-xs text-[var(--text-3)] hover:text-[var(--text)]"
+              >
+                {showTable ? <><ChevronUp size={14} /> Свернуть</> : <><ChevronDown size={14} /> Развернуть</>}
+              </button>
             </div>
 
-            {/* Errors */}
-            {preview.errors.length > 0 && (
-              <div className="mb-4">
-                <h4 className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-[var(--warning)]">
-                  <AlertTriangle size={14} /> Ошибки валидации ({preview.errors.length})
-                </h4>
-                <div className="max-h-40 overflow-y-auto rounded-[var(--radius-sm)] bg-[var(--surface-2)] p-3 text-xs">
-                  {preview.errors.slice(0, 20).map((err, i) => (
-                    <div key={i} className="text-[var(--text-2)]">
-                      {err.sheet} строка {err.row}: {err.field} — {err.message}
-                    </div>
-                  ))}
-                  {preview.errors.length > 20 && (
-                    <div className="mt-1 text-[var(--text-3)]">...и ещё {preview.errors.length - 20}</div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Warnings */}
-            {preview.warnings.length > 0 && (
-              <div className="mb-4">
-                <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">Предупреждения</h4>
-                {preview.warnings.map((w, i) => (
-                  <div key={i} className="text-xs text-[var(--text-3)]">{w.sheet}: {w.message}</div>
-                ))}
-              </div>
-            )}
-
-            {/* Unmatched pins */}
-            {preview.geocoding.unmatchedPins.length > 0 && (
-              <div className="mb-4">
-                <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-                  Несопоставленные пины ({preview.geocoding.unmatchedPins.length})
-                </h4>
-                <p className="text-xs text-[var(--text-3)]">
-                  Эти пины с Яндекс Карт не удалось сопоставить с адресами из таблицы.
-                </p>
+            {showTable && (
+              <div className="max-h-[480px] overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-2)]">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">#</th>
+                      <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">Тип</th>
+                      <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">Город</th>
+                      <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">Адрес</th>
+                      <th className="px-3 py-2 text-right font-semibold text-[var(--text-3)]">OTS план</th>
+                      <th className="px-3 py-2 text-right font-semibold text-[var(--text-3)]">Стоимость</th>
+                      <th className="px-3 py-2 text-center font-semibold text-[var(--text-3)]">Гео</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.screens.map((screen, i) => {
+                      const geo = screenGeo[i] ?? { matched: false, suggestions: [] };
+                      const isUnmatched = !geo.matched;
+                      return (
+                        <tr
+                          key={i}
+                          className={`border-b border-[var(--border)] last:border-0 ${
+                            isUnmatched ? 'bg-amber-50/70' : 'hover:bg-[var(--surface-2)]'
+                          }`}
+                        >
+                          <td className="px-3 py-2 text-[var(--text-3)]">{i + 1}</td>
+                          <td className="px-3 py-2">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.type] || 'bg-gray-100 text-gray-600'}`}>
+                              {TYPE_LABELS[screen.type] || screen.type}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-[var(--text-2)]">{screen.city}</td>
+                          <td className="max-w-[220px] px-3 py-2">
+                            <span className="line-clamp-2">{screen.address}</span>
+                          </td>
+                          <td className="px-3 py-2 text-right" style={{ fontFamily: 'var(--font-mono)' }}>
+                            {fmtOts(screen.otsPlan as number | null)}
+                          </td>
+                          <td className="px-3 py-2 text-right" style={{ fontFamily: 'var(--font-mono)' }}>
+                            {fmtPrice(screen)}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {geo.matched ? (
+                              <MapPin size={12} className="mx-auto text-[var(--brand-primary)]" strokeWidth={1.5} />
+                            ) : (
+                              <SuggestionPicker
+                                suggestions={geo.suggestions}
+                                onPick={(s) => pickCoords(i, s)}
+                              />
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
+
+          {unmatchedCount > 0 && (
+            <p className="text-[11px] text-amber-600">
+              ⚠ Жёлтые строки — адрес не найден среди Яндекс пинов. Используйте &quot;Выбрать пин&quot; чтобы назначить координаты вручную перед подтверждением.
+            </p>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3">
@@ -226,7 +402,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
               {confirming ? 'Сохранение...' : `Подтвердить загрузку (${preview.summary.totalScreens} поверхностей)`}
             </button>
             <button
-              onClick={() => setPreview(null)}
+              onClick={() => { setPreview(null); setScreenGeo([]); }}
               className="rounded-[var(--radius-md)] border border-[var(--border)] px-4 py-2.5 text-sm transition-colors hover:bg-[var(--surface-2)]"
             >
               Отменить

@@ -53,8 +53,10 @@ export default async function DashboardPage({
     where: { id: selectedId },
     select: {
       id: true, name: true, status: true, periodStart: true, periodEnd: true,
+      splitByPeriods: true,
       totalBudgetUzs: true, totalBudgetRub: true, heatmapUrl: true,
       client: { select: { name: true } },
+      periods: { select: { totalBudgetUzs: true } },
       screens: {
         where: Object.keys(screenWhere).length > 0 ? screenWhere : undefined,
         select: {
@@ -80,7 +82,17 @@ export default async function DashboardPage({
   const totalScreens = campaign.screens.length;
   const totalOts = campaign.screens.reduce((s, sc) => s + (sc.metrics?.otsPlan || 0), 0);
   const totalOtsFact = campaign.screens.reduce((s, sc) => s + (sc.metrics?.otsFact || 0), 0);
-  const totalBudget = campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : 0;
+
+  // Budget resolution:
+  // 1. For split-by-period campaigns: sum of manually-entered period.totalBudgetUzs
+  // 2. For mono campaigns: campaign.totalBudgetUzs (from XLSX Total sheet)
+  // 3. Fallback: sum of screen priceTotal/priceDiscounted/priceUnit
+  const periodsBudgetSum = campaign.splitByPeriods
+    ? campaign.periods.reduce((s, p) => s + (p.totalBudgetUzs ? Number(p.totalBudgetUzs) : 0), 0)
+    : 0;
+  const campaignBudget = campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : 0;
+  // Resolved before screen fallback
+  const manualBudget = campaign.splitByPeriods ? periodsBudgetSum : campaignBudget;
   const cities = new Set(campaign.screens.map(s => s.city.trim()));
 
   // Helper: effective price per screen (priceTotal > priceDiscounted > priceUnit)
@@ -121,6 +133,8 @@ export default async function DashboardPage({
     .filter(d => d.value > 0)
     .sort((a, b) => b.value - a.value);
   const totalBudgetFromScreens = budgetByType.reduce((s, d) => s + d.value, 0);
+  // Final budget: manual entry wins; fall back to sum of screen pricing
+  const totalBudget = manualBudget > 0 ? manualBudget : totalBudgetFromScreens;
 
   // By city: plan, fact, screens
   const byCityMap: Record<string, { plan: number; fact: number; screens: number }> = {};

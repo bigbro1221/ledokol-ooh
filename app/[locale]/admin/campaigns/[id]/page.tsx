@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, FileSpreadsheet, Layers, Pencil } from 'lucide-react';
+import { Upload, FileSpreadsheet, Layers, Pencil, Table2 } from 'lucide-react';
 import { StatusToggle } from '@/components/admin/status-toggle';
 import { PeriodManager } from '@/components/admin/period-manager';
 import { DeleteCampaignButton } from '@/components/admin/delete-campaign-button';
@@ -69,6 +69,14 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
             >
               <Upload size={16} strokeWidth={1.5} /> Загрузить XLSX
+            </Link>
+          )}
+          {totalScreens > 0 && (
+            <Link
+              href={`/${locale}/admin/campaigns/${id}/screens`}
+              className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
+            >
+              <Table2 size={13} strokeWidth={1.5} /> Поверхности
             </Link>
           )}
           {totalScreens > 0 && !campaign.splitByPeriods && (

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { parseMediaPlan } from '@/lib/parser';
 import { uploadFile } from '@/lib/minio';
 import { fetchYandexPins } from '@/lib/parser/yandex';
-import { matchPinsToRows } from '@/lib/parser/matcher';
+import { matchPinsToRows, getTopSuggestions } from '@/lib/parser/matcher';
 import { requireAdmin } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 
@@ -76,20 +76,38 @@ export async function POST(request: Request) {
 
   // Fetch Yandex pins and match if URL present
   let unmatchedPins: { lat: number; lng: number; city: string; label: string }[] = [];
+  let allPins: { lat: number; lng: number; city: string; label: string }[] = [];
   let matchedCount = 0;
 
+  // Per-screen geocoding info: index → { matched: bool, suggestions: top-5 pins }
+  type PinSuggestion = { lat: number; lng: number; label: string; score: number };
+  const screenGeo: { matched: boolean; suggestions: PinSuggestion[] }[] = result.screens.map(() => ({
+    matched: false,
+    suggestions: [],
+  }));
+
   if (result.campaign.yandexMapUrl) {
-    const pins = await fetchYandexPins(result.campaign.yandexMapUrl);
+    allPins = await fetchYandexPins(result.campaign.yandexMapUrl);
     const addresses = result.screens.map(s => s.address);
-    const { matched, unmatched } = matchPinsToRows(pins, addresses);
+    const { matched, unmatched } = matchPinsToRows(allPins, addresses);
     unmatchedPins = unmatched;
     matchedCount = matched.size;
 
-    for (const screen of result.screens) {
+    for (let i = 0; i < result.screens.length; i++) {
+      const screen = result.screens[i];
       const coords = matched.get(screen.address);
       if (coords) {
         (screen as Record<string, unknown>).lat = coords.lat;
         (screen as Record<string, unknown>).lng = coords.lng;
+        screenGeo[i].matched = true;
+      } else {
+        // Provide top suggestions from all available pins (not just unmatched)
+        screenGeo[i].suggestions = getTopSuggestions(screen.address, allPins, 5).map(p => ({
+          lat: p.lat,
+          lng: p.lng,
+          label: p.label,
+          score: Math.round(p.score * 100),
+        }));
       }
     }
   }
@@ -100,6 +118,7 @@ export async function POST(request: Request) {
     minioKey: key,
     campaign: result.campaign,
     screens: result.screens,
+    screenGeo,
     errors: result.errors,
     warnings: result.warnings,
     geocoding: {

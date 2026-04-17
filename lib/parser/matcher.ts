@@ -94,6 +94,21 @@ export function matchScore(query: string, pin: string): number {
 
 const MATCH_THRESHOLD = 0.28;
 
+/**
+ * Return top-N pins sorted by match score for a given address.
+ * No threshold — returns best available (even if score is low).
+ */
+export function getTopSuggestions(
+  address: string,
+  pins: YandexPin[],
+  n = 5,
+): (YandexPin & { score: number })[] {
+  return pins
+    .map(pin => ({ ...pin, score: matchScore(address, pin.label) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, n);
+}
+
 export interface YandexPin {
   lat: number;
   lng: number;

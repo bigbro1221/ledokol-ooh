@@ -113,7 +113,7 @@ model Screen {
   campaignId  String
   campaign    Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   periodId    String?
-  period      CampaignPeriod? @relation(fields: [periodId], references: [id])
+  period      CampaignPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
   externalId  String?
   type        ScreenType
   city        String

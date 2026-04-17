@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Upload, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Upload, Trash2, ChevronDown, ChevronUp, Eraser } from 'lucide-react';
 
 interface Period {
   id: string;
@@ -41,9 +41,12 @@ function PeriodCard({
   onDelete: () => void;
   onSaved: (p: Period) => void;
 }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [clearingXlsx, setClearingXlsx] = useState(false);
+  const [screenCount, setScreenCount] = useState(period._count.screens);
   const [financials, setFinancials] = useState({
     totalBudgetUzs: period.totalBudgetUzs ?? '',
     productionCost: period.productionCost ?? '',
@@ -70,6 +73,17 @@ function PeriodCard({
     }
   }
 
+  async function handleClearXlsx() {
+    if (!confirm(`Удалить все поверхности периода "${period.name}"? Сам период останется.`)) return;
+    setClearingXlsx(true);
+    const res = await fetch(`/api/campaigns/${campaignId}/periods/${period.id}/screens`, { method: 'DELETE' });
+    setClearingXlsx(false);
+    if (res.ok) {
+      setScreenCount(0);
+      router.refresh();
+    }
+  }
+
   async function handleDelete() {
     if (!confirm(`Удалить период "${period.name}"? Все поверхности будут удалены.`)) return;
     setDeleting(true);
@@ -90,7 +104,7 @@ function PeriodCard({
             <div className="mt-0.5 text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
               {new Date(period.periodStart).toLocaleDateString('ru-RU')} — {new Date(period.periodEnd).toLocaleDateString('ru-RU')}
               {' · '}
-              {period._count.screens} экр.
+              {screenCount} экр.
               {period.sourceFileUrl && <span className="ml-2 text-[var(--brand-primary)]">✓ XLSX</span>}
             </div>
           </div>
@@ -104,6 +118,17 @@ function PeriodCard({
           <Upload size={13} strokeWidth={1.5} />
           XLSX
         </a>
+
+        {screenCount > 0 && (
+          <button
+            onClick={handleClearXlsx}
+            disabled={clearingXlsx}
+            title="Очистить поверхности (период остаётся)"
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-4)] hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"
+          >
+            <Eraser size={14} strokeWidth={1.5} />
+          </button>
+        )}
 
         <button
           onClick={handleDelete}
