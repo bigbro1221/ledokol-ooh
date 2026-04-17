@@ -6,6 +6,29 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
+function validateCallbackUrl(callbackUrl: string | null): string {
+  const DEFAULT_REDIRECT = '/dashboard';
+  if (!callbackUrl) return DEFAULT_REDIRECT;
+
+  try {
+    // Reject external URLs — only allow same-origin paths
+    if (callbackUrl.startsWith('http://') || callbackUrl.startsWith('https://')) {
+      return DEFAULT_REDIRECT;
+    }
+    // Reject protocol-relative URLs
+    if (callbackUrl.startsWith('//')) {
+      return DEFAULT_REDIRECT;
+    }
+    // Must start with / to be a same-origin path
+    if (!callbackUrl.startsWith('/')) {
+      return DEFAULT_REDIRECT;
+    }
+    return callbackUrl;
+  } catch {
+    return DEFAULT_REDIRECT;
+  }
+}
+
 export default function LoginPage() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -35,7 +58,7 @@ export default function LoginPage() {
       return;
     }
 
-    const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+    const callbackUrl = validateCallbackUrl(searchParams.get('callbackUrl'));
     router.push(callbackUrl);
     router.refresh();
   }
