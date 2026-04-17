@@ -13,12 +13,35 @@ interface DonutEntry {
   value: number;
 }
 
-export function ImpressionsDonut({ data, total }: { data: DonutEntry[]; total: number }) {
+export function ImpressionsDonut({
+  data,
+  total,
+  isFact,
+}: {
+  data: DonutEntry[];
+  total: number;
+  isFact: boolean;
+}) {
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="mb-6">
-        <h3 className="text-[15px] font-semibold tracking-tight">Показы по типам</h3>
-        <p className="mt-0.5 text-xs text-[var(--text-3)]">Распределение OTS по типу поверхности</p>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[15px] font-semibold tracking-tight">Показы по типам</h3>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+              isFact
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : 'bg-amber-500/20 text-amber-400'
+            }`}
+          >
+            {isFact ? 'факт' : 'план'}
+          </span>
+        </div>
+        <p className="mt-0.5 text-xs text-[var(--text-3)]">
+          {isFact
+            ? 'Фактические OTS по типу поверхности'
+            : 'Плановые OTS — фактические данные ещё не загружены'}
+        </p>
       </div>
       <div className="flex items-center gap-8">
         <div className="relative h-[180px] w-[180px] flex-shrink-0">
@@ -51,7 +74,9 @@ export function ImpressionsDonut({ data, total }: { data: DonutEntry[]; total: n
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Всего</span>
+            <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">
+              {isFact ? 'Факт' : 'План'}
+            </span>
             <span className="text-lg font-semibold">{total.toLocaleString('ru-RU')}</span>
           </div>
         </div>

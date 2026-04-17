@@ -34,6 +34,7 @@ interface Props {
   campaign: { name: string; clientName: string; period: string; status: string };
   kpis: { totalOtsPlan: number; totalOtsFact: number; totalScreens: number; cities: number; totalBudget: number; formatBudget: string };
   donutData: { name: string; value: number }[];
+  donutIsFact: boolean;
   budgetByType: { name: string; value: number }[];
   totalBudgetFromScreens: number;
   planVsFactByCity: { label: string; plan: number; fact: number }[];
@@ -49,7 +50,7 @@ interface Props {
 
 export function DashboardClient({
   locale, campaigns, selectedCampaignId, campaign, kpis,
-  donutData, budgetByType, totalBudgetFromScreens,
+  donutData, donutIsFact, budgetByType, totalBudgetFromScreens,
   planVsFactByCity, planVsFactByType,
   topScreens, tableScreens, mapScreens, cityBreakdown, allCities, filters,
   heatmapEmbedUrl,
@@ -161,7 +162,7 @@ export function DashboardClient({
       {/* Row: Plan/Fact overall bar + OTS-by-type donut */}
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PlanFactBar plan={kpis.totalOtsPlan} fact={kpis.totalOtsFact} />
-        {donutTotal > 0 && <ImpressionsDonut data={donutData} total={donutTotal} />}
+        {donutTotal > 0 && <ImpressionsDonut data={donutData} total={donutTotal} isFact={donutIsFact} />}
       </div>
 
       {/* Row: Plan vs Fact by Type + Budget by Type donut */}
@@ -175,7 +176,7 @@ export function DashboardClient({
             />
           )}
           {budgetByType.length > 0 && (
-            <BudgetByType data={budgetByType} total={totalBudgetFromScreens} />
+            <BudgetByType data={budgetByType} total={kpis.totalBudget > 0 ? kpis.totalBudget : totalBudgetFromScreens} />
           )}
         </div>
       )}

@@ -101,11 +101,12 @@ export default async function DashboardPage({
   const manualBudget = campaign.splitByPeriods ? periodsBudgetSum : campaignBudget;
   const cities = new Set(campaign.screens.map(s => s.city.trim()));
 
-  // Helper: effective price per screen (priceTotal > priceDiscounted > priceUnit)
+  // Helper: effective price per screen.
+  // Priority: priceDiscounted (с АК и НДС — final cost) → priceTotal (без АК) → priceUnit (unit price)
   const screenPrice = (s: { pricing?: { priceTotal: bigint | null; priceDiscounted: bigint | null; priceUnit: bigint | null } | null }): number => {
     if (!s.pricing) return 0;
-    if (s.pricing.priceTotal) return Number(s.pricing.priceTotal);
     if (s.pricing.priceDiscounted) return Number(s.pricing.priceDiscounted);
+    if (s.pricing.priceTotal) return Number(s.pricing.priceTotal);
     if (s.pricing.priceUnit) return Number(s.pricing.priceUnit);
     return 0;
   };
@@ -121,9 +122,10 @@ export default async function DashboardPage({
     byTypeMap[key].screens++;
   }
 
-  // OTS donut by type (plan)
+  // OTS donut by type — use fact if available, fall back to plan
+  const hasAnyFact = Object.values(byTypeMap).some(v => v.fact > 0);
   const donutData = Object.entries(byTypeMap)
-    .map(([t, v]) => ({ name: TYPE_LABELS[t] || t, value: v.plan }))
+    .map(([t, v]) => ({ name: TYPE_LABELS[t] || t, value: hasAnyFact ? v.fact : v.plan }))
     .filter(d => d.value > 0)
     .sort((a, b) => b.value - a.value);
 
@@ -200,6 +202,7 @@ export default async function DashboardPage({
       campaign={{ name: campaign.name, clientName: campaign.client.name, period, status: campaign.status }}
       kpis={{ totalOtsPlan: totalOts, totalOtsFact, totalScreens, cities: cities.size, totalBudget, formatBudget: fmt(totalBudget) }}
       donutData={donutData}
+      donutIsFact={hasAnyFact}
       budgetByType={budgetByType}
       totalBudgetFromScreens={totalBudgetFromScreens}
       planVsFactByCity={planVsFactByCity}
