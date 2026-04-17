@@ -4,18 +4,19 @@ export function BudgetBar({ total, spent, currency = 'UZS' }: { total: number; s
   const pct = total > 0 ? Math.min(100, (spent / total) * 100) : 0;
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
+    /* mobile: <640px — 16px padding, desktop 24px */
+    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
       <div className="mb-4">
         <h3 className="text-[15px] font-semibold tracking-tight">Бюджет кампании</h3>
       </div>
-      <div className="mb-3 flex items-end justify-between">
+      <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <span className="text-[28px] font-semibold tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          <span className="text-[24px] font-semibold tracking-tight sm:text-[28px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
             {pct.toFixed(0)}%
           </span>
           <span className="ml-1 text-sm text-[var(--text-3)]">освоено</span>
         </div>
-        <div className="text-right text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
+        <div className="text-[11px] text-[var(--text-3)] sm:text-right sm:text-xs" style={{ fontFamily: 'var(--font-mono)' }}>
           {formatBudget(spent)} / {formatBudget(total)} {currency}
         </div>
       </div>

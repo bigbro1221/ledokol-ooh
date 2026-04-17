@@ -34,12 +34,12 @@ export function FilterBar({
   }, [router, searchParams, locale]);
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-3">
-      {/* City filter */}
+    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      {/* City filter — full width on mobile */}
       <select
         value={activeCity}
         onChange={(e) => updateParam('city', e.target.value)}
-        className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs transition-colors hover:border-[var(--border-hi)] focus:border-[var(--border-em)] focus:outline-none"
+        className="w-full min-h-[44px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] transition-colors hover:border-[var(--border-hi)] focus:border-[var(--border-em)] focus:outline-none sm:w-auto sm:min-h-0 sm:py-1.5 sm:text-xs"
       >
         <option value="">Все города</option>
         {cities.map(c => (
@@ -47,27 +47,29 @@ export function FilterBar({
         ))}
       </select>
 
-      {/* Type filter pills */}
-      <div className="flex gap-1">
-        <button
-          onClick={() => updateParam('type', '')}
-          className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
-            !activeType ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]' : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]'
-          }`}
-        >
-          Все типы
-        </button>
-        {TYPE_OPTIONS.map(t => (
+      {/* Type filter pills — horizontal scroll on mobile */}
+      <div className="filter-pills-scroll relative -mx-3 overflow-x-auto px-3 sm:mx-0 sm:overflow-visible sm:px-0">
+        <div className="flex gap-1 min-w-max sm:min-w-0">
           <button
-            key={t.value}
-            onClick={() => updateParam('type', activeType === t.value ? '' : t.value)}
-            className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
-              activeType === t.value ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]' : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]'
+            onClick={() => updateParam('type', '')}
+            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors sm:py-1 sm:text-[11px] ${
+              !activeType ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]' : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]'
             }`}
           >
-            {t.label}
+            Все типы
           </button>
-        ))}
+          {TYPE_OPTIONS.map(t => (
+            <button
+              key={t.value}
+              onClick={() => updateParam('type', activeType === t.value ? '' : t.value)}
+              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors sm:py-1 sm:text-[11px] ${
+                activeType === t.value ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]' : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Clear all */}
@@ -79,11 +81,28 @@ export function FilterBar({
             params.delete('type');
             router.push(`/${locale}/dashboard?${params.toString()}`);
           }}
-          className="text-xs text-[var(--text-3)] hover:text-[var(--danger)]"
+          className="text-left text-xs text-[var(--text-3)] hover:text-[var(--danger)] sm:text-center"
         >
           Сбросить фильтры
         </button>
       )}
+
+      {/* mobile: <640px — hide scrollbar, momentum scroll, fade on right edge */}
+      <style jsx>{`
+        .filter-pills-scroll {
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .filter-pills-scroll::-webkit-scrollbar {
+          display: none;
+        }
+        @media (max-width: 639px) {
+          .filter-pills-scroll {
+            mask-image: linear-gradient(to right, black 80%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+          }
+        }
+      `}</style>
     </div>
   );
 }

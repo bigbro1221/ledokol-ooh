@@ -14,12 +14,13 @@ interface KPICardProps {
 export function KPICard({ label, value, unit, trend, icon, delay = 0 }: KPICardProps) {
   return (
     <div
-      className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 transition-all duration-200 hover:border-[var(--border-hi)] hover:shadow-[var(--shadow-sm)]"
+      /* mobile: <640px — tighter padding */
+      className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-all duration-200 hover:border-[var(--border-hi)] hover:shadow-[var(--shadow-sm)] sm:p-6"
       style={{
         animation: `fadeInUp 500ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms both`,
       }}
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between sm:mb-3">
         <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
           {label}
         </span>
@@ -27,9 +28,10 @@ export function KPICard({ label, value, unit, trend, icon, delay = 0 }: KPICardP
           {icon}
         </span>
       </div>
-      <div className="mb-1.5 text-[32px] font-semibold leading-tight tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+      {/* mobile: <640px — 24px, desktop 32px */}
+      <div className="mb-1 text-[24px] font-semibold leading-tight tracking-tight sm:mb-1.5 sm:text-[32px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
         {value}
-        {unit && <span className="ml-1 text-sm font-normal text-[var(--text-3)]">{unit}</span>}
+        {unit && <span className="ml-1 text-[13px] font-normal text-[var(--text-3)] sm:text-sm">{unit}</span>}
       </div>
       {trend && (
         <div
