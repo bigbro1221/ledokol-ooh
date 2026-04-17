@@ -6,6 +6,7 @@ import { StatusToggle } from '@/components/admin/status-toggle';
 import { PeriodManager } from '@/components/admin/period-manager';
 import { DeleteCampaignButton } from '@/components/admin/delete-campaign-button';
 import { ClearScreensButton } from '@/components/admin/clear-screens-button';
+import { CampaignFinancials } from '@/components/admin/campaign-financials';
 
 const TYPE_LABELS: Record<string, string> = {
   LED: 'LED экраны',
@@ -113,9 +114,12 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           </div>
         ) : (
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-            <div className="text-xs text-[var(--text-3)]">Бюджет</div>
+            <div className="text-xs text-[var(--text-3)]">Бюджет (итого)</div>
             <div className="mt-1 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
-              {campaign.totalBudgetUzs ? `${Number(campaign.totalBudgetUzs).toLocaleString('ru-RU')} UZS` : '—'}
+              {(() => {
+                const v = campaign.totalFinal ?? campaign.totalBudgetUzs;
+                return v ? `${Number(v).toLocaleString('ru-RU')} UZS` : '—';
+              })()}
             </div>
           </div>
         )}
@@ -132,32 +136,46 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           />
         </div>
       ) : (
-        /* Mono campaign: screen breakdown */
-        totalScreens > 0 ? (
-          <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
-            <h2 className="mb-4 text-[15px] font-semibold">Поверхности по типам</h2>
-            <div className="flex flex-wrap gap-3">
-              {Object.entries(byType).map(([type, count]) => (
-                <div key={type} className="rounded-[var(--radius-md)] bg-[var(--surface-2)] px-4 py-3">
-                  <div className="text-lg font-semibold">{count}</div>
-                  <div className="text-xs text-[var(--text-3)]">{TYPE_LABELS[type] || type}</div>
-                </div>
-              ))}
+        /* Mono campaign: screen breakdown + financials */
+        <div className="space-y-6">
+          {totalScreens > 0 && (
+            <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
+              <h2 className="mb-4 text-[15px] font-semibold">Поверхности по типам</h2>
+              <div className="flex flex-wrap gap-3">
+                {Object.entries(byType).map(([type, count]) => (
+                  <div key={type} className="rounded-[var(--radius-md)] bg-[var(--surface-2)] px-4 py-3">
+                    <div className="text-lg font-semibold">{count}</div>
+                    <div className="text-xs text-[var(--text-3)]">{TYPE_LABELS[type] || type}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] p-12 text-center">
-            <FileSpreadsheet size={40} className="text-[var(--text-4)]" strokeWidth={1.5} />
-            <h3 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)' }}>Нет данных</h3>
-            <p className="text-sm text-[var(--text-3)]">Загрузите XLSX медиаплан для этой кампании</p>
-            <Link
-              href={`/${locale}/admin/campaigns/${id}/upload`}
-              className="mt-2 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
-            >
-              Загрузить XLSX
-            </Link>
-          </div>
-        )
+          )}
+
+          <CampaignFinancials
+            campaignId={id}
+            initialValues={{
+              totalBudgetUzs: campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : null,
+              productionCost: campaign.productionCost ? Number(campaign.productionCost) : null,
+              agencyFeePct: campaign.agencyFeePct ? Number(campaign.agencyFeePct) : null,
+              totalFinal: campaign.totalFinal ? Number(campaign.totalFinal) : null,
+            }}
+          />
+
+          {totalScreens === 0 && (
+            <div className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] p-12 text-center">
+              <FileSpreadsheet size={40} className="text-[var(--text-4)]" strokeWidth={1.5} />
+              <h3 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)' }}>Нет данных</h3>
+              <p className="text-sm text-[var(--text-3)]">Загрузите XLSX медиаплан для этой кампании</p>
+              <Link
+                href={`/${locale}/admin/campaigns/${id}/upload`}
+                className="mt-2 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
+              >
+                Загрузить XLSX
+              </Link>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

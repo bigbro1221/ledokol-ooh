@@ -12,11 +12,11 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  LED: 'bg-blue-100 text-blue-700',
-  STATIC: 'bg-purple-100 text-purple-700',
-  STOP: 'bg-green-100 text-green-700',
-  AIRPORT: 'bg-sky-100 text-sky-700',
-  BUS: 'bg-orange-100 text-orange-700',
+  LED: 'bg-blue-500/20 text-blue-400',
+  STATIC: 'bg-purple-500/20 text-purple-400',
+  STOP: 'bg-emerald-500/20 text-emerald-400',
+  AIRPORT: 'bg-sky-500/20 text-sky-400',
+  BUS: 'bg-orange-500/20 text-orange-400',
 };
 
 function fmt(n: bigint | null | undefined): string {
@@ -181,8 +181,8 @@ export default async function CampaignScreensPage({
                   <tr
                     key={screen.id}
                     className={`border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)] ${
-                      i % 2 === 0 ? '' : 'bg-[var(--surface)]'
-                    } ${!screen.lat ? 'bg-amber-50/60' : ''}`}
+                      !screen.lat ? 'bg-amber-500/10' : i % 2 === 0 ? '' : 'bg-[var(--surface)]'
+                    }`}
                   >
                     <td className="px-3 py-2.5 text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
                       {screen.externalId || i + 1}

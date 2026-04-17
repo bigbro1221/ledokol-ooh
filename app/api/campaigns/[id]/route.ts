@@ -11,6 +11,10 @@ const UpdateCampaignSchema = z.object({
   splitByPeriods: z.boolean().optional(),
   heatmapUrl: z.string().url().optional().nullable(),
   yandexMapUrl: z.string().url().optional().nullable(),
+  totalBudgetUzs: z.number().nullable().optional(),
+  productionCost: z.number().nullable().optional(),
+  agencyFeePct: z.number().nullable().optional(),
+  totalFinal: z.number().nullable().optional(),
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -40,8 +44,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
   }
 
-  const campaign = await prisma.campaign.update({ where: { id }, data: parsed.data });
-  return NextResponse.json(campaign);
+  const { totalBudgetUzs, productionCost, agencyFeePct, totalFinal, ...rest } = parsed.data;
+
+  const campaign = await prisma.campaign.update({
+    where: { id },
+    data: {
+      ...rest,
+      ...(totalBudgetUzs !== undefined && { totalBudgetUzs: totalBudgetUzs ? BigInt(Math.round(totalBudgetUzs)) : null }),
+      ...(productionCost !== undefined && { productionCost: productionCost ? BigInt(Math.round(productionCost)) : null }),
+      ...(agencyFeePct !== undefined && { agencyFeePct: agencyFeePct ?? null }),
+      ...(totalFinal !== undefined && { totalFinal: totalFinal ? BigInt(Math.round(totalFinal)) : null }),
+    },
+  });
+
+  return NextResponse.json({
+    ...campaign,
+    totalBudgetUzs: campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : null,
+    totalBudgetRub: campaign.totalBudgetRub ? Number(campaign.totalBudgetRub) : null,
+    productionCost: campaign.productionCost ? Number(campaign.productionCost) : null,
+    totalFinal: campaign.totalFinal ? Number(campaign.totalFinal) : null,
+  });
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {

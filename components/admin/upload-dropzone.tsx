@@ -52,11 +52,11 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  LED: 'bg-blue-100 text-blue-700',
-  STATIC: 'bg-purple-100 text-purple-700',
-  STOP: 'bg-green-100 text-green-700',
-  AIRPORT: 'bg-sky-100 text-sky-700',
-  BUS: 'bg-orange-100 text-orange-700',
+  LED: 'bg-blue-500/20 text-blue-400',
+  STATIC: 'bg-purple-500/20 text-purple-400',
+  STOP: 'bg-emerald-500/20 text-emerald-400',
+  AIRPORT: 'bg-sky-500/20 text-sky-400',
+  BUS: 'bg-orange-500/20 text-orange-400',
 };
 
 function fmtOts(n: number | null | undefined) {
@@ -294,11 +294,11 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
 
           {/* Errors */}
           {preview.errors.length > 0 && (
-            <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-4">
-              <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
+            <div className="rounded-[var(--radius-md)] border border-amber-500/30 bg-amber-500/10 p-4">
+              <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-400">
                 <AlertTriangle size={13} /> Ошибки валидации ({preview.errors.length})
               </h4>
-              <div className="max-h-32 overflow-y-auto text-xs text-amber-800">
+              <div className="max-h-32 overflow-y-auto text-xs text-amber-300/80">
                 {preview.errors.slice(0, 15).map((err, i) => (
                   <div key={i}>{err.sheet} строка {err.row}: {err.field} — {err.message}</div>
                 ))}
@@ -348,7 +348,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
                         <tr
                           key={i}
                           className={`border-b border-[var(--border)] last:border-0 ${
-                            isUnmatched ? 'bg-amber-50/70' : 'hover:bg-[var(--surface-2)]'
+                            isUnmatched ? 'bg-amber-500/10' : 'hover:bg-[var(--surface-2)]'
                           }`}
                         >
                           <td className="px-3 py-2 text-[var(--text-3)]">{i + 1}</td>

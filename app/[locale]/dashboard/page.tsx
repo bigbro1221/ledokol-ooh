@@ -56,7 +56,8 @@ export default async function DashboardPage({
       splitByPeriods: true,
       totalBudgetUzs: true, totalBudgetRub: true, heatmapUrl: true,
       client: { select: { name: true } },
-      periods: { select: { totalBudgetUzs: true } },
+      totalFinal: true,
+      periods: { select: { totalBudgetUzs: true, totalFinal: true } },
       screens: {
         where: Object.keys(screenWhere).length > 0 ? screenWhere : undefined,
         select: {
@@ -84,13 +85,18 @@ export default async function DashboardPage({
   const totalOtsFact = campaign.screens.reduce((s, sc) => s + (sc.metrics?.otsFact || 0), 0);
 
   // Budget resolution:
-  // 1. For split-by-period campaigns: sum of manually-entered period.totalBudgetUzs
+  // 1. For split-by-period campaigns: sum of period.totalFinal (Итоговая сумма), fallback to period.totalBudgetUzs
   // 2. For mono campaigns: campaign.totalBudgetUzs (from XLSX Total sheet)
   // 3. Fallback: sum of screen priceTotal/priceDiscounted/priceUnit
   const periodsBudgetSum = campaign.splitByPeriods
-    ? campaign.periods.reduce((s, p) => s + (p.totalBudgetUzs ? Number(p.totalBudgetUzs) : 0), 0)
+    ? campaign.periods.reduce((s, p) => {
+        const v = p.totalFinal ?? p.totalBudgetUzs;
+        return s + (v ? Number(v) : 0);
+      }, 0)
     : 0;
-  const campaignBudget = campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : 0;
+  const campaignBudget = campaign.totalFinal
+    ? Number(campaign.totalFinal)
+    : campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : 0;
   // Resolved before screen fallback
   const manualBudget = campaign.splitByPeriods ? periodsBudgetSum : campaignBudget;
   const cities = new Set(campaign.screens.map(s => s.city.trim()));
