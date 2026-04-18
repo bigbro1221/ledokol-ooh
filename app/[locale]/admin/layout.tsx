@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { LogoutButton } from '@/components/ui/logout-button';
@@ -37,7 +38,7 @@ export default function AdminLayout({
           <button onClick={() => setMobileOpen(true)} className="text-[var(--text-2)]">
             <Menu size={20} strokeWidth={1.5} />
           </button>
-          <span className="ml-3 text-sm font-semibold">Администрирование</span>
+          <Image src="/ledokol-logo.svg" alt="Ledokol" width={100} height={28} className="ml-3 h-6 w-auto" />
         </div>
         <main className="bg-[var(--bg)] p-4 lg:p-6">{children}</main>
       </div>
@@ -61,7 +62,7 @@ function AdminSidebar({ locale, onClose }: { locale: string; onClose: () => void
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between p-4 pb-6">
-        <h1 className="text-lg font-semibold tracking-tight">{t('title')}</h1>
+        <Image src="/ledokol-logo.svg" alt="Ledokol" width={110} height={30} className="h-7 w-auto" />
         <button onClick={onClose} className="lg:hidden"><X size={18} /></button>
       </div>
       <nav className="flex-1 space-y-0.5 px-2">

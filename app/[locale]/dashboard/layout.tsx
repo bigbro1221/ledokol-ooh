@@ -4,6 +4,7 @@ import { UserNav } from '@/components/ui/user-nav';
 import { useTranslations } from 'next-intl';
 import { auth } from '@/lib/auth';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Shield } from 'lucide-react';
 
 export default async function DashboardLayout({
@@ -34,12 +35,9 @@ function DashboardNav({ locale, isAdmin }: { locale: string; isAdmin: boolean })
       style={{ transition: 'background-color 150ms var(--ease-out-soft), border-color 150ms var(--ease-out-soft)' }}
     >
       <div className="mx-auto flex h-full max-w-[1440px] items-center gap-2 px-3 sm:gap-4 sm:px-8">
-        <div
-          className="text-[18px] font-semibold tracking-tight sm:text-[22px]"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Ledokol<span className="text-[var(--brand-primary)]">.</span>
-        </div>
+        <Link href={`/${locale}/dashboard`} className="flex items-center">
+          <Image src="/ledokol-logo.svg" alt="Ledokol" width={120} height={32} priority className="h-7 w-auto sm:h-8" />
+        </Link>
 
         {isAdmin && (
           <Link
