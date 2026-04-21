@@ -93,10 +93,9 @@ export function EfficiencyStrip({
     : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5';
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
-      <div className={`grid divide-x divide-y divide-[var(--border)] ${colClass} sm:divide-y-0`}>
-        {cells.map((c, i) => (
-          <div key={i} className="p-4 sm:p-5">
+    <div className={`grid gap-px overflow-hidden rounded-[var(--radius-lg)] bg-[var(--border)] outline outline-1 outline-[var(--border)] ${colClass}`}>
+      {cells.map((c, i) => (
+          <div key={i} className="bg-[var(--surface)] p-4 sm:p-5">
             <div className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
               {c.label}
             </div>
@@ -113,7 +112,6 @@ export function EfficiencyStrip({
             )}
           </div>
         ))}
-      </div>
     </div>
   );
 }

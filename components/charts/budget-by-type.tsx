@@ -30,7 +30,7 @@ export function BudgetByType({ data, total, currency = 'UZS' }: { data: Entry[];
         <h3 className="text-[15px] font-semibold tracking-tight">Бюджет по типам</h3>
         <p className="mt-0.5 text-xs text-[var(--text-3)]">Распределение стоимости по типу поверхности</p>
       </div>
-      <div className="flex items-center gap-8">
+      <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
         <div className="relative h-[180px] w-[180px] flex-shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -62,7 +62,7 @@ export function BudgetByType({ data, total, currency = 'UZS' }: { data: Entry[];
             <span className="text-[10px] text-[var(--text-3)]">{currency}</span>
           </div>
         </div>
-        <div className="flex flex-1 flex-col gap-2.5">
+        <div className="flex w-full flex-col gap-2.5 sm:flex-1">
           {data.map((entry, i) => {
             const pct = total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
             return (
