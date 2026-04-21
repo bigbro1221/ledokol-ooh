@@ -18,6 +18,8 @@ import { BudgetByType } from '@/components/charts/budget-by-type';
 import { EfficiencyStrip } from '@/components/charts/efficiency-strip';
 import { CampaignSelector } from '@/components/ui/campaign-selector';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { PeriodFilter } from '@/components/ui/period-filter';
+import { PeriodRangeSelector } from '@/components/ui/period-range-selector';
 import { type DateFormat, formatCampaignPeriod } from '@/lib/format-period';
 
 const ScreenMap = dynamic(() => import('@/components/map/screen-map').then(m => ({ default: m.ScreenMap })), {
@@ -80,16 +82,20 @@ interface Props {
   mapScreens: { id: string; lat: number; lng: number; type: string; address: string; city: string; size: string | null; ots: number | null; otsFact: number | null; photoUrl: string | null }[];
   cityBreakdown: { city: string; screens: number; ots: number }[];
   allCities: string[];
+  availableTypes: string[];
   filters: { city: string; type: string };
   heatmapEmbedUrl: string | null;
+  periodsWithData: { id: string; name: string }[];
+  selectedFrom: string | null;
+  selectedTo: string | null;
 }
 
 export function DashboardClient({
   locale, initialDateFormat, campaigns, selectedCampaignId, campaign, kpis,
   budgetByType, totalBudgetFromScreens,
   planVsFactByCity, monthlyByCity, planVsFactByType,
-  topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, filters,
-  heatmapEmbedUrl,
+  topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, availableTypes, filters,
+  heatmapEmbedUrl, periodsWithData, selectedFrom, selectedTo,
 }: Props) {
   const [monthlyExpanded, setMonthlyExpanded] = useState(false);
 
@@ -110,11 +116,21 @@ export function DashboardClient({
     <>
       <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-      {/* Campaign Selector */}
-      {campaigns.length > 1 && (
-        <div className="mb-4">
-          <CampaignSelector campaigns={campaigns} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
+      {/* Campaign Selector + Period Range Selector */}
+      {(campaigns.length > 1 || periodsWithData.length >= 2) && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {campaigns.length > 1 && (
+            <CampaignSelector campaigns={campaigns} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
+          )}
+          {periodsWithData.length >= 2 && (
+            <PeriodRangeSelector periods={periodsWithData} locale={locale} selectedFrom={selectedFrom} selectedTo={selectedTo} />
+          )}
         </div>
+      )}
+
+      {/* Period chips */}
+      {periodsWithData.length >= 2 && (
+        <PeriodFilter periods={periodsWithData} locale={locale} selectedFrom={selectedFrom} selectedTo={selectedTo} />
       )}
 
       {/* Campaign Hero */}
@@ -136,7 +152,7 @@ export function DashboardClient({
       </div>
 
       {/* Filters */}
-      <FilterBar cities={allCities} locale={locale} />
+      <FilterBar cities={allCities} availableTypes={availableTypes} locale={locale} />
       {(filters.city || filters.type) && (
         <p className="mb-4 text-xs text-[var(--text-3)]">
           Показаны: {filters.city || 'все города'}, {filters.type || 'все типы'} — {kpis.totalScreens} поверхностей

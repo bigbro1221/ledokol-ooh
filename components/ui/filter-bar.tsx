@@ -13,9 +13,11 @@ const TYPE_OPTIONS = [
 
 export function FilterBar({
   cities,
+  availableTypes,
   locale,
 }: {
   cities: string[];
+  availableTypes: string[];
   locale: string;
 }) {
   const router = useRouter();
@@ -58,7 +60,7 @@ export function FilterBar({
           >
             Все типы
           </button>
-          {TYPE_OPTIONS.map(t => (
+          {TYPE_OPTIONS.filter(t => availableTypes.includes(t.value)).map(t => (
             <button
               key={t.value}
               onClick={() => updateParam('type', activeType === t.value ? '' : t.value)}

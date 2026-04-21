@@ -16,10 +16,10 @@ export default async function DashboardPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ campaign?: string; city?: string; type?: string }>;
+  searchParams: Promise<{ campaign?: string; city?: string; type?: string; periodFrom?: string; periodTo?: string }>;
 }) {
   const { locale } = await params;
-  const { campaign: campaignIdParam, city: cityFilter, type: typeFilter } = await searchParams;
+  const { campaign: campaignIdParam, city: cityFilter, type: typeFilter, periodFrom: periodFromParam, periodTo: periodToParam } = await searchParams;
   const session = await auth();
   if (!session?.user) redirect(`/${locale}/login`);
 
@@ -45,7 +45,6 @@ export default async function DashboardPage({
     );
   }
 
-  // Build screen filter
   const screenWhere: { type?: ScreenType; city?: string } = {};
   if (typeFilter && ['LED','STATIC','STOP','AIRPORT','BUS'].includes(typeFilter)) {
     screenWhere.type = typeFilter as ScreenType;
@@ -61,7 +60,10 @@ export default async function DashboardPage({
         totalBudgetUzs: true, totalBudgetRub: true, heatmapUrl: true,
         client: { select: { name: true } },
         totalFinal: true,
-        periods: { select: { id: true, name: true, totalBudgetUzs: true, totalFinal: true }, orderBy: { periodStart: 'asc' as const } },
+        periods: {
+          select: { id: true, name: true, totalBudgetUzs: true, totalFinal: true, periodStart: true, periodEnd: true },
+          orderBy: { periodStart: 'asc' as const },
+        },
         screens: {
           where: Object.keys(screenWhere).length > 0 ? screenWhere : undefined,
           select: {
@@ -81,7 +83,47 @@ export default async function DashboardPage({
 
   const initialDateFormat = prefs.dateFormat.toLowerCase() as DateFormat;
 
-  // Also get all cities for filter (unfiltered)
+  // Periods that have at least one metrics row with data
+  const periodsWithData = campaign.splitByPeriods
+    ? campaign.periods.filter(p =>
+        campaign.screens.some(s => s.metrics.some(m => m.periodId === p.id))
+      )
+    : [];
+
+  const allPeriodIds = periodsWithData.map(p => p.id);
+
+  // Validate from/to against periods with data
+  const selectedFrom = periodFromParam && allPeriodIds.includes(periodFromParam) ? periodFromParam : null;
+  const selectedTo = periodToParam && allPeriodIds.includes(periodToParam) ? periodToParam : null;
+
+  // Build the set of period IDs included in the selected range
+  const fromIdx = selectedFrom ? allPeriodIds.indexOf(selectedFrom) : -1;
+  const toIdx = selectedTo ? allPeriodIds.indexOf(selectedTo) : -1;
+  const rangeIds: Set<string> = (fromIdx >= 0 && toIdx >= 0)
+    ? new Set(allPeriodIds.slice(Math.min(fromIdx, toIdx), Math.max(fromIdx, toIdx) + 1))
+    : new Set();
+
+  const isFiltered = rangeIds.size > 0;
+
+  // For the campaign title: show from-period start → to-period end when filtered
+  const displayPeriodStart = isFiltered
+    ? periodsWithData[Math.min(fromIdx, toIdx)].periodStart
+    : null;
+  const displayPeriodEnd = isFiltered
+    ? periodsWithData[Math.max(fromIdx, toIdx)].periodEnd
+    : null;
+
+  // Filter helpers — only restrict when a range is active
+  const filterMetrics = <T extends { periodId: string | null }>(metrics: T[]): T[] => {
+    if (!isFiltered) return metrics;
+    return metrics.filter(m => m.periodId && rangeIds.has(m.periodId));
+  };
+
+  const filterPricing = <T extends { periodId: string | null }>(pricing: T[]): T[] => {
+    if (!isFiltered) return pricing;
+    return pricing.filter(p => p.periodId && rangeIds.has(p.periodId));
+  };
+
   const allCities = await prisma.screen.findMany({
     where: { campaignId: selectedId },
     select: { city: true },
@@ -91,21 +133,19 @@ export default async function DashboardPage({
 
   const totalScreens = campaign.screens.length;
 
-  // Aggregate OTS across all periods per screen, then sum
   const totalOts = campaign.screens.reduce((s, sc) =>
-    s + sc.metrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0), 0);
+    s + filterMetrics(sc.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0), 0);
   const totalOtsFact = campaign.screens.reduce((s, sc) =>
-    s + sc.metrics.reduce((ms, m) => ms + (m.otsFact || 0), 0), 0);
+    s + filterMetrics(sc.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0), 0);
 
-  // Budget resolution:
-  // 1. For split-by-period campaigns: sum of period.totalFinal, fallback to period.totalBudgetUzs
-  // 2. For mono campaigns: campaign.totalBudgetUzs (from XLSX Total sheet)
-  // 3. Fallback: sum of screen priceTotal/priceDiscounted/priceUnit across all periods
+  // Budget resolution — sum only periods within selected range (or all if no filter)
   const periodsBudgetSum = campaign.splitByPeriods
-    ? campaign.periods.reduce((s, p) => {
-        const v = p.totalFinal ?? p.totalBudgetUzs;
-        return s + (v ? Number(v) : 0);
-      }, 0)
+    ? campaign.periods
+        .filter(p => !isFiltered || rangeIds.has(p.id))
+        .reduce((s, p) => {
+          const v = p.totalFinal ?? p.totalBudgetUzs;
+          return s + (v ? Number(v) : 0);
+        }, 0)
     : 0;
   const campaignBudget = campaign.totalFinal
     ? Number(campaign.totalFinal)
@@ -113,10 +153,8 @@ export default async function DashboardPage({
   const manualBudget = campaign.splitByPeriods ? periodsBudgetSum : campaignBudget;
   const cities = new Set(campaign.screens.map(s => s.city.trim()));
 
-  // Effective price for a screen: sum across all its pricing rows (one per period).
-  // Within each row, priority: priceDiscounted → priceTotal → priceUnit.
-  const screenTotalPrice = (s: { pricing: { priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[] }): number => {
-    return s.pricing.reduce((sum, p) => {
+  const screenTotalPrice = (s: { pricing: { periodId: string | null; priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[] }): number => {
+    return filterPricing(s.pricing).reduce((sum, p) => {
       if (p.priceDiscounted) return sum + Number(p.priceDiscounted);
       if (p.priceTotal) return sum + Number(p.priceTotal);
       if (p.priceUnit) return sum + Number(p.priceUnit);
@@ -124,24 +162,21 @@ export default async function DashboardPage({
     }, 0);
   };
 
-  // By type: OTS plan, OTS fact, budget share, screens count
   const byTypeMap: Record<string, { plan: number; fact: number; budget: number; screens: number }> = {};
   for (const s of campaign.screens) {
     const key = s.type;
     if (!byTypeMap[key]) byTypeMap[key] = { plan: 0, fact: 0, budget: 0, screens: 0 };
-    byTypeMap[key].plan   += s.metrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0);
-    byTypeMap[key].fact   += s.metrics.reduce((ms, m) => ms + (m.otsFact || 0), 0);
+    byTypeMap[key].plan   += filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0);
+    byTypeMap[key].fact   += filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0);
     byTypeMap[key].budget += screenTotalPrice(s);
     byTypeMap[key].screens++;
   }
 
-  // Plan-vs-fact by type
   const planVsFactByType = Object.entries(byTypeMap)
     .map(([t, v]) => ({ label: TYPE_LABELS[t] || t, plan: v.plan, fact: v.fact }))
     .filter(d => d.plan > 0)
     .sort((a, b) => b.plan - a.plan);
 
-  // Budget share by type
   const budgetByType = Object.entries(byTypeMap)
     .map(([t, v]) => ({ name: TYPE_LABELS[t] || t, value: v.budget, count: v.screens }))
     .filter(d => d.value > 0)
@@ -149,28 +184,25 @@ export default async function DashboardPage({
   const totalBudgetFromScreens = budgetByType.reduce((s, d) => s + d.value, 0);
   const totalBudget = manualBudget > 0 ? manualBudget : totalBudgetFromScreens;
 
-  // By city: plan, fact, screens
   const byCityMap: Record<string, { plan: number; fact: number; screens: number }> = {};
   for (const s of campaign.screens) {
     const c = s.city.trim();
     if (!byCityMap[c]) byCityMap[c] = { plan: 0, fact: 0, screens: 0 };
-    byCityMap[c].plan += s.metrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0);
-    byCityMap[c].fact += s.metrics.reduce((ms, m) => ms + (m.otsFact || 0), 0);
+    byCityMap[c].plan += filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0);
+    byCityMap[c].fact += filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0);
     byCityMap[c].screens++;
   }
 
-  // CityBreakdown shape: city, screens, ots (plan)
   const cityBreakdown = Object.entries(byCityMap)
     .map(([city, d]) => ({ city, screens: d.screens, ots: d.plan }))
     .sort((a, b) => b.ots - a.ots);
 
-  // Plan-vs-fact by city
   const planVsFactByCity = Object.entries(byCityMap)
     .map(([city, d]) => ({ label: city, plan: d.plan, fact: d.fact }))
     .filter(d => d.plan > 0)
     .sort((a, b) => b.plan - a.plan);
 
-  // Monthly plan/fact by city — group screen metrics by periodId
+  // Monthly breakdown always uses all metrics regardless of period filter
   const monthlyByCity: { city: string; months: { label: string; plan: number; fact: number }[] }[] = [];
   if (campaign.splitByPeriods && campaign.periods.length > 0) {
     const map: Record<string, Record<string, { plan: number; fact: number }>> = {};
@@ -195,16 +227,15 @@ export default async function DashboardPage({
     );
   }
 
-  // Top screens by total plan OTS across all periods
   const topScreens = campaign.screens
-    .map(s => ({ address: s.address, ots: s.metrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0) }))
+    .map(s => ({ address: s.address, ots: filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0) }))
     .filter(s => s.ots > 0)
     .sort((a, b) => b.ots - a.ots).slice(0, 20);
 
   const tableScreens: ScreenRow[] = campaign.screens
     .map(s => {
-      const totalOtsPlan = s.metrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0);
-      const totalOtsFact = s.metrics.reduce((ms, m) => ms + (m.otsFact || 0), 0);
+      const totalOtsPlan = filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0);
+      const totalOtsFact = filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0);
       const price = screenTotalPrice(s);
       return {
         id: s.id,
@@ -227,7 +258,6 @@ export default async function DashboardPage({
     })
     .sort((a, b) => (b.otsPlan ?? 0) - (a.otsPlan ?? 0));
 
-  // Period filter in admin table — not used on dashboard, but required by ScreensTable props
   const campaignPeriods = campaign.splitByPeriods
     ? campaign.periods.map(p => ({ id: p.id, name: p.name }))
     : [];
@@ -242,8 +272,8 @@ export default async function DashboardPage({
       address: s.address,
       city: s.city.trim(),
       size: s.size,
-      ots: s.metrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0) || null,
-      otsFact: s.metrics.reduce((ms, m) => ms + (m.otsFact || 0), 0) || null,
+      ots: filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0) || null,
+      otsFact: filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0) || null,
       photoUrl: s.photoUrl,
     }));
 
@@ -273,8 +303,8 @@ export default async function DashboardPage({
       campaign={{
         name: campaign.name,
         clientName: campaign.client.name,
-        periodStart: campaign.periodStart.toISOString(),
-        periodEnd: campaign.periodEnd.toISOString(),
+        periodStart: displayPeriodStart ? displayPeriodStart.toISOString() : campaign.periodStart.toISOString(),
+        periodEnd: displayPeriodEnd ? displayPeriodEnd.toISOString() : campaign.periodEnd.toISOString(),
         status: campaign.status,
       }}
       kpis={{ totalOtsPlan: totalOts, totalOtsFact, totalScreens, cities: cities.size, totalBudget, formatBudget: fmt(totalBudget) }}
@@ -289,8 +319,12 @@ export default async function DashboardPage({
       mapScreens={mapScreens}
       cityBreakdown={cityBreakdown}
       allCities={allCities.map(c => c.city.trim())}
+      availableTypes={Array.from(new Set(campaign.screens.map(s => s.type)))}
       filters={{ city: cityFilter || '', type: typeFilter || '' }}
       heatmapEmbedUrl={heatmapEmbedUrl}
+      periodsWithData={periodsWithData.map(p => ({ id: p.id, name: p.name }))}
+      selectedFrom={selectedFrom}
+      selectedTo={selectedTo}
     />
   );
 }

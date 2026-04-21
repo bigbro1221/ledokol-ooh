@@ -57,6 +57,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (body.periodId) {
         await tx.screenMetrics.deleteMany({ where: { periodId: body.periodId } });
         await tx.screenPricing.deleteMany({ where: { periodId: body.periodId } });
+        await tx.screen.deleteMany({
+          where: { campaignId, metrics: { none: {} }, pricing: { none: {} } },
+        });
       } else {
         // Mono upload: clear null-period metrics/pricing, then remove orphaned screens.
         await tx.screenMetrics.deleteMany({ where: { screen: { campaignId }, periodId: null } });
