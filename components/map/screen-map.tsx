@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -41,7 +41,6 @@ interface MapScreen {
 export function ScreenMap({ screens }: { screens: MapScreen[] }) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [heatmap, setHeatmap] = useState(false);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const { resolvedTheme } = useTheme();
 
@@ -161,19 +160,6 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screensWithCoords, resolvedTheme]);
 
-  // Toggle heatmap
-  useEffect(() => {
-    const m = map.current;
-    if (!m || !m.isStyleLoaded()) return;
-    try {
-      m.setLayoutProperty('heatmap-layer', 'visibility', heatmap ? 'visible' : 'none');
-      markersRef.current.forEach(marker => {
-        marker.getElement().style.display = heatmap ? 'none' : 'block';
-      });
-    } catch {
-      // Layer might not be ready yet
-    }
-  }, [heatmap]);
 
   if (!TOKEN || TOKEN.includes('placeholder')) {
     return (
@@ -199,20 +185,6 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
         <div>
           <h3 className="text-[15px] font-semibold tracking-tight">Расположение экранов</h3>
           <p className="mt-0.5 text-xs text-[var(--text-3)]">{screensWithCoords.length} поверхностей с координатами</p>
-        </div>
-        <div className="flex rounded-[var(--radius-md)] bg-[var(--surface-2)] p-0.5">
-          <button
-            onClick={() => setHeatmap(false)}
-            className={`rounded-[var(--radius-sm)] px-2.5 py-1 text-[11px] transition-all ${!heatmap ? 'bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-sm)]' : 'text-[var(--text-3)]'}`}
-          >
-            Маркеры
-          </button>
-          <button
-            onClick={() => setHeatmap(true)}
-            className={`rounded-[var(--radius-sm)] px-2.5 py-1 text-[11px] transition-all ${heatmap ? 'bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-sm)]' : 'text-[var(--text-3)]'}`}
-          >
-            Тепловая карта
-          </button>
         </div>
       </div>
 
