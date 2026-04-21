@@ -27,6 +27,9 @@
   "dashboard": {
     "title": "Панель управления",
     "myCampaigns": "Мои кампании",
-    "selectCampaign": "Выберите кампанию"
+    "selectCampaign": "Выберите кампанию",
+    "budgetWithFees": "Бюджет с учётом АК/НДС",
+    "avgImpressionsPerDay": "Сред. кол-во показов в день",
+    "geography": "География"
   }
 }

@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import { User, Mail, Shield, Building2, Globe, Calendar } from 'lucide-react';
 import Link from 'next/link';
+import { getUserPreferences } from '@/lib/user-preferences';
+import { DateFormatPicker } from '@/components/ui/date-format-picker';
+import type { DateFormat } from '@/lib/format-period';
 
 const ROLE_LABELS: Record<string, string> = { ADMIN: 'Администратор', CLIENT: 'Клиент' };
 const LANG_LABELS: Record<string, string> = { RU: 'Русский', EN: 'English', UZ: "O'zbek", TR: 'Türkçe' };
@@ -12,15 +15,20 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   const session = await auth();
   if (!session?.user) redirect(`/${locale}/login`);
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      id: true, email: true, role: true, language: true, createdAt: true,
-      client: { select: { name: true, contactPerson: true } },
-    },
-  });
+  const [user, prefs] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true, email: true, role: true, language: true, createdAt: true,
+        client: { select: { name: true, contactPerson: true } },
+      },
+    }),
+    getUserPreferences(session.user.id),
+  ]);
 
   if (!user) redirect(`/${locale}/login`);
+
+  const initialDateFormat = prefs.dateFormat.toLowerCase() as DateFormat;
 
   const isAdmin = user.role === 'ADMIN';
 
@@ -75,6 +83,17 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
                 <span className="text-[14px] text-[var(--text)]">{value}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Display preferences card */}
+        <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
+          <div className="border-b border-[var(--border)] px-6 py-4">
+            <h2 className="text-[15px] font-semibold">Формат дат</h2>
+            <p className="mt-0.5 text-[13px] text-[var(--text-3)]">Как отображать период кампании в заголовке</p>
+          </div>
+          <div className="p-6">
+            <DateFormatPicker initialFormat={initialDateFormat} locale={locale} />
           </div>
         </div>
 

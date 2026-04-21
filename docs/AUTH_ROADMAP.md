@@ -141,7 +141,74 @@ A page at `/admin/settings/email-suppressions` (or a tab within `/admin/users`) 
 - [ ] Should removing a suppression also automatically trigger a resend of the pending invite, or require a separate admin action?
 - [ ] Alert on complaint rate spike — SES has a CloudWatch metric `Reputation.ComplaintRate`; set an alarm at > 0.1 % (SES's own warning threshold)
 
-#### 1.4 Invite flow — admin side
+#### 1.4 Input-time email validation (protecting SES sender reputation)
+
+**Why this belongs in Phase 1:** Admin-driven invite flows are uniquely exposed to bounce-rate problems — admins type email addresses on behalf of other people, often from memory or copy-paste from a spreadsheet. At MVP invite volumes, a single typo (`@gmial.com`) can push the SES account's bounce rate above AWS's 5 % warning threshold. The mitigations below catch bad addresses *before* they reach SES and complement the reactive bounce-handling in section 1.3.
+
+**RFC 5322 syntax validation:**
+- Client-side: the invite form's email field must use a Zod/regex check that goes beyond the browser default — reject addresses without a TLD and reject local-only addresses like `user@localhost`.
+- Server-side: `POST /api/users` must re-validate the email with Zod before any DB write or email send. Never trust client-side-only validation.
+
+**Typo-correction suggestions (mailcheck.js):**
+
+Add `mailcheck` (or equivalent) to the admin invite form to flag common domain typos before submit:
+
+```
+"Did you mean john@gmail.com?" — shown inline below the email field, dismissed with a click
+```
+
+Domain list to cover at minimum: `gmail.com`, `googlemail.com`, `outlook.com`, `hotmail.com`, `yahoo.com`, `icloud.com`, `proton.me`, `protonmail.com`, `mail.ru`, `yandex.ru`. The suggestion is advisory — admin can dismiss and submit the original address.
+
+**MX record lookup (server-side, pre-invite):**
+
+Before creating the user and sending the invite, verify the domain has valid MX records:
+
+```typescript
+// lib/email.ts
+import { resolve } from 'node:dns/promises';
+
+async function domainHasMx(email: string): Promise<boolean> {
+  const domain = email.split('@')[1];
+  try {
+    const records = await resolve(domain, 'MX');
+    return records.length > 0;
+  } catch {
+    return false; // NXDOMAIN or no MX records
+  }
+}
+```
+
+Cache results keyed by domain for 24 h (in-memory `Map` is fine for a single-process server; switch to Redis if running multiple replicas). Return a 422 with a human-readable error if lookup fails:
+
+```json
+{ "error": "EMAIL_DOMAIN_NO_MX", "message": "The domain example.com has no mail servers. Check the address and try again." }
+```
+
+**Two-step invite confirmation UX:**
+
+After the admin fills in the invite form and clicks "Send invite", show a preview screen before dispatch:
+
+> **Confirm invite**  
+> An invite will be sent to: **john.smith@acme.com**  
+> Role: Client · Company: Acme Corp  
+> [Send invite] [Go back and edit]
+
+This gives the admin one last chance to spot a surface-level typo. The "Send invite" button on the confirmation screen is what triggers `POST /api/users`.
+
+**Pre-send suppression warning (upgrade from silent skip):**
+
+The pre-send check in section 1.3 short-circuits silently. In admin-initiated flows (invite and resend-invite), change the behaviour: return a warning response that the UI surfaces as:
+
+> **This address was previously suppressed (hard bounce). Are you sure?**  
+> [Remove suppression and send] [Cancel]
+
+"Remove suppression and send" calls a combined endpoint that clears the `SuppressedEmail` record and dispatches the invite in a single transaction.
+
+**Open questions specific to 1.4:**
+- [ ] Should a failed MX lookup hard-block the invite, or show a warning and allow admin override?
+- [ ] MX cache invalidation — 24 h TTL is fine for most cases, but a domain could add MX records mid-day; consider a manual "retry" path.
+
+#### 1.5 Invite flow — admin side
 
 - Remove the `password` field from the Create User form.
 - `POST /api/users` no longer accepts `password`. Instead:
@@ -151,30 +218,30 @@ A page at `/admin/settings/email-suppressions` (or a tab within `/admin/users`) 
 - Add a "Resend invite" button on the user list/edit page → calls `POST /api/users/[id]/resend-invite` → rotates token, resets expiry, resends email.
 - Status column on the user list should show `INVITED | ACTIVE | DISABLED`.
 
-#### 1.5 Invite acceptance — user side
+#### 1.6 Invite acceptance — user side
 
 New pages:
 - `/invite/accept?token=…` — validates token (hash lookup, expiry check, status=INVITED), then shows a set-password form.
 - On submit: hash password, set `passwordHash`, flip `status → ACTIVE`, clear `inviteTokenHash` / `inviteTokenExpiry`.
-- Immediately sign the user in and redirect to the 2FA advisory screen (1.5).
+- Immediately sign the user in and redirect to the 2FA advisory screen (1.7).
 
 Token validation rules:
 - Token not found → generic "link is invalid or expired" error (don't leak which).
 - Token found but expired → show "link expired, request a new one" with a mailto/contact link.
 - Token found, valid, but `status != INVITED` → "account already activated, go to login".
 
-#### 1.6 Post-invite 2FA advisory screen
+#### 1.7 Post-invite 2FA advisory screen
 
 Shown once, immediately after the user sets their password. Not shown again unless they visit Settings.
 
 Three options:
-- **Enable 2FA now** → TOTP enrollment flow (1.6) or Google SSO link (1.7)
+- **Enable 2FA now** → TOTP enrollment flow (1.8) or Google SSO link (1.9)
 - **Remind me later** → session cookie / user preference; shown again next login for N days (suggested: 7)
 - **Skip for now** → dismisses permanently until admin forces it (Phase 2)
 
 Middleware must not enforce 2FA at this stage — `AppSettings.twoFactorRequired = false` is the gate.
 
-#### 1.7 TOTP enrollment
+#### 1.8 TOTP enrollment
 
 Library: `otpauth` (maintained, browser + Node, no native deps).
 
@@ -185,7 +252,7 @@ Flow:
 4. On success: set `verifiedAt = now()`, generate 8 recovery codes (`crypto.randomBytes(5).toString('hex')`), store bcrypt hashes in `RecoveryCode`, display the plaintext codes **once** with a download/copy prompt.
 5. Codes are displayed with a clear warning: "These codes will not be shown again."
 
-#### 1.8 Google SSO
+#### 1.9 Google SSO
 
 NextAuth already supports the Google provider — wire it up with env vars `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
@@ -196,7 +263,7 @@ Behavior:
 
 Open question: Should linking Google auto-satisfy 2FA? Recommended: yes for the advisory screen, but TOTP enrollment should remain independent if the org later requires TOTP specifically.
 
-#### 1.9 TOTP at login
+#### 1.10 TOTP at login
 
 Modified `authorize` callback:
 1. Validate email + password as today.
@@ -206,7 +273,7 @@ Modified `authorize` callback:
 
 Implementation note: NextAuth 5 (beta) handles this cleanly with a custom `signIn` callback and a separate challenge route. Alternatively, a short-lived encrypted cookie can carry the partial state.
 
-#### 1.10 Recovery code flow
+#### 1.11 Recovery code flow
 
 On the TOTP challenge page: "Lost your authenticator?" link.
 - User pastes one of their recovery codes.
@@ -214,7 +281,7 @@ On the TOTP challenge page: "Lost your authenticator?" link.
 - If valid: mark code `usedAt = now()`, sign the user in, then **immediately redirect to forced TOTP re-enrollment** (not optional this time).
 - Issue 8 fresh recovery codes on successful re-enrollment.
 
-#### 1.11 AppSettings read in middleware
+#### 1.12 AppSettings read in middleware
 
 `middleware.ts` must call a lightweight DB read (or cache) for `AppSettings.twoFactorRequired`. When `false` (Phase 1), enrollment is advisory only and the middleware never blocks. When `true` (Phase 2), users without a verified `TotpCredential` are gated at the middleware level.
 
@@ -230,6 +297,11 @@ Caching strategy for middleware: since Next.js middleware runs on the edge (or N
 - [ ] Bounce/complaint handler: hard bounce → suppress, complaint → suppress, soft bounce → count → suppress at threshold
 - [ ] SES account-level suppression enabled via `PutAccountSuppressionAttributes`
 - [ ] **Admin suppression management UI** at `/admin/settings/email-suppressions`
+- [ ] RFC 5322 syntax validation on invite form — client-side (Zod) and server-side (`POST /api/users`)
+- [ ] Mailcheck.js typo-correction hint on invite form ("Did you mean…?")
+- [ ] MX record lookup + 24 h domain cache before creating invite; 422 on no MX records
+- [ ] Two-step invite confirmation UX — preview screen before dispatch
+- [ ] Pre-send suppression warning in admin UI (upgrade from silent skip to "address previously bounced — proceed?")
 - [ ] Invite flow: admin creates user → invite email sent, status = INVITED
 - [ ] Invite acceptance page: token validation, password set, status → ACTIVE
 - [ ] 2FA advisory screen post-invite (Enable now / Remind me later / Skip)

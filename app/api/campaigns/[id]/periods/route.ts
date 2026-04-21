@@ -9,7 +9,7 @@ const CreatePeriodSchema = z.object({
   periodEnd: z.string().transform(s => new Date(s)),
   totalBudgetUzs: z.number().nullable().optional(),
   productionCost: z.number().nullable().optional(),
-  agencyFeePct: z.number().nullable().optional(),
+  acRate: z.number().min(0).max(1).optional().default(0),
   totalFinal: z.number().nullable().optional(),
 });
 
@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id: campaignId } = await params;
   const periods = await prisma.campaignPeriod.findMany({
     where: { campaignId },
-    include: { _count: { select: { screens: true } } },
+    include: { _count: { select: { metrics: true } } },
     orderBy: { periodStart: 'asc' },
   });
 
@@ -46,7 +46,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const parsed = CreatePeriodSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
 
-  const { totalBudgetUzs, productionCost, agencyFeePct, totalFinal, ...rest } = parsed.data;
+  const { totalBudgetUzs, productionCost, acRate, totalFinal, ...rest } = parsed.data;
 
   const period = await prisma.campaignPeriod.create({
     data: {
@@ -54,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       campaignId,
       totalBudgetUzs: totalBudgetUzs ? BigInt(Math.round(totalBudgetUzs)) : null,
       productionCost: productionCost ? BigInt(Math.round(productionCost)) : null,
-      agencyFeePct: agencyFeePct ?? null,
+      acRate: acRate ?? 0,
       totalFinal: totalFinal ? BigInt(Math.round(totalFinal)) : null,
     },
   });

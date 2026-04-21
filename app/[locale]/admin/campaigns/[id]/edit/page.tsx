@@ -17,6 +17,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
         splitByPeriods: true,
         heatmapUrl: true,
         yandexMapUrl: true,
+        acRate: true,
       },
     }),
     prisma.client.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
@@ -45,6 +46,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
           splitByPeriods: campaign.splitByPeriods,
           heatmapUrl: campaign.heatmapUrl,
           yandexMapUrl: campaign.yandexMapUrl,
+          acRate: campaign.acRate ? String(Number(campaign.acRate) * 100) : '',
         }}
       />
     </div>

@@ -39,17 +39,35 @@ enum DataSource {
   API
 }
 
+enum DateFormat {
+  SMART_HYBRID
+  MONTH_ONLY
+  FULL_RANGE
+  NUMERIC_DMY
+  NUMERIC_DMON
+}
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String           @id @default(uuid())
+  email        String           @unique
   passwordHash String
   role         UserRole
-  enabled      Boolean  @default(true)
-  language     Language @default(RU)
+  enabled      Boolean          @default(true)
+  language     Language         @default(RU)
   clientId     String?
-  client       Client?  @relation(fields: [clientId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  client       Client?          @relation(fields: [clientId], references: [id])
+  preferences  UserPreferences?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model UserPreferences {
+  id         String     @id @default(uuid())
+  userId     String     @unique
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateFormat DateFormat @default(SMART_HYBRID)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model Client {
@@ -78,7 +96,7 @@ model Campaign {
   totalBudgetUzs BigInt?
   totalBudgetRub BigInt?
   productionCost BigInt?
-  agencyFeePct   Decimal?
+  acRate         Decimal  @default("0") @db.Decimal(5, 4)
   totalFinal     BigInt?
   screens        Screen[]
   periods        CampaignPeriod[]
@@ -90,74 +108,84 @@ model Campaign {
 }
 
 model CampaignPeriod {
-  id             String   @id @default(uuid())
+  id             String          @id @default(uuid())
   campaignId     String
-  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaign       Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name           String
   periodStart    DateTime
   periodEnd      DateTime
   sourceFileUrl  String?
   totalBudgetUzs BigInt?
   productionCost BigInt?
-  agencyFeePct   Decimal?
+  acRate         Decimal         @default("0") @db.Decimal(5, 4)
   totalFinal     BigInt?
-  screens        Screen[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  metrics        ScreenMetrics[]
+  pricing        ScreenPricing[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([campaignId])
 }
 
 model Screen {
-  id          String          @id @default(uuid())
-  campaignId  String
-  campaign    Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  periodId    String?
-  period      CampaignPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  externalId  String?
-  type        ScreenType
-  city        String
-  address     String
-  lat         Float?
-  lng         Float?
-  size        String?
-  resolution  String?
-  photoUrl    String?
-  pricing     ScreenPricing?
-  metrics     ScreenMetrics?
-  impressions Impression[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id                String          @id @default(uuid())
+  campaignId        String
+  campaign          Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  externalId        String?
+  type              ScreenType
+  city              String
+  address           String
+  lat               Float?
+  lng               Float?
+  size              String?
+  resolution        String?
+  impressionsPerDay Int?
+  photoUrl          String?
+  pricing           ScreenPricing[]
+  metrics           ScreenMetrics[]
+  impressions       Impression[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
+  @@unique([campaignId, city, address])
   @@index([campaignId])
-  @@index([periodId])
   @@index([city])
   @@index([type])
 }
 
 model ScreenPricing {
-  id              String   @id @default(uuid())
-  screenId        String   @unique
-  screen          Screen   @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  id              String          @id @default(uuid())
+  screenId        String
+  screen          Screen          @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  periodId        String?
+  period          CampaignPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
   priceUnit       BigInt?
   priceDiscounted BigInt?
   priceTotal      BigInt?
   priceRub        BigInt?
-  commissionPct   Decimal?   // AK% — agency fee percentage
-  agencyFeeAmt    BigInt?    // AK сумма — agency fee absolute amount
+  commissionPct   Decimal?
+  agencyFeeAmt    BigInt?
   productionCost  BigInt?
+
+  @@index([screenId])
+  @@index([periodId])
 }
 
 model ScreenMetrics {
-  id         String     @id @default(uuid())
-  screenId   String     @unique
-  screen     Screen     @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  id         String          @id @default(uuid())
+  screenId   String
+  screen     Screen          @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  periodId   String?
+  period     CampaignPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
   otsPlan    Int?
   ratingPlan Decimal?
   otsFact    Int?
   ratingFact Decimal?
   universe   Int?
-  source     DataSource @default(XLSX)
+  source     DataSource      @default(XLSX)
+
+  @@index([screenId])
+  @@index([periodId])
 }
 
 model Impression {
@@ -170,4 +198,12 @@ model Impression {
 
   @@unique([screenId, date])
   @@index([date])
+}
+
+model AppSettings {
+  id                Int      @id @default(1)
+  vatRate           Decimal  @default("0.12") @db.Decimal(5, 4)
+  twoFactorRequired Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now())
 }

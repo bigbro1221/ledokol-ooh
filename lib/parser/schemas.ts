@@ -8,6 +8,7 @@ export const ScreenRowSchema = z.object({
   resolution: z.string().nullable(),
   externalId: z.string().nullable(),
   photoUrl: z.string().url().nullable().or(z.literal(null)),
+  impressionsPerDay: z.number().nullable(),
   priceUnit: z.number().nullable(),
   priceDiscounted: z.number().nullable(),
   priceTotal: z.number().nullable(),

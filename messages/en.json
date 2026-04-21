@@ -27,6 +27,9 @@
   "dashboard": {
     "title": "Dashboard",
     "myCampaigns": "My Campaigns",
-    "selectCampaign": "Select a campaign"
+    "selectCampaign": "Select a campaign",
+    "budgetWithFees": "Budget (incl. AC/VAT)",
+    "avgImpressionsPerDay": "Avg. impressions per day",
+    "geography": "Geography"
   }
 }

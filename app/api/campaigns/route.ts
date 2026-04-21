@@ -11,6 +11,7 @@ const CreateCampaignSchema = z.object({
   splitByPeriods: z.boolean().optional().default(false),
   heatmapUrl: z.string().url().optional().nullable(),
   yandexMapUrl: z.string().url().optional().nullable(),
+  acRate: z.number().min(0).max(1).optional().default(0),
 });
 
 export async function GET() {

@@ -13,7 +13,7 @@ const UpdateCampaignSchema = z.object({
   yandexMapUrl: z.string().url().optional().nullable(),
   totalBudgetUzs: z.number().nullable().optional(),
   productionCost: z.number().nullable().optional(),
-  agencyFeePct: z.number().nullable().optional(),
+  acRate: z.number().min(0).max(1).optional(),
   totalFinal: z.number().nullable().optional(),
 });
 
@@ -44,15 +44,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { totalBudgetUzs, productionCost, agencyFeePct, totalFinal, ...rest } = parsed.data;
+  const { totalBudgetUzs, productionCost, totalFinal, acRate, ...rest } = parsed.data;
 
   const campaign = await prisma.campaign.update({
     where: { id },
     data: {
       ...rest,
+      ...(acRate !== undefined && { acRate }),
       ...(totalBudgetUzs !== undefined && { totalBudgetUzs: totalBudgetUzs ? BigInt(Math.round(totalBudgetUzs)) : null }),
       ...(productionCost !== undefined && { productionCost: productionCost ? BigInt(Math.round(productionCost)) : null }),
-      ...(agencyFeePct !== undefined && { agencyFeePct: agencyFeePct ?? null }),
       ...(totalFinal !== undefined && { totalFinal: totalFinal ? BigInt(Math.round(totalFinal)) : null }),
     },
   });

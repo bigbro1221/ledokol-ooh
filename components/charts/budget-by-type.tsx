@@ -18,6 +18,7 @@ function fmtBudget(n: number): string {
 interface Entry {
   name: string;
   value: number;
+  count?: number;
 }
 
 export function BudgetByType({ data, total, currency = 'UZS' }: { data: Entry[]; total: number; currency?: string }) {
@@ -67,7 +68,9 @@ export function BudgetByType({ data, total, currency = 'UZS' }: { data: Entry[];
             return (
               <div key={entry.name} className="flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-[var(--surface-2)]">
                 <span className="h-2.5 w-2.5 flex-shrink-0 rounded-[3px]" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                <span className="flex-1 text-xs text-[var(--text-2)]">{entry.name}</span>
+                <span className="flex-1 text-xs text-[var(--text-2)]">
+                  {entry.name}{entry.count != null ? ` (${entry.count})` : ''}
+                </span>
                 <span className="text-xs" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmtBudget(entry.value)}
                 </span>

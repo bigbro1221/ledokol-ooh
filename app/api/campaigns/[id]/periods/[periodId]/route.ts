@@ -9,7 +9,7 @@ const UpdatePeriodSchema = z.object({
   periodEnd: z.string().transform(s => new Date(s)).optional(),
   totalBudgetUzs: z.number().nullable().optional(),
   productionCost: z.number().nullable().optional(),
-  agencyFeePct: z.number().nullable().optional(),
+  acRate: z.number().min(0).max(1).optional(),
   totalFinal: z.number().nullable().optional(),
 });
 
@@ -22,7 +22,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const parsed = UpdatePeriodSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
 
-  const { totalBudgetUzs, productionCost, agencyFeePct, totalFinal, ...rest } = parsed.data;
+  const { totalBudgetUzs, productionCost, acRate, totalFinal, ...rest } = parsed.data;
 
   const period = await prisma.campaignPeriod.update({
     where: { id: periodId },
@@ -30,7 +30,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       ...rest,
       ...(totalBudgetUzs !== undefined && { totalBudgetUzs: totalBudgetUzs ? BigInt(Math.round(totalBudgetUzs)) : null }),
       ...(productionCost !== undefined && { productionCost: productionCost ? BigInt(Math.round(productionCost)) : null }),
-      ...(agencyFeePct !== undefined && { agencyFeePct: agencyFeePct ?? null }),
+      ...(acRate !== undefined && { acRate }),
       ...(totalFinal !== undefined && { totalFinal: totalFinal ? BigInt(Math.round(totalFinal)) : null }),
     },
   });

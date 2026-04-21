@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -12,6 +12,19 @@ import '@/app/globals.css';
 export const metadata: Metadata = {
   title: 'OOH Dashboard — Ledokol Group',
   description: 'Outdoor advertising dashboard for Ledokol Group',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png', media: '(prefers-color-scheme: light)' },
+      { url: '/favicon-96x96-dark.png', sizes: '96x96', type: 'image/png', media: '(prefers-color-scheme: dark)' },
+      { url: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '192x192' }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#ffffff',
 };
 
 export default async function RootLayout({

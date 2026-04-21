@@ -20,11 +20,19 @@ interface ScreenRow {
   city: string;
   address: string;
   size?: string | null;
-  otsPlan?: number | null;
-  otsFact?: number | null;
+  resolution?: string | null;
+  impressionsPerDay?: number | null;
+  productionCost?: number | null;
   priceTotal?: number | null;
+  commissionPct?: number | null;
+  agencyFeeAmt?: number | null;
   priceDiscounted?: number | null;
   priceUnit?: number | null;
+  otsPlan?: number | null;
+  ratingPlan?: number | null;
+  universe?: number | null;
+  otsFact?: number | null;
+  ratingFact?: number | null;
   lat?: number | null;
   lng?: number | null;
   [key: string]: unknown;
@@ -59,17 +67,14 @@ const TYPE_COLORS: Record<string, string> = {
   BUS: 'bg-orange-500/20 text-orange-400',
 };
 
-function fmtOts(n: number | null | undefined) {
-  if (!n) return '—';
-  return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n.toLocaleString('ru-RU');
-}
+const num = (v: number | null | undefined) =>
+  v == null ? '—' : v.toLocaleString('ru-RU');
 
-function fmtPrice(s: ScreenRow) {
-  const v = s.priceTotal ?? s.priceDiscounted ?? s.priceUnit ?? null;
-  if (!v) return '—';
-  const n = Number(v);
-  return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n.toLocaleString('ru-RU');
-}
+const pct = (v: number | null | undefined) =>
+  v == null ? '—' : (v * 100).toFixed(1) + '%';
+
+const dec = (v: number | null | undefined) =>
+  v == null ? '—' : v.toFixed(2);
 
 function SuggestionPicker({
   suggestions,
@@ -313,7 +318,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
               <h3 className="text-sm font-semibold">
                 Таблица поверхностей
                 {unmatchedCount > 0 && (
-                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                  <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-400">
                     {unmatchedCount} без координат
                   </span>
                 )}
@@ -327,17 +332,35 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
             </div>
 
             {showTable && (
-              <div className="max-h-[480px] overflow-auto">
-                <table className="w-full text-xs">
+              <div className="max-h-[560px] overflow-auto">
+                <table className="w-full text-xs" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
                   <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-2)]">
                     <tr>
-                      <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">#</th>
-                      <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">Тип</th>
-                      <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">Город</th>
-                      <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">Адрес</th>
-                      <th className="px-3 py-2 text-right font-semibold text-[var(--text-3)]">OTS план</th>
-                      <th className="px-3 py-2 text-right font-semibold text-[var(--text-3)]">Стоимость</th>
-                      <th className="px-3 py-2 text-center font-semibold text-[var(--text-3)]">Гео</th>
+                      {[
+                        { label: '#', align: 'left' },
+                        { label: 'Тип', align: 'left' },
+                        { label: 'Город', align: 'left' },
+                        { label: 'Адрес', align: 'left' },
+                        { label: 'Размер', align: 'left' },
+                        { label: 'Произв.', align: 'right' },
+                        { label: 'Без АК/НДС', align: 'right' },
+                        { label: 'АК%', align: 'right' },
+                        { label: 'АК', align: 'right' },
+                        { label: 'С АК/НДС', align: 'right' },
+                        { label: 'OTS пл.', align: 'right' },
+                        { label: 'Рейт. пл.', align: 'right' },
+                        { label: 'Universe', align: 'right' },
+                        { label: 'OTS ф.', align: 'right' },
+                        { label: 'Рейт. ф.', align: 'right' },
+                        { label: 'Гео', align: 'center' },
+                      ].map(col => (
+                        <th
+                          key={col.label}
+                          className={`whitespace-nowrap px-3 py-2 text-${col.align} text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-3)]`}
+                        >
+                          {col.label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -351,23 +374,28 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
                             isUnmatched ? 'bg-amber-500/10' : 'hover:bg-[var(--surface-2)]'
                           }`}
                         >
-                          <td className="px-3 py-2 text-[var(--text-3)]">{i + 1}</td>
-                          <td className="px-3 py-2">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.type] || 'bg-gray-100 text-gray-600'}`}>
+                          <td className="px-3 py-1.5 text-[var(--text-3)]">{i + 1}</td>
+                          <td className="px-3 py-1.5">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.type] || 'bg-gray-500/20 text-gray-400'}`}>
                               {TYPE_LABELS[screen.type] || screen.type}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-[var(--text-2)]">{screen.city}</td>
-                          <td className="max-w-[220px] px-3 py-2">
-                            <span className="line-clamp-2">{screen.address}</span>
+                          <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.city}</td>
+                          <td className="max-w-[200px] px-3 py-1.5">
+                            <span className="line-clamp-1" style={{ fontFamily: 'var(--font-sans)' }}>{screen.address}</span>
                           </td>
-                          <td className="px-3 py-2 text-right" style={{ fontFamily: 'var(--font-mono)' }}>
-                            {fmtOts(screen.otsPlan as number | null)}
-                          </td>
-                          <td className="px-3 py-2 text-right" style={{ fontFamily: 'var(--font-mono)' }}>
-                            {fmtPrice(screen)}
-                          </td>
-                          <td className="px-3 py-2 text-center">
+                          <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.size ?? '—'}</td>
+                          <td className="px-3 py-1.5 text-right">{num(screen.productionCost)}</td>
+                          <td className="px-3 py-1.5 text-right">{num(screen.priceTotal)}</td>
+                          <td className="px-3 py-1.5 text-right">{pct(screen.commissionPct)}</td>
+                          <td className="px-3 py-1.5 text-right">{num(screen.agencyFeeAmt)}</td>
+                          <td className="px-3 py-1.5 text-right font-medium">{num(screen.priceDiscounted ?? screen.priceUnit)}</td>
+                          <td className="px-3 py-1.5 text-right">{num(screen.otsPlan)}</td>
+                          <td className="px-3 py-1.5 text-right">{dec(screen.ratingPlan)}</td>
+                          <td className="px-3 py-1.5 text-right">{num(screen.universe)}</td>
+                          <td className="px-3 py-1.5 text-right">{num(screen.otsFact)}</td>
+                          <td className="px-3 py-1.5 text-right">{dec(screen.ratingFact)}</td>
+                          <td className="px-3 py-1.5 text-center">
                             {geo.matched ? (
                               <MapPin size={12} className="mx-auto text-[var(--brand-primary)]" strokeWidth={1.5} />
                             ) : (

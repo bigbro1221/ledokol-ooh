@@ -3,7 +3,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   photo: ['Фото конструкции', 'Фото'],
   city: ['Город'],
   address: ['Адрес расположения', 'Адрес'],
-  size: ['Размер конструкции'],
+  size: ['Размер конструкции', 'Размер'],
   resolution: ['Разрешение'],
   priceUnit: [
     'Стоимость за 1 единицу (без АК и НДС)',
@@ -15,6 +15,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     'Общая сумма (с АК и НДС)',   // final price incl. agency fee — final template col O
   ],
   commissionPct: [
+    'АК(%',   // "АК(%)" — new template (must be before plain "АК" alias)
     'AK%',
     'АК%',
     'АК, %',
@@ -24,6 +25,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     'AK сумма',
     'АК сумма',
     'АК, сумма',
+    'АК',     // plain "АК" column in new template — matched after commissionPct via usedCols
   ],
   priceTotal: [
     'Общая сумма (без  АК и НДС)', // double-space variant — final template col L
@@ -36,6 +38,11 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     'Цена с учетом скидки  в RUB',
     'Цена с учетом скидки в RUB',
     'Стоимость за 1 ед   в RUB',
+  ],
+  impressionsPerDay: [
+    'Прогнозное кол-во выходов в сутки',
+    'Прогнозное количество выходов в сутки',
+    'Кол-во выходов в сутки',
   ],
   externalId: ['id', 'ID'],
   productionCost: [
@@ -66,15 +73,18 @@ export function findHeaderRow(data: unknown[][]): number {
 
 export function buildColumnMap(headerRow: string[]): ColumnMap {
   const map: ColumnMap = {};
+  const usedCols = new Set<number>();
 
   for (const [key, names] of Object.entries(COLUMN_ALIASES)) {
     // skip ots/rating/universe — all handled by buildPlanFactMap
     if (key === 'ots' || key === 'rating' || key === 'universe') continue;
 
     for (let c = 0; c < headerRow.length; c++) {
+      if (usedCols.has(c)) continue;
       const cell = String(headerRow[c] || '').trim();
       if (names.some(n => cell.toLowerCase().startsWith(n.toLowerCase()))) {
         map[key] = c;
+        usedCols.add(c);
         break;
       }
     }

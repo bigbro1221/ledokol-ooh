@@ -7,6 +7,7 @@ import { PeriodManager } from '@/components/admin/period-manager';
 import { DeleteCampaignButton } from '@/components/admin/delete-campaign-button';
 import { ClearScreensButton } from '@/components/admin/clear-screens-button';
 import { CampaignFinancials } from '@/components/admin/campaign-financials';
+import { RegeocodeButton } from '@/components/admin/regeocodebutton';
 
 const TYPE_LABELS: Record<string, string> = {
   LED: 'LED экраны',
@@ -24,10 +25,11 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
       client: true,
       screens: { select: { type: true } },
       periods: {
-        include: { _count: { select: { screens: true } } },
+        include: { _count: { select: { metrics: true } } },
         orderBy: { periodStart: 'asc' },
       },
     },
+    // yandexMapUrl is included automatically via include (all scalar fields)
   });
 
   if (!campaign) notFound();
@@ -41,13 +43,17 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   // Serialise periods (BigInt → number)
   const periods = campaign.periods.map(p => ({
-    ...p,
-    totalBudgetUzs: p.totalBudgetUzs ? Number(p.totalBudgetUzs) : null,
-    productionCost: p.productionCost ? Number(p.productionCost) : null,
-    agencyFeePct: p.agencyFeePct ? Number(p.agencyFeePct) : null,
-    totalFinal: p.totalFinal ? Number(p.totalFinal) : null,
+    id: p.id,
+    campaignId: p.campaignId,
+    name: p.name,
     periodStart: p.periodStart.toISOString(),
     periodEnd: p.periodEnd.toISOString(),
+    sourceFileUrl: p.sourceFileUrl,
+    totalBudgetUzs: p.totalBudgetUzs ? Number(p.totalBudgetUzs) : null,
+    productionCost: p.productionCost ? Number(p.productionCost) : null,
+    agencyFeePct: Number(p.acRate) > 0 ? Number(p.acRate) * 100 : null,
+    totalFinal: p.totalFinal ? Number(p.totalFinal) : null,
+    _count: p._count,
   }));
 
   return (
@@ -83,6 +89,9 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           {totalScreens > 0 && !campaign.splitByPeriods && (
             <ClearScreensButton campaignId={id} />
           )}
+          {campaign.yandexMapUrl && totalScreens > 0 && (
+            <RegeocodeButton campaignId={id} />
+          )}
           <DeleteCampaignButton campaignId={id} locale={locale} />
         </div>
       </div>
@@ -106,7 +115,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
         {campaign.splitByPeriods ? (
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-            <div className="text-xs text-[var(--text-3)]">Периодов</div>
+            <div className="text-xs text-[var(--text-3)]">Месяцев</div>
             <div className="mt-1 flex items-center gap-2">
               <Layers size={18} className="text-[var(--brand-primary)]" strokeWidth={1.5} />
               <span className="text-2xl font-semibold">{campaign.periods.length}</span>
@@ -128,11 +137,13 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
       {/* Periods section */}
       {campaign.splitByPeriods ? (
         <div className="mb-8">
-          <h2 className="mb-3 text-[15px] font-semibold">Периоды</h2>
+          <h2 className="mb-3 text-[15px] font-semibold">Месяцы</h2>
           <PeriodManager
             campaignId={id}
             locale={locale}
             initialPeriods={periods}
+            campaignStart={campaign.periodStart.toISOString()}
+            campaignEnd={campaign.periodEnd.toISOString()}
           />
         </div>
       ) : (
@@ -157,7 +168,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
             initialValues={{
               totalBudgetUzs: campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : null,
               productionCost: campaign.productionCost ? Number(campaign.productionCost) : null,
-              agencyFeePct: campaign.agencyFeePct ? Number(campaign.agencyFeePct) : null,
+              agencyFeePct: Number(campaign.acRate) > 0 ? Number(campaign.acRate) * 100 : null,
               totalFinal: campaign.totalFinal ? Number(campaign.totalFinal) : null,
             }}
           />

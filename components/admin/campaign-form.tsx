@@ -15,6 +15,7 @@ interface CampaignFormProps {
     splitByPeriods: boolean;
     heatmapUrl?: string | null;
     yandexMapUrl?: string | null;
+    acRate?: string | null;
   };
 }
 
@@ -26,6 +27,7 @@ interface DraftState {
   splitByPeriods: boolean;
   heatmapUrl: string;
   yandexMapUrl: string;
+  acRate: string;
 }
 
 const DRAFT_KEY = 'ledokol_campaign_draft';
@@ -63,6 +65,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   const [splitByPeriods, setSplitByPeriods] = useState(initial?.splitByPeriods ?? false);
   const [heatmapUrl, setHeatmapUrl] = useState(initial?.heatmapUrl ?? '');
   const [yandexMapUrl, setYandexMapUrl] = useState(initial?.yandexMapUrl ?? '');
+  const [acRate, setAcRate] = useState(initial?.acRate ?? '');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -80,6 +83,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       setSplitByPeriods(draft.splitByPeriods);
       setHeatmapUrl(draft.heatmapUrl);
       setYandexMapUrl(draft.yandexMapUrl);
+      setAcRate(draft.acRate ?? '');
       if (draft.name || draft.clientId) setDraftRestored(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,14 +96,15 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   useEffect(() => {
     if (isEdit) return;
     if (skipFirstSave.current) { skipFirstSave.current = false; return; }
-    saveDraft({ name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl });
-  }, [isEdit, name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl]);
+    saveDraft({ name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl, acRate });
+  }, [isEdit, name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl, acRate]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    const acRatePct = parseFloat(acRate);
     const data = {
       name,
       clientId,
@@ -108,6 +113,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       splitByPeriods,
       heatmapUrl: heatmapUrl.trim() || null,
       yandexMapUrl: yandexMapUrl.trim() || null,
+      acRate: !isNaN(acRatePct) && acRatePct > 0 ? acRatePct / 100 : 0,
     };
 
     const url = isEdit ? `/api/campaigns/${initial.id}` : '/api/campaigns';
@@ -144,7 +150,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
             onClick={() => {
               clearDraft();
               setName(''); setClientId(''); setPeriodStart(''); setPeriodEnd('');
-              setSplitByPeriods(false); setHeatmapUrl(''); setYandexMapUrl('');
+              setSplitByPeriods(false); setHeatmapUrl(''); setYandexMapUrl(''); setAcRate('');
               setDraftRestored(false);
             }}
             className="ml-4 text-[11px] text-[var(--text-3)] underline hover:text-[var(--text)]"
@@ -210,6 +216,24 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
         </div>
       </div>
 
+      {/* Agency commission */}
+      <div>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+          {locale === 'en' ? 'Agency commission, %' : locale === 'uz' ? 'Agentlik komissiyasi, %' : 'Агентская комиссия, %'}
+        </label>
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          placeholder="0"
+          value={acRate}
+          onChange={e => setAcRate(e.target.value)}
+          className={inputCls}
+        />
+        <p className="mt-1 text-[11px] text-[var(--text-4)]">Процент от суммы без АК и НДС. Оставьте пустым или 0 если не применяется.</p>
+      </div>
+
       {/* Heatmap URL */}
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
@@ -254,9 +278,9 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
             <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${splitByPeriods ? 'translate-x-4' : 'translate-x-0.5'}`} />
           </div>
           <div>
-            <div className="text-sm font-medium">Разбить на периоды</div>
+            <div className="text-sm font-medium">Разбить на месяцы</div>
             <div className="mt-0.5 text-xs text-[var(--text-3)]">
-              Каждый период — отдельный XLSX-файл и финансовые данные (флайты, месяцы)
+              Каждый месяц — отдельный XLSX-файл и финансовые данные
             </div>
           </div>
         </label>

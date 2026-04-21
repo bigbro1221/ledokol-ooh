@@ -27,6 +27,9 @@
   "dashboard": {
     "title": "",
     "myCampaigns": "",
-    "selectCampaign": ""
+    "selectCampaign": "",
+    "budgetWithFees": "Byudjet (AK va QQS bilan)",
+    "avgImpressionsPerDay": "Kuniga o'rtacha ko'rsatishlar soni",
+    "geography": "Geografiya"
   }
 }

@@ -98,6 +98,7 @@ function parseScreenSheet(
       resolution,
       externalId: colMap.externalId !== undefined ? String(row[colMap.externalId] || '').trim() || null : null,
       photoUrl,
+      impressionsPerDay: colMap.impressionsPerDay !== undefined ? parseNum(row[colMap.impressionsPerDay]) : null,
       priceUnit: colMap.priceUnit !== undefined ? parseNum(row[colMap.priceUnit]) : null,
       priceDiscounted: colMap.priceDiscounted !== undefined ? parseNum(row[colMap.priceDiscounted]) : null,
       priceTotal: colMap.priceTotal !== undefined ? parseNum(row[colMap.priceTotal]) : null,

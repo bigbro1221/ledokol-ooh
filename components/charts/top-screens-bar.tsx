@@ -12,9 +12,9 @@ export function TopScreensBar({ data }: { data: ScreenEntry[] }) {
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="mb-6">
         <h3 className="text-[15px] font-semibold tracking-tight">Показы по поверхностям</h3>
-        <p className="mt-0.5 text-xs text-[var(--text-3)]">Топ-10 поверхностей по OTS</p>
+        <p className="mt-0.5 text-xs text-[var(--text-3)]">Топ-20 поверхностей по OTS</p>
       </div>
-      <div className="h-[280px]">
+      <div className="h-[420px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 0, right: 10, bottom: 0, left: 0 }}>
             <XAxis
@@ -30,8 +30,8 @@ export function TopScreensBar({ data }: { data: ScreenEntry[] }) {
               tick={{ fontSize: 11, fill: 'var(--text-2)' }}
               axisLine={false}
               tickLine={false}
-              width={140}
-              tickFormatter={(v: string) => v.length > 22 ? v.slice(0, 22) + '…' : v}
+              width={220}
+              tickFormatter={(v: string) => v.length > 34 ? v.slice(0, 34) + '…' : v}
             />
             <Tooltip
               formatter={(value) => [Number(value).toLocaleString('ru-RU'), 'OTS']}

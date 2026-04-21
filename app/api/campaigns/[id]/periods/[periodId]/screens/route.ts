@@ -11,12 +11,21 @@ export async function DELETE(
 
   const { id: campaignId, periodId } = await params;
 
-  // Verify period belongs to this campaign
   const period = await prisma.campaignPeriod.findFirst({
     where: { id: periodId, campaignId },
   });
   if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 });
 
-  const { count } = await prisma.screen.deleteMany({ where: { periodId } });
-  return NextResponse.json({ ok: true, deleted: count });
+  // Delete metrics + pricing for this period, then clean up orphaned screens
+  const [metricsResult] = await prisma.$transaction([
+    prisma.screenMetrics.deleteMany({ where: { periodId } }),
+    prisma.screenPricing.deleteMany({ where: { periodId } }),
+  ]);
+
+  // Remove screens that now have no metrics and no pricing
+  await prisma.screen.deleteMany({
+    where: { campaignId, metrics: { none: {} }, pricing: { none: {} } },
+  });
+
+  return NextResponse.json({ ok: true, deleted: metricsResult.count });
 }

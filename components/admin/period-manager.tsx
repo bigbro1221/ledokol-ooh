@@ -2,7 +2,38 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Upload, Trash2, ChevronDown, ChevronUp, Eraser } from 'lucide-react';
+import { Plus, Upload, Trash2, ChevronDown, ChevronUp, Eraser, Check } from 'lucide-react';
+
+const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_RU_SHORT = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+
+function getMonthsInRange(startIso: string, endIso: string): { year: number; month: number }[] {
+  const result: { year: number; month: number }[] = [];
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  let y = start.getUTCFullYear();
+  let m = start.getUTCMonth();
+  const endY = end.getUTCFullYear();
+  const endM = end.getUTCMonth();
+  while (y < endY || (y === endY && m <= endM)) {
+    result.push({ year: y, month: m });
+    m++;
+    if (m > 11) { m = 0; y++; }
+  }
+  return result;
+}
+
+function monthKey(year: number, month: number) {
+  return `${year}-${month}`;
+}
+
+function pad(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+function lastDayOf(year: number, month: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
 
 interface Period {
   id: string;
@@ -14,13 +45,15 @@ interface Period {
   productionCost: number | null;
   agencyFeePct: number | null;
   totalFinal: number | null;
-  _count: { screens: number };
+  _count: { metrics: number };
 }
 
 interface PeriodManagerProps {
   campaignId: string;
   locale: string;
   initialPeriods: Period[];
+  campaignStart: string;
+  campaignEnd: string;
 }
 
 function fmt(n: number | null) {
@@ -46,7 +79,7 @@ function PeriodCard({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [clearingXlsx, setClearingXlsx] = useState(false);
-  const [screenCount, setScreenCount] = useState(period._count.screens);
+  const [screenCount, setScreenCount] = useState(period._count.metrics);
   const [financials, setFinancials] = useState({
     totalBudgetUzs: period.totalBudgetUzs ?? '',
     productionCost: period.productionCost ?? '',
@@ -62,7 +95,7 @@ function PeriodCard({
       body: JSON.stringify({
         totalBudgetUzs: financials.totalBudgetUzs ? Number(financials.totalBudgetUzs) : null,
         productionCost: financials.productionCost ? Number(financials.productionCost) : null,
-        agencyFeePct: financials.agencyFeePct ? Number(financials.agencyFeePct) : null,
+        acRate: financials.agencyFeePct ? Number(financials.agencyFeePct) / 100 : 0,
         totalFinal: financials.totalFinal ? Number(financials.totalFinal) : null,
       }),
     });
@@ -74,7 +107,7 @@ function PeriodCard({
   }
 
   async function handleClearXlsx() {
-    if (!confirm(`Удалить все поверхности периода "${period.name}"? Сам период останется.`)) return;
+    if (!confirm(`Удалить все поверхности месяца "${period.name}"? Сам месяц останется.`)) return;
     setClearingXlsx(true);
     const res = await fetch(`/api/campaigns/${campaignId}/periods/${period.id}/screens`, { method: 'DELETE' });
     setClearingXlsx(false);
@@ -85,7 +118,7 @@ function PeriodCard({
   }
 
   async function handleDelete() {
-    if (!confirm(`Удалить период "${period.name}"? Все поверхности будут удалены.`)) return;
+    if (!confirm(`Удалить месяц "${period.name}"? Все поверхности будут удалены.`)) return;
     setDeleting(true);
     await fetch(`/api/campaigns/${campaignId}/periods/${period.id}`, { method: 'DELETE' });
     onDelete();
@@ -123,8 +156,8 @@ function PeriodCard({
           <button
             onClick={handleClearXlsx}
             disabled={clearingXlsx}
-            title="Очистить поверхности (период остаётся)"
-            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-4)] hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"
+            title="Очистить поверхности (месяц остаётся)"
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-4)] hover:bg-amber-500/10 hover:text-amber-500 disabled:opacity-50"
           >
             <Eraser size={14} strokeWidth={1.5} />
           </button>
@@ -164,7 +197,6 @@ function PeriodCard({
             ))}
           </div>
 
-          {/* Summary row */}
           {(period.totalBudgetUzs || period.productionCost || period.totalFinal) && (
             <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--text-2)]" style={{ fontFamily: 'var(--font-mono)' }}>
               {period.totalBudgetUzs && <span>Без АК: {fmt(period.totalBudgetUzs)} UZS</span>}
@@ -187,12 +219,46 @@ function PeriodCard({
   );
 }
 
-export function PeriodManager({ campaignId, locale, initialPeriods }: PeriodManagerProps) {
+export function PeriodManager({ campaignId, locale, initialPeriods, campaignStart, campaignEnd }: PeriodManagerProps) {
   const router = useRouter();
   const [periods, setPeriods] = useState<Period[]>(initialPeriods);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newPeriod, setNewPeriod] = useState({ name: '', periodStart: '', periodEnd: '' });
+  const [selectedMonthValue, setSelectedMonthValue] = useState('');
+
+  const campaignMonths = getMonthsInRange(campaignStart, campaignEnd);
+  const multiYear = campaignMonths.some(m => m.year !== campaignMonths[0].year);
+
+  const addedMonthKeys = new Set(
+    periods.map(p => {
+      const d = new Date(p.periodStart);
+      return monthKey(d.getUTCFullYear(), d.getUTCMonth());
+    })
+  );
+
+  function selectMonth(year: number, month: number) {
+    const name = `${MONTHS_RU[month]} ${year}`;
+    const last = lastDayOf(year, month);
+    const start = `${year}-${pad(month + 1)}-01`;
+    const end = `${year}-${pad(month + 1)}-${pad(last)}`;
+    setNewPeriod({ name, periodStart: start, periodEnd: end });
+    setSelectedMonthValue(`${year}-${pad(month + 1)}`);
+  }
+
+  function handleMonthInput(value: string) {
+    setSelectedMonthValue(value);
+    if (!value) return;
+    const [y, m] = value.split('-').map(Number);
+    const month = m - 1;
+    const name = `${MONTHS_RU[month]} ${y}`;
+    const last = lastDayOf(y, month);
+    setNewPeriod({
+      name,
+      periodStart: `${y}-${pad(m)}-01`,
+      periodEnd: `${y}-${pad(m)}-${pad(last)}`,
+    });
+  }
 
   async function addPeriod() {
     if (!newPeriod.name || !newPeriod.periodStart || !newPeriod.periodEnd) return;
@@ -205,11 +271,18 @@ export function PeriodManager({ campaignId, locale, initialPeriods }: PeriodMana
     setSaving(false);
     if (res.ok) {
       const created = await res.json();
-      setPeriods(ps => [...ps, { ...created, _count: { screens: 0 } }]);
+      setPeriods(ps => [...ps, { ...created, _count: { metrics: 0 } }]);
       setNewPeriod({ name: '', periodStart: '', periodEnd: '' });
+      setSelectedMonthValue('');
       setAdding(false);
       router.refresh();
     }
+  }
+
+  function cancelAdding() {
+    setAdding(false);
+    setNewPeriod({ name: '', periodStart: '', periodEnd: '' });
+    setSelectedMonthValue('');
   }
 
   return (
@@ -227,40 +300,94 @@ export function PeriodManager({ campaignId, locale, initialPeriods }: PeriodMana
 
       {adding ? (
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="mb-3 text-sm font-medium">Новый период</p>
-          <div className="space-y-3">
-            <input
-              placeholder="Название (напр. «Первый флайт»)"
-              value={newPeriod.name}
-              onChange={e => setNewPeriod(p => ({ ...p, name: e.target.value }))}
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary-subtle)]"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">Начало</label>
-                <input
-                  type="date"
-                  value={newPeriod.periodStart}
-                  onChange={e => setNewPeriod(p => ({ ...p, periodStart: e.target.value }))}
-                  className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">Конец</label>
-                <input
-                  type="date"
-                  value={newPeriod.periodEnd}
-                  onChange={e => setNewPeriod(p => ({ ...p, periodEnd: e.target.value }))}
-                  className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none"
-                />
-              </div>
+          <p className="mb-3 text-sm font-medium">Новый месяц</p>
+
+          {/* Month chips */}
+          {campaignMonths.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {campaignMonths.map(({ year, month }) => {
+                const key = monthKey(year, month);
+                const isAdded = addedMonthKeys.has(key);
+                const isSelected = selectedMonthValue === `${year}-${pad(month + 1)}`;
+                const label = multiYear
+                  ? `${MONTHS_RU_SHORT[month]} '${String(year).slice(2)}`
+                  : MONTHS_RU_SHORT[month];
+
+                if (isAdded) {
+                  return (
+                    <span
+                      key={key}
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[11px] text-[var(--text-4)] cursor-default select-none"
+                    >
+                      <Check size={10} strokeWidth={2} />
+                      {label}
+                    </span>
+                  );
+                }
+
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => selectMonth(year, month)}
+                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                      isSelected
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white'
+                        : 'border-[var(--border)] text-[var(--text-2)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
+          )}
+
+          <div className="space-y-3">
+            {/* Month picker */}
+            <div>
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">Месяц</label>
+              <input
+                type="month"
+                value={selectedMonthValue}
+                min={campaignStart.slice(0, 7)}
+                max={campaignEnd.slice(0, 7)}
+                onChange={e => handleMonthInput(e.target.value)}
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary-subtle)]"
+              />
+            </div>
+
+            {/* Name — auto-filled but editable */}
+            <div>
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">Название</label>
+              <input
+                placeholder="Январь 2026"
+                value={newPeriod.name}
+                onChange={e => setNewPeriod(p => ({ ...p, name: e.target.value }))}
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary-subtle)]"
+              />
+            </div>
+
+            {/* Date range — derived, read-only display */}
+            {newPeriod.periodStart && newPeriod.periodEnd && (
+              <p className="text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
+                {new Date(newPeriod.periodStart).toLocaleDateString('ru-RU')} — {new Date(newPeriod.periodEnd).toLocaleDateString('ru-RU')}
+              </p>
+            )}
           </div>
+
           <div className="mt-3 flex gap-2">
-            <button onClick={addPeriod} disabled={saving} className="rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50">
+            <button
+              onClick={addPeriod}
+              disabled={saving || !newPeriod.name || !newPeriod.periodStart}
+              className="rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
+            >
               {saving ? '...' : 'Добавить'}
             </button>
-            <button onClick={() => setAdding(false)} className="rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-2)]">
+            <button
+              onClick={cancelAdding}
+              className="rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-2)]"
+            >
               Отмена
             </button>
           </div>
@@ -271,7 +398,7 @@ export function PeriodManager({ campaignId, locale, initialPeriods }: PeriodMana
           className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] py-3 text-sm text-[var(--text-3)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
         >
           <Plus size={16} strokeWidth={1.5} />
-          Добавить период
+          Добавить месяц
         </button>
       )}
     </div>

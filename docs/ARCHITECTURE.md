@@ -1,7 +1,7 @@
 # OOH Dashboard — Architecture Specification
 
 > **Project:** Ledokol Group OOH Advertising Dashboard
-> **Version:** 2.0
+> **Version:** 2.1
 > **Last updated:** April 2026
 > **Reader:** Claude Code / development agent
 
@@ -124,9 +124,9 @@ Unmatched pins should be logged for manual review rather than silently dropped.
 
 ### 5.1 Prisma Schema
 
-```prisma
-// prisma/schema.prisma
+Current schema as of v2.1 — matches `prisma/schema.prisma` in the repo.
 
+```prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -136,139 +136,214 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum UserRole {
-  ADMIN
-  CLIENT
-}
+enum UserRole { ADMIN  CLIENT }
+enum Language { RU  EN  UZ  TR }
+enum ScreenType { LED  STATIC  STOP  AIRPORT  BUS }
+enum CampaignStatus { ACTIVE  PAUSED  COMPLETED  DRAFT }
+enum DataSource { XLSX  API }
 
-enum Language {
-  RU
-  EN
-  UZ
-  TR
-}
-
-enum ScreenType {
-  LED
-  STATIC
-  STOP
-  AIRPORT
-  BUS
-}
-
-enum CampaignStatus {
-  ACTIVE
-  PAUSED
-  COMPLETED
-  DRAFT
-}
-
-enum DataSource {
-  XLSX
-  API
+// 5 date-formatting modes for campaign period display
+enum DateFormat {
+  SMART_HYBRID   // "1–31 янв" / "1 янв – 15 фев"
+  MONTH_ONLY     // "Январь 2026"
+  FULL_RANGE     // "1 января – 31 января 2026"
+  NUMERIC_DMY    // "01.01 – 31.01.2026"
+  NUMERIC_DMON   // "1 янв – 31 янв 2026"
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  passwordHash  String
-  role          UserRole
-  language      Language  @default(RU)
-  clientId      String?
-  client        Client?   @relation(fields: [clientId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String           @id @default(uuid())
+  email        String           @unique
+  passwordHash String
+  role         UserRole
+  enabled      Boolean          @default(true)
+  language     Language         @default(RU)
+  clientId     String?
+  client       Client?          @relation(fields: [clientId], references: [id])
+  preferences  UserPreferences?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+// One-to-one with User; created lazily on first access (upsert).
+model UserPreferences {
+  id         String     @id @default(uuid())
+  userId     String     @unique
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateFormat DateFormat @default(SMART_HYBRID)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model Client {
-  id              String     @id @default(uuid())
-  name            String
-  contactPerson   String?
-  users           User[]
-  campaigns       Campaign[]
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id            String     @id @default(uuid())
+  name          String
+  contactPerson String?
+  users         User[]
+  campaigns     Campaign[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model Campaign {
-  id              String          @id @default(uuid())
-  clientId        String
-  client          Client          @relation(fields: [clientId], references: [id])
-  name            String
-  project         String?
-  periodStart     DateTime
-  periodEnd       DateTime
-  status          CampaignStatus  @default(DRAFT)
-  sourceFileUrl   String?         // MinIO URL for uploaded XLSX
-  yandexMapUrl    String?         // Original Yandex Maps Constructor URL
-  totalBudgetUzs  BigInt?
-  totalBudgetRub  BigInt?
-  screens         Screen[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id             String           @id @default(uuid())
+  clientId       String
+  client         Client           @relation(fields: [clientId], references: [id])
+  name           String
+  project        String?
+  periodStart    DateTime
+  periodEnd      DateTime
+  status         CampaignStatus   @default(DRAFT)
+  splitByPeriods Boolean          @default(false)
+  sourceFileUrl  String?
+  yandexMapUrl   String?
+  heatmapUrl     String?          // Foursquare Studio embed URL
+  totalBudgetUzs BigInt?
+  totalBudgetRub BigInt?
+  productionCost BigInt?
+  acRate         Decimal          @default("0") @db.Decimal(5, 4)  // fraction, e.g. 0.15 = 15%
+  totalFinal     BigInt?
+  screens        Screen[]
+  periods        CampaignPeriod[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([clientId])
   @@index([status])
 }
 
-model Screen {
-  id            String         @id @default(uuid())
-  campaignId    String
-  campaign      Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  externalId    String?        // id from XLSX where available
-  type          ScreenType
-  city          String
-  address       String
-  lat           Float?
-  lng           Float?
-  size          String?        // e.g. "6x3"
-  resolution    String?        // e.g. "1920x1080"
-  photoUrl      String?        // Google Drive URL
-  pricing       ScreenPricing?
-  metrics       ScreenMetrics?
-  impressions   Impression[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+// Only used when Campaign.splitByPeriods = true.
+// Each period has its own XLSX upload, screens, and financial fields.
+model CampaignPeriod {
+  id             String   @id @default(uuid())
+  campaignId     String
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name           String
+  periodStart    DateTime
+  periodEnd      DateTime
+  sourceFileUrl  String?
+  totalBudgetUzs BigInt?
+  productionCost BigInt?
+  acRate         Decimal  @default("0") @db.Decimal(5, 4)
+  totalFinal     BigInt?
+  screens        Screen[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([campaignId])
+}
+
+model Screen {
+  id                String          @id @default(uuid())
+  campaignId        String
+  campaign          Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  periodId          String?         // set when Campaign.splitByPeriods = true
+  period            CampaignPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  externalId        String?
+  type              ScreenType
+  city              String
+  address           String
+  lat               Float?
+  lng               Float?
+  size              String?         // e.g. "6x3"
+  resolution        String?         // e.g. "1920x1080"
+  impressionsPerDay Int?            // from XLSX column "Прогнозное кол-во выходов в сутки"
+  photoUrl          String?
+  pricing           ScreenPricing?
+  metrics           ScreenMetrics?
+  impressions       Impression[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([campaignId])
+  @@index([periodId])
   @@index([city])
   @@index([type])
 }
 
 model ScreenPricing {
-  id                String  @id @default(uuid())
-  screenId          String  @unique
-  screen            Screen  @relation(fields: [screenId], references: [id], onDelete: Cascade)
-  priceUnit         BigInt?
-  priceDiscounted   BigInt?
-  priceTotal        BigInt?
-  priceRub          BigInt?
-  commissionPct     Decimal?
-  productionCost    BigInt?
+  id              String   @id @default(uuid())
+  screenId        String   @unique
+  screen          Screen   @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  priceUnit       BigInt?  // unit price before discounts
+  priceDiscounted BigInt?  // final price incl. AC and VAT (= what client pays)
+  priceTotal      BigInt?  // subtotal before AC/VAT
+  priceRub        BigInt?
+  commissionPct   Decimal? // АК% — agency commission percentage
+  agencyFeeAmt    BigInt?  // АК сумма — agency fee absolute amount
+  productionCost  BigInt?
 }
 
+// plan/fact split — both present when operator API provides actuals
 model ScreenMetrics {
-  id          String      @id @default(uuid())
-  screenId    String      @unique
-  screen      Screen      @relation(fields: [screenId], references: [id], onDelete: Cascade)
-  ots         Int?        // Opportunity To See
-  rating      Decimal?
-  universe    Int?
-  source      DataSource  @default(XLSX)
+  id         String     @id @default(uuid())
+  screenId   String     @unique
+  screen     Screen     @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  otsPlan    Int?
+  ratingPlan Decimal?
+  otsFact    Int?
+  ratingFact Decimal?
+  universe   Int?
+  source     DataSource @default(XLSX)
 }
 
 model Impression {
-  id          String      @id @default(uuid())
-  screenId    String
-  screen      Screen      @relation(fields: [screenId], references: [id], onDelete: Cascade)
-  date        DateTime
-  count       Int
-  source      DataSource  @default(API)  // impressions only come from API post-MVP
+  id       String     @id @default(uuid())
+  screenId String
+  screen   Screen     @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  date     DateTime
+  count    Int
+  source   DataSource @default(API)
 
   @@unique([screenId, date])
   @@index([date])
 }
+
+// Singleton (id = 1). Created on first access via upsert in lib/app-settings.ts.
+model AppSettings {
+  id                Int      @id @default(1)
+  vatRate           Decimal  @default("0.12") @db.Decimal(5, 4)
+  twoFactorRequired Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now())
+}
 ```
+
+### 5.2 Financial Calculation Formula
+
+`lib/campaign-total.ts` — single source of truth for the (raw + AC) + VAT formula:
+
+```
+total = (rawAmount × (1 + acRate)) × (1 + vatRate)
+```
+
+Breaking it down:
+- `acAmount  = rawAmount × acRate`
+- `subtotal  = rawAmount + acAmount`
+- `vatAmount = subtotal × vatRate`
+- `total     = subtotal + vatAmount`
+
+**Storage convention for `acRate`:** stored as a decimal fraction (e.g. `0.15` for 15%). Form inputs accept percentage values; conversion (`÷ 100`) happens at the API boundary. The old `agencyFeePct` columns (integer percentage) were removed and data migrated via `UPDATE SET acRate = agencyFeePct / 100`.
+
+`AppSettings.vatRate` defaults to `0.12` (12%). The formula is not yet wired into the existing UI financial fields — that is a follow-up task.
+
+### 5.3 User Preferences and Date Formatting
+
+`lib/user-preferences.ts` — `getUserPreferences(userId)` (upsert, returns defaults if first access), `updateUserPreferences(userId, patch)`.
+
+`lib/format-period.ts` — `formatCampaignPeriod(start, end, locale, format)` with 5 modes:
+
+| Mode | Example output (RU) |
+|------|-------------------|
+| `SMART_HYBRID` | "1–31 янв" or "1 янв – 15 фев" |
+| `MONTH_ONLY` | "Январь 2026" |
+| `FULL_RANGE` | "1 января – 31 января 2026" |
+| `NUMERIC_DMY` | "01.01 – 31.01.2026" |
+| `NUMERIC_DMON` | "1 янв – 31 янв 2026" |
+
+Month abbreviations for `NUMERIC_DMON` are hardcoded (not from `Intl`) to avoid trailing-dot and inconsistent-length bugs across environments.
+
+**Campaign title convention:** `{ClientName}. {FormattedPeriod}` — used as the dashboard `<h1>` and campaign selector labels. The formatted period flows through SSR so `suppressHydrationWarning` is not needed.
 
 ---
 
@@ -424,16 +499,33 @@ function matchScore(pinLabel: string, rowAddress: string): number {
 ## 7. Routing Structure
 
 ```
-/                          → Redirect to /login or dashboard based on role
-/login                     → Login page
-/[locale]/admin            → Admin home (client list)
-/[locale]/admin/clients    → Client CRUD
+/                                              → Redirect to /{locale}/login
+/[locale]/login                                → Login page
+/[locale]/profile                              → User profile: date-format picker
+/[locale]/admin                                → Admin home (client list)
+/[locale]/admin/clients                        → Client CRUD
 /[locale]/admin/clients/[id]
-/[locale]/admin/campaigns  → Campaign list across all clients
-/[locale]/admin/campaigns/[id]
-/[locale]/admin/campaigns/[id]/upload  → XLSX upload UI
-/[locale]/dashboard        → Client-side: their campaign list
-/[locale]/dashboard/[campaignId]  → Client-side: campaign dashboard
+/[locale]/admin/campaigns                      → Campaign list across all clients
+/[locale]/admin/campaigns/[id]                 → Campaign detail + financials + period manager
+/[locale]/admin/campaigns/[id]/edit            → Edit campaign metadata
+/[locale]/admin/campaigns/[id]/upload          → XLSX upload UI (parse + preview + confirm)
+/[locale]/admin/campaigns/[id]/screens         → Reusable ScreensTable (editable=true)
+/[locale]/dashboard                            → Client campaign dashboard (campaign selected via ?campaign=)
+```
+
+API routes:
+```
+POST   /api/campaigns                          → create campaign
+GET    /api/campaigns/[id]                     → get campaign
+PUT    /api/campaigns/[id]                     → update campaign (incl. acRate, financials)
+DELETE /api/campaigns/[id]                     → delete campaign
+GET    /api/campaigns/[id]/periods             → list periods
+POST   /api/campaigns/[id]/periods             → create period
+PUT    /api/campaigns/[id]/periods/[periodId]  → update period (incl. acRate)
+DELETE /api/campaigns/[id]/periods/[periodId]  → delete period
+PATCH  /api/user/preferences                   → update current user's preferences (dateFormat)
+POST   /api/upload                             → parse XLSX, return preview (no DB write)
+POST   /api/upload/[id]/confirm                → write parsed screens to DB
 ```
 
 Middleware (`middleware.ts`) checks role at every `/admin/*` and redirects to `/dashboard` if user is a client.
@@ -442,22 +534,34 @@ Middleware (`middleware.ts`) checks role at every `/admin/*` and redirects to `/
 
 ## 8. Client Dashboard Widgets
 
-Built in Phase 3–4. Reference: Geomotive screenshots.
+Current live implementation in `app/[locale]/dashboard/`.
 
-| Widget | Data source | Notes |
-|--------|-------------|-------|
-| Campaign selector | `campaigns` WHERE `clientId = user.clientId` | Dropdown |
-| Date range filter | — | Applies to impressions (post-MVP) |
-| Plan completion bar | Calculated from `screens.ots` sum vs. target | Show absolute + percentage |
-| Impressions by day | `impressions` grouped by date | **Post-MVP** (requires API) |
-| Impressions by type | `screens` grouped by `type`, summing OTS | Donut chart — Recharts |
-| Surface count | `COUNT(screens)` for campaign | Simple KPI card |
-| Hourly distribution | — | **Post-MVP** (requires API) |
-| Impressions by surface | `screens` sorted by OTS, top N | Horizontal bar chart |
-| Map | `screens` with lat/lng | Mapbox markers, color by type, heatmap toggle |
-| Screens table | `screens` | Paginated, sortable, searchable |
+| Widget | Component / source | Notes |
+|--------|-------------------|-------|
+| Campaign selector | `CampaignSelector` | Labels use `{ClientName}. {FormattedPeriod}` per user's dateFormat preference |
+| City / Type filter bar | `FilterBar` | URL params `?city=&type=`; applied server-side before render |
+| KPI strip (3 cards) | `KPICard` × 3 | Geography (cities count), Surfaces (screen count), Budget ("Бюджет с учётом АК/НДС") |
+| Efficiency strip | `EfficiencyStrip` | CPM, avg OTS/screen, avg budget/screen, avg impressions/day |
+| Plan vs fact by type | `PlanFactBreakdown` | Horizontal bar pairs, sorted by plan desc |
+| Budget by type donut | `BudgetByType` | Legend labels include surface count: "LED экраны (165)" |
+| Plan vs fact by city | `PlanFactBreakdown` | Same component, city dimension |
+| Map | `ScreenMap` (Mapbox, dynamic) | Markers color-coded by type; bounds auto-fit |
+| Foursquare heatmap | `<iframe>` | Shown only when `campaign.heatmapUrl` is set |
+| City breakdown table | `CityBreakdown` | Screens + OTS plan per city |
+| Top screens bar chart | `TopScreensBar` | Top 10 by OTS plan |
+| Screens table | `ScreensTable` (shared) | `editable={false}`, period selector, type/city/size filters |
 
-For MVP, widgets that depend on daily/hourly impression data should render a "Data available after operator API integration" empty state.
+**Removed / commented out (product decision 2026-04-20):**
+- `PlanFactBar` — "Выполнение плана" completion bar
+- `ImpressionsDonut` — "Показы по типам" donut (replaced by plan/fact breakdown)
+
+**`<ScreensTable>` component** (`components/screens/screens-table.tsx`):
+- Shared by admin (`editable=true`) and dashboard (`editable=false`)
+- `editable=true`: shows Cost column, highlights rows with no coordinates (yellow background), shows no-coords warning
+- Period selector: "Whole period" aggregates all periods by `(externalId ?? city‖address)`, summing OTS/price, MAX impressionsPerDay
+- Three auto-hiding filters: Type (hidden if only one type), City (hidden if only one city), Size (hidden if all size values are null)
+- Pagination: 25 rows/page; numbered buttons desktop, prev/next mobile
+- Columns: #, Type, City, Address, OTS plan, OTS fact, Size, Imp./day, [Cost if editable], Geo, Photo
 
 ---
 
@@ -519,7 +623,9 @@ For MVP, widgets that depend on daily/hourly impression data should render a "Da
 
 Not in scope for initial launch:
 
+- **Auth rework** — invite-only registration, optional 2FA, TOTP, Google SSO, recovery codes, SES transactional email with bounce/complaint handling. Full roadmap: `docs/AUTH_ROADMAP.md`.
 - Operator API integrations (daily/hourly impressions, live spend)
+- Wire `computeCampaignTotal` into UI financial fields (formula exists, UI still uses manual inputs)
 - Multi-operator support (when XLSX starts listing Media Lux, Apex Media, etc.)
 - Competitor analysis module
 - PDF/XLSX report export
@@ -564,30 +670,63 @@ Not in scope for initial launch:
 │   │   │   ├── page.tsx
 │   │   │   ├── clients/
 │   │   │   └── campaigns/
+│   │   │       └── [id]/
+│   │   │           ├── page.tsx          # campaign detail
+│   │   │           ├── edit/page.tsx
+│   │   │           ├── upload/page.tsx
+│   │   │           └── screens/page.tsx  # ScreensTable editable=true
 │   │   ├── dashboard/
-│   │   │   ├── layout.tsx
-│   │   │   └── [campaignId]/
+│   │   │   ├── page.tsx                  # server: fetch + reshape
+│   │   │   └── dashboard-client.tsx      # client: all widgets
+│   │   ├── profile/
+│   │   │   └── page.tsx                  # date-format picker
 │   │   └── login/
-│   └── api/
-│       ├── auth/
-│       ├── campaigns/
-│       └── upload/
+│   ├── api/
+│   │   ├── auth/
+│   │   ├── campaigns/
+│   │   │   └── [id]/
+│   │   │       ├── route.ts
+│   │   │       └── periods/
+│   │   │           ├── route.ts
+│   │   │           └── [periodId]/route.ts
+│   │   ├── upload/
+│   │   │   ├── route.ts                  # parse XLSX, return preview
+│   │   │   └── [id]/confirm/route.ts     # write to DB
+│   │   └── user/
+│   │       └── preferences/route.ts      # PATCH dateFormat
+│   └── manifest.json
 ├── components/
-│   ├── ui/              # Base components (buttons, inputs)
-│   ├── charts/          # Chart components
-│   ├── map/             # Mapbox components
-│   └── admin/           # Admin-specific components
+│   ├── ui/
+│   │   ├── campaign-selector.tsx         # selector with formatted period labels
+│   │   ├── date-format-picker.tsx        # 5-mode picker for /profile
+│   │   ├── filter-bar.tsx
+│   │   └── ...
+│   ├── charts/                           # Recharts/Tremor chart components
+│   ├── map/                              # Mapbox ScreenMap
+│   ├── screens/
+│   │   └── screens-table.tsx             # shared ScreensTable (editable prop)
+│   └── admin/                            # admin-only components
+│       ├── campaign-form.tsx
+│       ├── campaign-financials.tsx
+│       ├── period-manager.tsx
+│       └── ...
 ├── lib/
-│   ├── parser/          # XLSX parsing subsystem
+│   ├── parser/                           # XLSX parsing subsystem
 │   │   ├── index.ts
-│   │   ├── sheets/      # Per-sheet-type extractors
-│   │   ├── yandex.ts    # Yandex GeoJSON fetch
-│   │   ├── matcher.ts   # Fuzzy matching
-│   │   └── schemas.ts   # Zod schemas
-│   ├── db.ts            # Prisma client singleton
-│   ├── auth.ts          # NextAuth config
+│   │   ├── sheets.ts
+│   │   ├── columns.ts
+│   │   ├── schemas.ts
+│   │   ├── matcher.ts
+│   │   └── yandex.ts
+│   ├── db.ts                             # Prisma client singleton
+│   ├── auth.ts                           # NextAuth config
+│   ├── api-auth.ts                       # requireAdmin() helper
+│   ├── app-settings.ts                   # getAppSettings / updateAppSettings (singleton)
+│   ├── campaign-total.ts                 # computeCampaignTotal (raw + AC + VAT)
+│   ├── format-period.ts                  # formatCampaignPeriod, 5 DateFormat modes
+│   ├── user-preferences.ts               # getUserPreferences / updateUserPreferences
 │   └── i18n.ts
-├── messages/            # i18n translations
+├── messages/
 │   ├── ru.json
 │   ├── en.json
 │   ├── uz.json
@@ -595,6 +734,15 @@ Not in scope for initial launch:
 ├── prisma/
 │   └── schema.prisma
 ├── public/
+│   ├── favicon.svg
+│   ├── favicon-96x96.png
+│   ├── favicon-96x96-dark.png            # used in <link media="(prefers-color-scheme: dark)">
+│   ├── apple-touch-icon.png
+│   └── android-chrome-192x192.png
+├── docs/
+│   ├── ARCHITECTURE.md                   # this file
+│   ├── AUTH_ROADMAP.md                   # auth rework phases 0-4
+│   └── DESIGN_SYSTEM.md
 ├── docker-compose.yml
 ├── Dockerfile
 └── middleware.ts

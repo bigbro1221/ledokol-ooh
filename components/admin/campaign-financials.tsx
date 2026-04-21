@@ -36,7 +36,7 @@ export function CampaignFinancials({ campaignId, initialValues }: CampaignFinanc
       body: JSON.stringify({
         totalBudgetUzs: values.totalBudgetUzs ? Number(values.totalBudgetUzs) : null,
         productionCost: values.productionCost ? Number(values.productionCost) : null,
-        agencyFeePct: values.agencyFeePct ? Number(values.agencyFeePct) : null,
+        acRate: values.agencyFeePct ? Number(values.agencyFeePct) / 100 : 0,
         totalFinal: values.totalFinal ? Number(values.totalFinal) : null,
       }),
     });
