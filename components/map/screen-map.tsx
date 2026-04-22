@@ -192,7 +192,7 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
 
       {/* Legend */}
       <div className="mt-3 flex flex-wrap gap-4">
-        {Object.entries(TYPE_COLORS).map(([type, color]) => (
+        {Object.entries(TYPE_COLORS).filter(([type]) => screensWithCoords.some(s => s.type === type)).map(([type, color]) => (
           <div key={type} className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-[11px] text-[var(--text-3)]">{TYPE_LABELS[type] || type}</span>
