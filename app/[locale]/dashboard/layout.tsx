@@ -1,5 +1,6 @@
 import { LogoutButton } from '@/components/ui/logout-button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LocaleToggle } from '@/components/ui/locale-toggle';
 import { UserNav } from '@/components/ui/user-nav';
 import { useTranslations } from 'next-intl';
 import { auth } from '@/lib/auth';
@@ -28,6 +29,7 @@ export default async function DashboardLayout({
 
 function DashboardNav({ locale, isAdmin }: { locale: string; isAdmin: boolean }) {
   const tc = useTranslations('common');
+  const tn = useTranslations('nav');
 
   return (
     <header
@@ -42,17 +44,18 @@ function DashboardNav({ locale, isAdmin }: { locale: string; isAdmin: boolean })
         {isAdmin && (
           <Link
             href={`/${locale}/admin`}
-            aria-label="Админ панель"
+            aria-label={tn('adminPanel')}
             className="flex min-h-[44px] items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1 text-[12px] font-medium text-[var(--text-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] sm:min-h-0"
           >
             <Shield size={16} strokeWidth={1.5} />
             {/* mobile: <640px — hide label */}
-            <span className="hidden sm:inline">Админ панель</span>
+            <span className="hidden sm:inline">{tn('adminPanel')}</span>
           </Link>
         )}
 
         <div className="flex-1" />
         <UserNav locale={locale} />
+        <LocaleToggle />
         <ThemeToggle />
         <LogoutButton label={tc('logout')} />
       </div>

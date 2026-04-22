@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 export interface MonthData {
   label: string;
@@ -44,6 +45,8 @@ interface Props {
 
 export function MonthlyPlanFact({ data }: Props) {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const tc = useTranslations('charts');
+  const tf = useTranslations('filters');
 
   // All unique period labels in their original order (first city's order is canonical)
   const allLabels = data[0]?.months.map(m => m.label) ?? [];
@@ -87,7 +90,7 @@ export function MonthlyPlanFact({ data }: Props) {
               : 'border border-[var(--border)] text-[var(--text-2)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]'
           }`}
         >
-          Все города
+          {tf('allCities')}
         </button>
         {data.map(d => (
           <button
@@ -126,8 +129,8 @@ export function MonthlyPlanFact({ data }: Props) {
             wrapperStyle={{ fontSize: 11, color: 'var(--text-3)', paddingTop: 12 }}
             formatter={(value) => <span style={{ color: 'var(--text-2)' }}>{value}</span>}
           />
-          <Bar dataKey="fact" name="Факт" fill="#3B82F6" radius={[3, 3, 0, 0]} maxBarSize={40} />
-          <Bar dataKey="plan" name="План" fill="#94A3B8" radius={[3, 3, 0, 0]} maxBarSize={40} fillOpacity={0.7} />
+          <Bar dataKey="fact" name={tc('fact')} fill="#3B82F6" radius={[3, 3, 0, 0]} maxBarSize={40} />
+          <Bar dataKey="plan" name={tc('plan')} fill="#94A3B8" radius={[3, 3, 0, 0]} maxBarSize={40} fillOpacity={0.7} />
         </BarChart>
       </ResponsiveContainer>
     </div>

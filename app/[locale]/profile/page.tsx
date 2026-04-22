@@ -9,9 +9,6 @@ import { GoogleLinkButton } from '@/components/auth/google-link-button';
 import type { DateFormat } from '@/lib/format-period';
 import { getTranslations } from 'next-intl/server';
 
-const ROLE_LABELS: Record<string, string> = { ADMIN: 'Администратор', CLIENT: 'Клиент' };
-const LANG_LABELS: Record<string, string> = { RU: 'Русский', EN: 'English', UZ: "O'zbek", TR: 'Türkçe' };
-
 export default async function ProfilePage({
   params,
   searchParams,
@@ -21,7 +18,10 @@ export default async function ProfilePage({
 }) {
   const { locale } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const t = await getTranslations({ locale, namespace: 'auth' });
+  const ta = await getTranslations({ locale, namespace: 'auth' });
+  const tp = await getTranslations({ locale, namespace: 'profile' });
+  const tRoles = await getTranslations({ locale, namespace: 'roles' });
+  const tLang = await getTranslations({ locale, namespace: 'languages' });
   const session = await auth();
   if (!session?.user) redirect(`/${locale}/login`);
 
@@ -47,16 +47,16 @@ export default async function ProfilePage({
   if (!user) redirect(`/${locale}/login`);
 
   const initialDateFormat = prefs.dateFormat.toLowerCase() as DateFormat;
-
   const isAdmin = user.role === 'ADMIN';
+  const dateLocale = locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU';
 
   const fields = [
     { icon: Mail, label: 'Email', value: user.email },
-    { icon: Shield, label: 'Роль', value: ROLE_LABELS[user.role] || user.role },
-    ...(user.client ? [{ icon: Building2, label: 'Компания', value: user.client.name }] : []),
-    ...(user.client?.contactPerson ? [{ icon: User, label: 'Контактное лицо', value: user.client.contactPerson }] : []),
-    { icon: Globe, label: 'Язык интерфейса', value: LANG_LABELS[user.language] || user.language },
-    { icon: Calendar, label: 'Аккаунт создан', value: user.createdAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) },
+    { icon: Shield, label: tp('fieldRole'), value: tRoles(user.role) },
+    ...(user.client ? [{ icon: Building2, label: tp('fieldCompany'), value: user.client.name }] : []),
+    ...(user.client?.contactPerson ? [{ icon: User, label: tp('fieldContact'), value: user.client.contactPerson }] : []),
+    { icon: Globe, label: tp('fieldLanguage'), value: tLang(user.language) },
+    { icon: Calendar, label: tp('fieldCreated'), value: user.createdAt.toLocaleDateString(dateLocale, { day: 'numeric', month: 'long', year: 'numeric' }) },
   ];
 
   return (
@@ -68,15 +68,21 @@ export default async function ProfilePage({
             href={isAdmin ? `/${locale}/admin` : `/${locale}/dashboard`}
             className="text-sm text-[var(--text-2)] transition-colors hover:text-[var(--text)]"
           >
-            &larr; {isAdmin ? 'Администрирование' : 'Дашборд'}
+            &larr; {isAdmin ? tp('adminLink') : tp('dashboardLink')}
           </Link>
         </div>
       </header>
 
       <main className="mx-auto max-w-[800px] px-4 py-12 sm:px-8">
         {resolvedSearchParams?.mustLinkGoogle === "1" && (
-          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-100">
-            {t("mustLinkGoogleBanner")}
+          <div className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-100">
+            <span>{ta('mustLinkGoogleBanner')}</span>
+            <a
+              href="#linked-accounts"
+              className="shrink-0 rounded-md border border-red-400/40 px-3 py-1.5 text-[12px] font-medium text-red-100 transition-colors hover:bg-red-500/20"
+            >
+              {ta('linkGoogleCta')}
+            </a>
           </div>
         )}
         {/* Profile header */}
@@ -87,7 +93,7 @@ export default async function ProfilePage({
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight">{user.email}</h1>
             <p className="mt-0.5 text-sm text-[var(--text-3)]">
-              {ROLE_LABELS[user.role]}
+              {tRoles(user.role)}
               {user.client && <> &middot; {user.client.name}</>}
             </p>
           </div>
@@ -96,7 +102,7 @@ export default async function ProfilePage({
         {/* Info card */}
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
           <div className="border-b border-[var(--border)] px-6 py-4">
-            <h2 className="text-[15px] font-semibold">Профиль</h2>
+            <h2 className="text-[15px] font-semibold">{tp('cardTitle')}</h2>
           </div>
           <div className="divide-y divide-[var(--border)]">
             {fields.map(({ icon: Icon, label, value }) => (
@@ -112,8 +118,8 @@ export default async function ProfilePage({
         {/* Display preferences card */}
         <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
           <div className="border-b border-[var(--border)] px-6 py-4">
-            <h2 className="text-[15px] font-semibold">Формат дат</h2>
-            <p className="mt-0.5 text-[13px] text-[var(--text-3)]">Как отображать период кампании в заголовке</p>
+            <h2 className="text-[15px] font-semibold">{tp('dateFormatTitle')}</h2>
+            <p className="mt-0.5 text-[13px] text-[var(--text-3)]">{tp('dateFormatSubtitle')}</p>
           </div>
           <div className="p-6">
             <DateFormatPicker initialFormat={initialDateFormat} locale={locale} />
@@ -122,14 +128,10 @@ export default async function ProfilePage({
 
         {/* Linked accounts — only shown when Google OAuth is configured */}
         {googleConfigured && (
-          <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
+          <div id="linked-accounts" className="mt-6 scroll-mt-24 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
             <div className="border-b border-[var(--border)] px-6 py-4">
-              <h2 className="text-[15px] font-semibold">
-                {locale === 'en' ? 'Linked accounts' : locale === 'uz' ? "Bog'langan hisoblar" : 'Привязанные аккаунты'}
-              </h2>
-              <p className="mt-0.5 text-[13px] text-[var(--text-3)]">
-                {locale === 'en' ? 'Sign in with a linked account instead of a password' : locale === 'uz' ? 'Parol o\'rniga bog\'langan hisob bilan kiring' : 'Войдите через привязанный аккаунт вместо пароля'}
-              </p>
+              <h2 className="text-[15px] font-semibold">{tp('linkedAccountsTitle')}</h2>
+              <p className="mt-0.5 text-[13px] text-[var(--text-3)]">{tp('linkedAccountsSubtitle')}</p>
             </div>
             <div className="flex items-center gap-4 px-6 py-4">
               <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0">
@@ -141,20 +143,13 @@ export default async function ProfilePage({
               <div className="flex-1">
                 <p className="text-[14px] font-medium">Google</p>
                 {googleAccount ? (
-                  <p className="text-[12px] text-[var(--success)]">
-                    {locale === 'en' ? 'Linked' : locale === 'uz' ? 'Bog\'langan' : 'Привязан'}
-                  </p>
+                  <p className="text-[12px] text-[var(--success)]">{tp('linked')}</p>
                 ) : (
-                  <p className="text-[12px] text-[var(--text-3)]">
-                    {locale === 'en' ? 'Not linked' : locale === 'uz' ? "Bog'lanmagan" : 'Не привязан'}
-                  </p>
+                  <p className="text-[12px] text-[var(--text-3)]">{tp('notLinked')}</p>
                 )}
               </div>
               {!googleAccount && (
-                <GoogleLinkButton
-                  locale={locale}
-                  label={locale === 'en' ? 'Link' : locale === 'uz' ? "Bog'lash" : 'Привязать'}
-                />
+                <GoogleLinkButton locale={locale} label={tp('linkBtn')} />
               )}
             </div>
           </div>
@@ -167,14 +162,14 @@ export default async function ProfilePage({
               href={`/${locale}/admin`}
               className="rounded-[var(--radius-md)] border border-[var(--border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--surface-2)]"
             >
-              Администрирование
+              {tp('adminLink')}
             </Link>
           )}
           <Link
             href={`/${locale}/dashboard`}
             className="rounded-[var(--radius-md)] border border-[var(--border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--surface-2)]"
           >
-            Дашборд
+            {tp('dashboardLink')}
           </Link>
         </div>
       </main>

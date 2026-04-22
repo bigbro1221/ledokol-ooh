@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Plus, ChevronRight } from 'lucide-react';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 export default async function ClientsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -11,6 +12,7 @@ export default async function ClientsPage({ params }: { params: Promise<{ locale
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const t = await getTranslations({ locale, namespace: 'admin' });
   const clients = await prisma.client.findMany({
     include: { _count: { select: { campaigns: true, users: true } } },
     orderBy: { createdAt: 'desc' },
@@ -19,15 +21,15 @@ export default async function ClientsPage({ params }: { params: Promise<{ locale
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Клиенты</h1>
+        <h1 className="text-xl font-semibold">{t('clients')}</h1>
         <Link
           href={`/${locale}/admin/clients/new`}
-          aria-label="Новый клиент"
+          aria-label={t('newClient')}
           className="flex min-h-[44px] items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)] sm:min-h-0 sm:px-4"
         >
           <Plus size={16} strokeWidth={1.5} />
           {/* mobile: <640px — hide label */}
-          <span className="hidden sm:inline">Новый клиент</span>
+          <span className="hidden sm:inline">{t('newClient')}</span>
         </Link>
       </div>
 
@@ -35,12 +37,12 @@ export default async function ClientsPage({ params }: { params: Promise<{ locale
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-[var(--surface-2)]">
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Название</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableClientName')}</th>
               {/* mobile: <640px — hide contact person */}
-              <th className="hidden border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)] sm:table-cell">Контактное лицо</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-right text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Кампании</th>
+              <th className="hidden border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)] sm:table-cell">{t('tableContactPerson')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-right text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableCampaignsCount')}</th>
               {/* mobile: <640px — hide users count */}
-              <th className="hidden border-b border-[var(--border)] px-4 py-3 text-right text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)] sm:table-cell">Пользователи</th>
+              <th className="hidden border-b border-[var(--border)] px-4 py-3 text-right text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)] sm:table-cell">{t('tableUsersCount')}</th>
               {/* mobile chevron column */}
               <th className="w-8 border-b border-[var(--border)] sm:hidden"></th>
             </tr>
@@ -66,7 +68,7 @@ export default async function ClientsPage({ params }: { params: Promise<{ locale
             {clients.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
-                  Нет клиентов. Создайте первого.
+                  {t('noClients')}
                 </td>
               </tr>
             )}

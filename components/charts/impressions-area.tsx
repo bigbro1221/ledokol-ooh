@@ -3,6 +3,7 @@
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 interface DayEntry {
   date: string;
@@ -10,11 +11,12 @@ interface DayEntry {
 }
 
 export function ImpressionsArea({ data }: { data: DayEntry[] }) {
+  const t = useTranslations('charts');
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="mb-6">
-        <h3 className="text-[15px] font-semibold tracking-tight">Показы по дням</h3>
-        <p className="mt-0.5 text-xs text-[var(--text-3)]">Ежедневные показы за период кампании</p>
+        <h3 className="text-[15px] font-semibold tracking-tight">{t('impressionsDailyTitle')}</h3>
+        <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('impressionsDailySubtitle')}</p>
       </div>
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -41,7 +43,7 @@ export function ImpressionsArea({ data }: { data: DayEntry[] }) {
               width={40}
             />
             <Tooltip
-              formatter={(value) => [Number(value).toLocaleString('ru-RU'), 'Показы']}
+              formatter={(value) => [Number(value).toLocaleString('ru-RU'), t('impressions')]}
               contentStyle={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 interface CampaignFormProps {
   locale: string;
@@ -55,6 +56,8 @@ function clearDraft() {
 
 export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   const router = useRouter();
+  const tc = useTranslations('common');
+  const tf = useTranslations('forms');
   const isEdit = !!initial;
 
   // All controlled state — seeded from initial (edit) or draft (new)
@@ -68,6 +71,15 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   const [acRate, setAcRate] = useState(initial?.acRate ?? '');
 
   const [loading, setLoading] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = useCallback((value: string, field: string) => {
+    if (!value) return;
+    navigator.clipboard.writeText(value).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    });
+  }, []);
   const [error, setError] = useState('');
   const [draftRestored, setDraftRestored] = useState(false);
 
@@ -123,7 +135,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(err.error || err.errors?.fieldErrors?.name?.[0] || 'Ошибка сохранения');
+        setError(err.error || err.errors?.fieldErrors?.name?.[0] || tc('error'));
         setLoading(false);
         return;
       }
@@ -131,7 +143,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       router.push(`/${locale}/admin/campaigns`);
       router.refresh();
     } catch {
-      setError('Сетевая ошибка');
+      setError(tc('error'));
       setLoading(false);
     }
   }
@@ -144,7 +156,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       {/* Draft restored notice */}
       {draftRestored && (
         <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--warning)] bg-[rgba(234,179,8,0.08)] px-3 py-2">
-          <p className="text-xs text-[var(--warning)]">Восстановлен незаполненный черновик</p>
+          <p className="text-xs text-[var(--warning)]">{tf('draftRestored')}</p>
           <button
             type="button"
             onClick={() => {
@@ -155,14 +167,14 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
             }}
             className="ml-4 text-[11px] text-[var(--text-3)] underline hover:text-[var(--text)]"
           >
-            Очистить
+            {tc('clear')}
           </button>
         </div>
       )}
 
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          Название кампании
+          {tf('campaignName')}
         </label>
         <input
           required
@@ -174,7 +186,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
 
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          Клиент
+          {tf('company')}
         </label>
         <select
           required
@@ -182,7 +194,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
           onChange={e => setClientId(e.target.value)}
           className={inputCls}
         >
-          <option value="">Выберите клиента</option>
+          <option value="">{tf('selectClient')}</option>
           {clients.map(c => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
@@ -192,7 +204,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-            Начало
+            {tf('periodStart')}
           </label>
           <input
             type="date"
@@ -204,7 +216,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-            Окончание
+            {tf('periodEnd')}
           </label>
           <input
             type="date"
@@ -219,7 +231,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       {/* Agency commission */}
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          {locale === 'en' ? 'Agency commission, %' : locale === 'uz' ? 'Agentlik komissiyasi, %' : 'Агентская комиссия, %'}
+          {tf('agencyCommissionPct')}
         </label>
         <input
           type="number"
@@ -231,37 +243,67 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
           onChange={e => setAcRate(e.target.value)}
           className={inputCls}
         />
-        <p className="mt-1 text-[11px] text-[var(--text-4)]">Процент от суммы без АК и НДС. Оставьте пустым или 0 если не применяется.</p>
+        <p className="mt-1 text-[11px] text-[var(--text-4)]">{tf('agencyCommissionHelp')}</p>
       </div>
 
       {/* Heatmap URL */}
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          Ссылка на тепловую карту (Foursquare)
+          {tf('heatmapUrl')}
         </label>
-        <input
-          type="url"
-          placeholder="https://studio.foursquare.com/map/public/..."
-          value={heatmapUrl}
-          onChange={e => setHeatmapUrl(e.target.value)}
-          className={inputCls}
-        />
-        <p className="mt-1 text-[11px] text-[var(--text-4)]">Ссылка вида /map/public/… будет автоматически преобразована в iframe</p>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            placeholder="https://studio.foursquare.com/map/public/..."
+            value={heatmapUrl}
+            onChange={e => setHeatmapUrl(e.target.value)}
+            className={inputCls + ' flex-1'}
+          />
+          <button
+            type="button"
+            onClick={() => copyToClipboard(heatmapUrl, 'heatmap')}
+            disabled={!heatmapUrl}
+            title={tc('copy')}
+            className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--border)] px-2.5 text-[var(--text-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {copiedField === 'heatmap' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            )}
+          </button>
+        </div>
+        <p className="mt-1 text-[11px] text-[var(--text-4)]">{tf('heatmapHelp')}</p>
       </div>
 
       {/* Yandex Maps URL */}
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          Ссылка на Яндекс Карты (пины)
+          {tf('yandexUrl')}
         </label>
-        <input
-          type="url"
-          placeholder="https://yandex.uz/maps/..."
-          value={yandexMapUrl}
-          onChange={e => setYandexMapUrl(e.target.value)}
-          className={inputCls}
-        />
-        <p className="mt-1 text-[11px] text-[var(--text-4)]">Используется для геокодирования пинов при загрузке XLSX</p>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            placeholder="https://yandex.uz/maps/..."
+            value={yandexMapUrl}
+            onChange={e => setYandexMapUrl(e.target.value)}
+            className={inputCls + ' flex-1'}
+          />
+          <button
+            type="button"
+            onClick={() => copyToClipboard(yandexMapUrl, 'yandex')}
+            disabled={!yandexMapUrl}
+            title={tc('copy')}
+            className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--border)] px-2.5 text-[var(--text-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {copiedField === 'yandex' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            )}
+          </button>
+        </div>
+        <p className="mt-1 text-[11px] text-[var(--text-4)]">{tf('yandexHelp')}</p>
       </div>
 
       {/* Split by periods toggle */}
@@ -278,9 +320,9 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
             <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${splitByPeriods ? 'translate-x-4' : 'translate-x-0.5'}`} />
           </div>
           <div>
-            <div className="text-sm font-medium">Разбить на месяцы</div>
+            <div className="text-sm font-medium">{tf('splitByPeriodsLabel')}</div>
             <div className="mt-0.5 text-xs text-[var(--text-3)]">
-              Каждый месяц — отдельный XLSX-файл и финансовые данные
+              {tf('splitByPeriodsHelp')}
             </div>
           </div>
         </label>
@@ -294,14 +336,14 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
           disabled={loading}
           className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
         >
-          {loading ? '...' : isEdit ? 'Сохранить' : 'Создать'}
+          {loading ? '...' : isEdit ? tc('save') : tc('create')}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="rounded-[var(--radius-md)] border border-[var(--border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--surface-2)]"
         >
-          Отмена
+          {tc('cancel')}
         </button>
       </div>
     </form>

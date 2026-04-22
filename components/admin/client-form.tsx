@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 interface ClientFormProps {
   locale: string;
@@ -10,6 +11,8 @@ interface ClientFormProps {
 
 export function ClientForm({ locale, initial }: ClientFormProps) {
   const router = useRouter();
+  const tc = useTranslations('common');
+  const tf = useTranslations('forms');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const isEdit = !!initial;
@@ -30,7 +33,7 @@ export function ClientForm({ locale, initial }: ClientFormProps) {
 
     if (!res.ok) {
       const err = await res.json();
-      setError(err.errors?.fieldErrors?.name?.[0] || 'Ошибка сохранения');
+      setError(err.errors?.fieldErrors?.name?.[0] || tc('error'));
       return;
     }
 
@@ -42,7 +45,7 @@ export function ClientForm({ locale, initial }: ClientFormProps) {
     <form onSubmit={handleSubmit} className="max-w-lg space-y-4">
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          Название компании
+          {tf('companyName')}
         </label>
         <input
           name="name"
@@ -53,7 +56,7 @@ export function ClientForm({ locale, initial }: ClientFormProps) {
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          Контактное лицо
+          {tf('contactPerson')}
         </label>
         <input
           name="contactPerson"
@@ -68,14 +71,14 @@ export function ClientForm({ locale, initial }: ClientFormProps) {
           disabled={loading}
           className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
         >
-          {loading ? '...' : isEdit ? 'Сохранить' : 'Создать'}
+          {loading ? '...' : isEdit ? tc('save') : tc('create')}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="rounded-[var(--radius-md)] border border-[var(--border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--surface-2)]"
         >
-          Отмена
+          {tc('cancel')}
         </button>
       </div>
     </form>

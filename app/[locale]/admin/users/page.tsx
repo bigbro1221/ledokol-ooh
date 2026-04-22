@@ -3,8 +3,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-
-const ROLE_LABELS: Record<string, string> = { ADMIN: 'Админ', CLIENT: 'Клиент' };
+import { getTranslations } from 'next-intl/server';
 
 export default async function UsersPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -13,6 +12,9 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const t = await getTranslations({ locale, namespace: 'admin' });
+  const tRoles = await getTranslations({ locale, namespace: 'roles' });
+  const roleLabel = (role: string) => role === 'ADMIN' ? tRoles('adminShort') : tRoles('CLIENT');
   const users = await prisma.user.findMany({
     select: {
       id: true, email: true, role: true, enabled: true,
@@ -25,12 +27,12 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Пользователи</h1>
+        <h1 className="text-xl font-semibold">{t('users')}</h1>
         <Link
           href={`/${locale}/admin/users/new`}
           className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
-          <Plus size={16} strokeWidth={1.5} /> Новый пользователь
+          <Plus size={16} strokeWidth={1.5} /> {t('newUser')}
         </Link>
       </div>
 
@@ -39,10 +41,10 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
           <thead>
             <tr className="bg-[var(--surface-2)]">
               <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Email</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Роль</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Компания</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Статус</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Создан</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableRole')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableCompany')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableStatus')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableCreated')}</th>
             </tr>
           </thead>
           <tbody>
@@ -59,7 +61,7 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
                       ? 'bg-[rgba(59,130,246,0.12)] text-[var(--info)]'
                       : 'bg-[var(--surface-3)] text-[var(--text-2)]'
                   }`}>
-                    {ROLE_LABELS[u.role]}
+                    {roleLabel(u.role)}
                   </span>
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-2)]">
@@ -71,11 +73,11 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
                       ? 'bg-[rgba(16,185,129,0.12)] text-[var(--success)]'
                       : 'bg-[rgba(239,68,68,0.12)] text-[var(--danger)]'
                   }`}>
-                    {u.enabled ? 'Активен' : 'Отключён'}
+                    {u.enabled ? t('statusEnabled') : t('statusDisabled')}
                   </span>
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
-                  {u.createdAt.toLocaleDateString('ru-RU')}
+                  {u.createdAt.toLocaleDateString(locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU')}
                 </td>
               </tr>
             ))}

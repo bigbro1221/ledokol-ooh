@@ -21,6 +21,8 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { PeriodFilter } from '@/components/ui/period-filter';
 import { PeriodRangeSelector } from '@/components/ui/period-range-selector';
 import { type DateFormat, formatCampaignPeriod } from '@/lib/format-period';
+import { useTranslations } from 'next-intl';
+import { CreativesCard, type CreativeView } from '@/components/dashboard/creatives-card';
 
 const ScreenMap = dynamic(() => import('@/components/map/screen-map').then(m => ({ default: m.ScreenMap })), {
   ssr: false,
@@ -33,32 +35,16 @@ const STATUS_STYLES: Record<string, string> = {
   COMPLETED: 'bg-[var(--surface-3)] text-[var(--text-3)]',
   DRAFT: 'bg-[var(--surface-3)] text-[var(--text-3)]',
 };
-const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Активна', PAUSED: 'Пауза', COMPLETED: 'Завершена', DRAFT: 'Черновик' };
-
-const BUDGET_LABEL: Record<string, string> = {
-  ru: 'Бюджет с учётом АК/НДС',
-  en: 'Budget (incl. AC/VAT)',
-  uz: 'Byudjet (AK va QQS bilan)',
-  tr: 'Bütçe (AK/KDV dahil)',
-};
-const GEOGRAPHY_LABEL: Record<string, string> = {
-  ru: 'География',
-  en: 'Geography',
-  uz: 'Geografiya',
-  tr: 'Coğrafya',
-};
-
-function citiesNoun(n: number, locale: string): string {
-  if (locale === 'en') return n === 1 ? 'city' : 'cities';
-  if (locale === 'uz') return 'shahar';
-  if (locale === 'tr') return n === 1 ? 'şehir' : 'şehir';
-  // Russian declension
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return 'городов';
-  if (mod10 === 1) return 'город';
-  if (mod10 >= 2 && mod10 <= 4) return 'города';
-  return 'городов';
+function citiesNoun(n: number, locale: string, t: (key: string) => string): string {
+  if (locale === 'ru') {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 14) return t('cityMany');
+    if (mod10 === 1) return t('cityOne');
+    if (mod10 >= 2 && mod10 <= 4) return t('cityFew');
+    return t('cityMany');
+  }
+  return n === 1 ? t('cityOne') : t('cityMany');
 }
 
 interface Props {
@@ -88,6 +74,7 @@ interface Props {
   periodsWithData: { id: string; name: string }[];
   selectedFrom: string | null;
   selectedTo: string | null;
+  creatives: CreativeView[];
 }
 
 export function DashboardClient({
@@ -95,9 +82,12 @@ export function DashboardClient({
   budgetByType, totalBudgetFromScreens,
   planVsFactByCity, monthlyByCity, planVsFactByType,
   topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, availableTypes, filters,
-  heatmapEmbedUrl, periodsWithData, selectedFrom, selectedTo,
+  heatmapEmbedUrl, periodsWithData, selectedFrom, selectedTo, creatives,
 }: Props) {
   const [monthlyExpanded, setMonthlyExpanded] = useState(false);
+  const td = useTranslations('dashboard');
+  const tStatus = useTranslations('campaignStatus');
+  const tc = useTranslations('charts');
 
   const formattedPeriod = formatCampaignPeriod(
     new Date(campaign.periodStart),
@@ -145,7 +135,7 @@ export function DashboardClient({
           <div className="flex flex-wrap items-center gap-3">
             <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.04em] ${STATUS_STYLES[campaign.status]}`}>
               {campaign.status === 'ACTIVE' && <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />}
-              {STATUS_LABELS[campaign.status]}
+              {tStatus(campaign.status)}
             </span>
           </div>
         </div>
@@ -155,23 +145,26 @@ export function DashboardClient({
       <FilterBar cities={allCities} availableTypes={availableTypes} locale={locale} />
       {(filters.city || filters.type) && (
         <p className="mb-4 text-xs text-[var(--text-3)]">
-          Показаны: {filters.city || 'все города'}, {filters.type || 'все типы'} — {kpis.totalScreens} поверхностей
+          {td('showingLabel')} {filters.city || td('allCities')}, {filters.type || td('allTypes')} — {kpis.totalScreens} {td('screensSuffix')}
         </p>
       )}
+
+      {/* Creatives — campaign media, sits between filters and KPIs */}
+      <CreativesCard creatives={creatives} />
 
       {/* KPI Cards — 3 visible cards (Performance disabled) */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         {/* Geography */}
         <KPICard
-          label={GEOGRAPHY_LABEL[locale] ?? GEOGRAPHY_LABEL.ru}
+          label={td('geography')}
           value={String(kpis.cities)}
-          unit={citiesNoun(kpis.cities, locale)}
+          unit={citiesNoun(kpis.cities, locale, td)}
           icon={<MapPin size={14} strokeWidth={1.5} />}
           delay={0}
         />
         {/* Surfaces */}
         <KPICard
-          label="Поверхности"
+          label={td('screens')}
           value={String(kpis.totalScreens)}
           icon={<LayoutGrid size={14} strokeWidth={1.5} />}
           delay={80}
@@ -188,7 +181,7 @@ export function DashboardClient({
         */}
         {/* Budget */}
         <KPICard
-          label={BUDGET_LABEL[locale] ?? BUDGET_LABEL.ru}
+          label={td('budgetWithFees')}
           value={kpis.formatBudget}
           unit="UZS"
           icon={<Banknote size={14} strokeWidth={1.5} />}
@@ -222,8 +215,8 @@ export function DashboardClient({
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {planVsFactByType.length > 0 && (
             <PlanFactBreakdown
-              title="План и факт по типам"
-              subtitle="Сравнение плановых и фактических показов"
+              title={tc('planTitle')}
+              subtitle={tc('planSubtitle')}
               data={planVsFactByType}
             />
           )}
@@ -237,8 +230,8 @@ export function DashboardClient({
       {planVsFactByCity.length > 0 && (
         <div className="mb-6 space-y-3">
           <PlanFactBreakdown
-            title="План и факт по городам"
-            subtitle="Выполнение плана в разрезе городов"
+            title={tc('planCitiesTitle')}
+            subtitle={tc('planCitiesSubtitle')}
             data={planVsFactByCity}
           />
 
@@ -249,8 +242,8 @@ export function DashboardClient({
                 className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-xl)] border border-dashed border-[var(--border)] py-3 text-[13px] text-[var(--text-3)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
               >
                 {monthlyExpanded
-                  ? <><ChevronUp size={15} strokeWidth={1.5} /> Скрыть помесячную разбивку</>
-                  : <><ChevronDown size={15} strokeWidth={1.5} /> Показать помесячную разбивку</>
+                  ? <><ChevronUp size={15} strokeWidth={1.5} /> {td('hideMonthlyBreakdown')}</>
+                  : <><ChevronDown size={15} strokeWidth={1.5} /> {td('showMonthlyBreakdown')}</>
                 }
               </button>
 
@@ -272,7 +265,7 @@ export function DashboardClient({
         <div className="mb-6 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)]">
           <div className="flex items-center justify-between px-6 py-4">
             <div>
-              <h3 className="text-[15px] font-semibold tracking-tight">Тепловая карта аудитории</h3>
+              <h3 className="text-[15px] font-semibold tracking-tight">{td('heatmapTitle')}</h3>
               <p className="mt-0.5 text-xs text-[var(--text-3)]">Foursquare Studio</p>
             </div>
             <a
@@ -281,7 +274,7 @@ export function DashboardClient({
               rel="noopener noreferrer"
               className="text-[11px] text-[var(--text-3)] underline hover:text-[var(--text)]"
             >
-              Открыть в новой вкладке ↗
+              {td('heatmapOpenNewTab')}
             </a>
           </div>
           <iframe

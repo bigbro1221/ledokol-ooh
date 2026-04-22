@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 interface CityData {
   city: string;
   screens: number;
@@ -13,13 +15,14 @@ function formatOts(n: number): string {
 }
 
 export function CityBreakdown({ data }: { data: CityData[] }) {
+  const t = useTranslations('charts');
   const maxOts = Math.max(...data.map(d => d.ots), 1);
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
       <div className="mb-4">
-        <h3 className="text-[15px] font-semibold tracking-tight">Города</h3>
-        <p className="mt-0.5 text-xs text-[var(--text-3)]">Распределение поверхностей и OTS по городам</p>
+        <h3 className="text-[15px] font-semibold tracking-tight">{t('citiesTitle')}</h3>
+        <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('citiesSubtitle')}</p>
       </div>
 
       {/* mobile: <640px — simplified list, no bar chart */}
@@ -29,11 +32,11 @@ export function CityBreakdown({ data }: { data: CityData[] }) {
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-medium text-[var(--text)]">{d.city}</span>
               <span className="text-[12px] text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-                {d.screens} экр.
+                {d.screens} {t('screensShort')}
               </span>
             </div>
             <div className="text-[11px] text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-              OTS: {formatOts(d.ots)}
+              {t('ots')}: {formatOts(d.ots)}
             </div>
           </div>
         ))}
@@ -61,8 +64,8 @@ export function CityBreakdown({ data }: { data: CityData[] }) {
       </div>
 
       <div className="mt-3 hidden justify-end gap-6 text-[10px] uppercase tracking-wide text-[var(--text-4)] sm:flex">
-        <span>Экранов</span>
-        <span>OTS</span>
+        <span>{t('screensCol')}</span>
+        <span>{t('ots')}</span>
       </div>
     </div>
   );

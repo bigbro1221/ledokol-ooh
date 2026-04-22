@@ -3,11 +3,11 @@
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { User } from 'lucide-react';
-
-const ROLE_LABELS: Record<string, string> = { ADMIN: 'Администратор', CLIENT: 'Клиент' };
+import { useTranslations } from 'next-intl';
 
 export function UserNav({ locale }: { locale: string }) {
   const { data: session } = useSession();
+  const t = useTranslations('roles');
 
   if (!session?.user) return null;
 
@@ -26,7 +26,7 @@ export function UserNav({ locale }: { locale: string }) {
           {session.user.email}
         </div>
         <div className="text-[10px] uppercase tracking-wide text-[var(--text-3)]">
-          {ROLE_LABELS[session.user.role] || session.user.role}
+          {t(session.user.role)}
         </div>
       </div>
     </Link>

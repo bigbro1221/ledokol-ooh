@@ -1,6 +1,7 @@
 'use client';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 const CHART_COLORS = [
   'var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)',
@@ -22,11 +23,12 @@ export function ImpressionsDonut({
   total: number;
   isFact: boolean;
 }) {
+  const t = useTranslations('charts');
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="mb-6">
         <div className="flex items-center gap-2">
-          <h3 className="text-[15px] font-semibold tracking-tight">Показы по типам</h3>
+          <h3 className="text-[15px] font-semibold tracking-tight">{t('impressionsByTypeTitle')}</h3>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
               isFact
@@ -34,13 +36,11 @@ export function ImpressionsDonut({
                 : 'bg-amber-500/20 text-amber-400'
             }`}
           >
-            {isFact ? 'факт' : 'план'}
+            {isFact ? t('fact').toLowerCase() : t('plan').toLowerCase()}
           </span>
         </div>
         <p className="mt-0.5 text-xs text-[var(--text-3)]">
-          {isFact
-            ? 'Фактические OTS по типу поверхности'
-            : 'Плановые OTS — фактические данные ещё не загружены'}
+          {isFact ? t('impressionsByTypeFact') : t('impressionsByTypePlan')}
         </p>
       </div>
       <div className="flex items-center gap-8">
@@ -75,7 +75,7 @@ export function ImpressionsDonut({
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">
-              {isFact ? 'Факт' : 'План'}
+              {isFact ? t('fact') : t('plan')}
             </span>
             <span className="text-lg font-semibold">{total.toLocaleString('ru-RU')}</span>
           </div>

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface Period {
   id: string;
@@ -21,6 +22,7 @@ export function PeriodRangeSelector({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const tf = useTranslations('filters');
 
   function update(from: string, to: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -51,7 +53,7 @@ export function PeriodRangeSelector({
 
   return (
     <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-3)]">
-      <span>С</span>
+      <span>{tf('from')}</span>
       <div className="relative">
         <select value={selectedFrom ?? ''} onChange={handleFrom} className={selectClass}>
           {!selectedFrom && <option value="">—</option>}
@@ -61,7 +63,7 @@ export function PeriodRangeSelector({
         </select>
         <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
       </div>
-      <span>по</span>
+      <span>{tf('to')}</span>
       <div className="relative">
         <select value={selectedTo ?? ''} onChange={handleTo} className={selectClass}>
           {!selectedTo && <option value="">—</option>}

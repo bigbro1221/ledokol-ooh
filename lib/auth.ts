@@ -5,28 +5,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { compare } from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import type { UserRole } from '@prisma/client';
-
-declare module 'next-auth' {
-  interface User {
-    role: UserRole;
-    clientId: string | null;
-  }
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      role: UserRole;
-      clientId: string | null;
-    };
-  }
-}
-
-declare module '@auth/core/jwt' {
-  interface JWT {
-    role: UserRole;
-    clientId: string | null;
-  }
-}
+import { authConfig } from './auth.config';
 
 export function isGoogleOAuthConfigured(): boolean {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
@@ -34,7 +13,7 @@ export function isGoogleOAuthConfigured(): boolean {
 
 export async function isGoogleLinked(userId: string): Promise<boolean> {
   const count = await prisma.account.count({
-    where: { userId, provider: "google" },
+    where: { userId, provider: 'google' },
   });
   return count > 0;
 }
@@ -49,10 +28,14 @@ const googleProvider = isGoogleOAuthConfigured()
       // users are admin-provisioned (credentials only at creation), this
       // flag is required for the "link Google" flow on the profile page.
       allowDangerousEmailAccountLinking: true,
+      // Force Google to show the account chooser every time instead of
+      // silently picking whichever account the browser is signed into.
+      authorization: { params: { prompt: 'select_account' } },
     })
   : null;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(prisma) as any,
   providers: [
@@ -79,23 +62,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
     ...(googleProvider ? [googleProvider] : []),
   ],
-  session: { strategy: 'jwt' },
-  pages: { signIn: '/login' },
   callbacks: {
+    ...authConfig.callbacks,
     async signIn({ user, account, profile }) {
-      if (account?.provider === "credentials") return true;
+      if (account?.provider === 'credentials') return true;
 
-      if (account?.provider === "google") {
+      if (account?.provider === 'google') {
         const email = user?.email ?? profile?.email;
         if (!email) return false;
 
-        const existing = await prisma.user.findUnique({
+        // The app user this Google identity maps to (matched by email)
+        const appUser = await prisma.user.findUnique({
           where: { email },
           select: { id: true, enabled: true },
         });
+        if (!appUser || !appUser.enabled) return false;
 
-        if (!existing) return false;
-        if (!existing.enabled) return false;
+        // Reject if this Google account is already linked to a DIFFERENT user.
+        // The DB unique index on (provider, providerAccountId) prevents duplicate
+        // rows, but allowDangerousEmailAccountLinking can bypass it at the app
+        // layer — this check closes that gap.
+        if (account.providerAccountId) {
+          const existingLink = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: 'google',
+                providerAccountId: account.providerAccountId,
+              },
+            },
+            select: { userId: true },
+          });
+          if (existingLink && existingLink.userId !== appUser.id) {
+            return false;
+          }
+        }
+
         return true;
       }
 
@@ -120,12 +121,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
       return token;
-    },
-    async session({ session, token }) {
-      session.user.id = token.sub!;
-      session.user.role = token.role;
-      session.user.clientId = token.clientId;
-      return session;
     },
   },
 });

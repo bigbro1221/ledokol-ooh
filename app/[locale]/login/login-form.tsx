@@ -1,10 +1,11 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LocaleToggle } from '@/components/ui/locale-toggle';
 
 function validateCallbackUrl(callbackUrl: string | null): string {
   const DEFAULT_REDIRECT = '/dashboard';
@@ -23,13 +24,36 @@ interface Props {
   googleConfigured: boolean;
 }
 
+function mapOAuthError(code: string | null, t: (key: string) => string): string {
+  if (!code) return '';
+  switch (code) {
+    case 'OAuthAccountNotLinked':
+      return t('errorOAuthConflict');
+    case 'AccessDenied':
+      return t('errorAccessDenied');
+    default:
+      return t('errorGeneric');
+  }
+}
+
 export function LoginForm({ googleConfigured }: Props) {
   const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [error, setError] = useState('');
+  const urlError = mapOAuthError(searchParams.get('error'), t);
+  const [error, setError] = useState(urlError);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // If we landed here with an OAuth error, a stale session cookie is likely
+  // still attached — that's exactly what produced the error. Clear it so the
+  // next sign-in attempt starts from a clean slate.
+  useEffect(() => {
+    if (searchParams.get('error')) {
+      signOut({ redirect: false });
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -55,13 +79,18 @@ export function LoginForm({ googleConfigured }: Props) {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
+    // Kill any lingering session before starting OAuth — otherwise NextAuth
+    // may refuse the new Google account if the cached session user doesn't
+    // match the OAuth user (throws OAuthAccountNotLinked).
+    await signOut({ redirect: false });
     const callbackUrl = validateCallbackUrl(searchParams.get('callbackUrl'));
     await signIn('google', { callbackUrl });
   }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="fixed right-6 top-6">
+      <div className="fixed right-6 top-6 flex items-center gap-2">
+        <LocaleToggle />
         <ThemeToggle />
       </div>
 
@@ -114,15 +143,30 @@ export function LoginForm({ googleConfigured }: Props) {
               >
                 {t('password')}
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[14px] text-[var(--text)] placeholder:text-[var(--text-4)] focus:border-[var(--border-em)] focus:outline-none focus:ring-[3px] focus:ring-[var(--brand-primary-subtle)]"
-                style={{ transition: 'border-color var(--duration-fast) var(--ease-out-soft), box-shadow var(--duration-fast) var(--ease-out-soft)' }}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 pr-10 text-[14px] text-[var(--text)] placeholder:text-[var(--text-4)] focus:border-[var(--border-em)] focus:outline-none focus:ring-[3px] focus:ring-[var(--brand-primary-subtle)]"
+                  style={{ transition: 'border-color var(--duration-fast) var(--ease-out-soft), box-shadow var(--duration-fast) var(--ease-out-soft)' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--text-4)] hover:text-[var(--text-2)]"
+                  tabIndex={-1}
+                  aria-label={showPassword ? t('passwordHide') : t('passwordShow')}
+                >
+                  {showPassword ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -142,7 +186,7 @@ export function LoginForm({ googleConfigured }: Props) {
               {loading ? (
                 <span className="inline-flex items-center gap-2">
                   <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Вход...
+                  {t('loginInProgress')}
                 </span>
               ) : (
                 t('login')
@@ -155,7 +199,7 @@ export function LoginForm({ googleConfigured }: Props) {
             <>
               <div className="my-5 flex items-center gap-3">
                 <div className="h-px flex-1 bg-[var(--border)]" />
-                <span className="text-[11px] text-[var(--text-4)]">или</span>
+                <span className="text-[11px] text-[var(--text-4)]">{t('or')}</span>
                 <div className="h-px flex-1 bg-[var(--border)]" />
               </div>
 
