@@ -269,9 +269,12 @@ export function DashboardClient({
 
       {/* Heatmap (Foursquare Studio) */}
       {heatmapEmbedUrl && (
-        <div className="mb-6">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[13px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">Тепловая карта аудитории</h2>
+        <div className="mb-6 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)]">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div>
+              <h3 className="text-[15px] font-semibold tracking-tight">Тепловая карта аудитории</h3>
+              <p className="mt-0.5 text-xs text-[var(--text-3)]">Foursquare Studio</p>
+            </div>
             <a
               href={heatmapEmbedUrl}
               target="_blank"
@@ -281,16 +284,14 @@ export function DashboardClient({
               Открыть в новой вкладке ↗
             </a>
           </div>
-          <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)]" style={{ height: 480 }}>
-            <iframe
-              src={heatmapEmbedUrl}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              allow="fullscreen; geolocation"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title="Heatmap"
-            />
-          </div>
+          <iframe
+            src={heatmapEmbedUrl}
+            style={{ width: '100%', height: 480, border: 'none', display: 'block' }}
+            allow="fullscreen; geolocation"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Heatmap"
+          />
         </div>
       )}
 
