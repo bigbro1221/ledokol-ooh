@@ -7,47 +7,47 @@
 @layer base {
   /* ─── LIGHT MODE (default) ─── */
   :root, [data-theme="light"] {
-    --brand-primary: #FF6B2C;
-    --brand-primary-hover: #FF8555;
-    --brand-primary-active: #E55A1F;
-    --brand-primary-subtle: rgba(255, 107, 44, 0.12);
+    --brand-primary:         #0C5DC6;
+    --brand-primary-hover:   #1668D3;
+    --brand-primary-active:  #094AA8;
+    --brand-primary-subtle:  rgba(12, 93, 198, 0.13);
 
-    --success: #10B981;
-    --warning: #EAB308;
-    --danger: #EF4444;
-    --info: #3B82F6;
+    --success: #059669;
+    --warning: #D97706;
+    --danger:  #DC2626;
+    --info:    #0C5DC6;
 
-    --bg: #FAFAF8;
-    --surface: #FFFFFF;
-    --surface-2: #F5F5F2;
-    --surface-3: #ECECE8;
+    --bg:        #F5F7FC;
+    --surface:   #FFFFFF;
+    --surface-2: #EEF2F9;
+    --surface-3: #E2E9F4;
 
-    --border: #E5E5E0;
-    --border-hi: #D4D4CE;
-    --border-em: #1A1A1F;
+    --border:    #DDE4F0;
+    --border-hi: #C3CDE0;
+    --border-em: #0C5DC6;
 
-    --text: #1A1A1F;
-    --text-2: #525255;
-    --text-3: #8A8A8C;
-    --text-4: #B5B5B7;
+    --text:   #091630;
+    --text-2: #42506B;
+    --text-3: #7E8AA1;
+    --text-4: #B5BDCC;
 
-    --chart-1: #FF6B2C;
-    --chart-2: #3B82F6;
-    --chart-3: #8B5CF6;
+    --chart-1: #0C5DC6;
+    --chart-2: #2563EB;
+    --chart-3: #7C3AED;
     --chart-4: #10B981;
     --chart-5: #F59E0B;
-    --chart-6: #EC4899;
-    --chart-7: #06B6D4;
-    --chart-8: #84CC16;
+    --chart-6: #DB2777;
+    --chart-7: #0891B2;
+    --chart-8: #65A30D;
 
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
-    --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.12);
+    --shadow-sm: 0 1px 2px  rgba(9, 22, 48, 0.05);
+    --shadow-md: 0 2px 8px  rgba(9, 22, 48, 0.07);
+    --shadow-lg: 0 8px 24px rgba(12, 93, 198, 0.10);
+    --shadow-xl: 0 16px 48px rgba(12, 93, 198, 0.14);
 
-    --tooltip-bg: #12121A;
-    --tooltip-text: #EDEDF0;
-    --tooltip-border: #2A2A38;
+    --tooltip-bg:     #091630;
+    --tooltip-text:   #F5F7FC;
+    --tooltip-border: #1C2845;
   }
 
   /* ─── DARK MODE ─── */
