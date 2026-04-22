@@ -16,7 +16,9 @@
     "password": "",
     "loginTitle": "",
     "loginDescription": "",
-    "invalidCredentials": ""
+    "invalidCredentials": "",
+    "signInWithGoogle": "Google orqali kirish",
+    "mustLinkGoogleBanner": "Davom etish uchun Google hisobingizni bog'lashingiz kerak."
   },
   "admin": {
     "title": "",

@@ -1,10 +1,16 @@
 import { prisma } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ClientForm } from '@/components/admin/client-form';
+import { auth, isGoogleLinked } from '@/lib/auth';
 import Link from 'next/link';
 
 export default async function EditClientPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
+  const session = await auth();
+  if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
   const client = await prisma.client.findUnique({
     where: { id },
     include: { campaigns: { orderBy: { createdAt: 'desc' } } },

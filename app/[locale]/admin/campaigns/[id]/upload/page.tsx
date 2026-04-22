@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { auth, isGoogleLinked } from '@/lib/auth';
 import { UploadDropzone } from '@/components/admin/upload-dropzone';
 import { Download } from 'lucide-react';
 
@@ -11,6 +12,11 @@ export default async function UploadPage({
   searchParams: Promise<{ periodId?: string }>;
 }) {
   const { locale, id } = await params;
+  const session = await auth();
+  if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
   const { periodId } = await searchParams;
 
   const campaign = await prisma.campaign.findUnique({

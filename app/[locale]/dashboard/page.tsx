@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { auth } from '@/lib/auth';
+import { auth, isGoogleLinked } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { DashboardClient } from './dashboard-client';
 import { getUserPreferences } from '@/lib/user-preferences';
@@ -22,6 +22,9 @@ export default async function DashboardPage({
   const { campaign: campaignIdParam, city: cityFilter, type: typeFilter, periodFrom: periodFromParam, periodTo: periodToParam } = await searchParams;
   const session = await auth();
   if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
 
   const clientFilter = session.user.role === 'CLIENT' && session.user.clientId
     ? { client: { users: { some: { id: session.user.id } } } }

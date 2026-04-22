@@ -1,9 +1,15 @@
 import { prisma } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { UserForm } from '@/components/admin/user-form';
+import { auth, isGoogleLinked } from '@/lib/auth';
 
 export default async function EditUserPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
+  const session = await auth();
+  if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
   const user = await prisma.user.findUnique({
     where: { id },
     select: { id: true, email: true, role: true, enabled: true, clientId: true, language: true },

@@ -1,9 +1,15 @@
 import { prisma } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { CampaignForm } from '@/components/admin/campaign-form';
+import { auth, isGoogleLinked } from '@/lib/auth';
 
 export default async function EditCampaignPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
+  const session = await auth();
+  if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
 
   const [campaign, clients] = await Promise.all([
     prisma.campaign.findUnique({

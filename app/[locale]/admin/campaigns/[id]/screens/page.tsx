@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { auth, isGoogleLinked } from '@/lib/auth';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ScreensTable, type ScreenRow } from '@/components/screens/screens-table';
@@ -10,6 +11,11 @@ export default async function CampaignScreensPage({
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { locale, id } = await params;
+  const session = await auth();
+  if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
 
   const campaign = await prisma.campaign.findUnique({
     where: { id },

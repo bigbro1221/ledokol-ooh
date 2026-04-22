@@ -22,7 +22,7 @@ services:
   db:
     image: postgres:16-alpine
     ports:
-      - "6100:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

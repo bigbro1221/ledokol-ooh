@@ -35,7 +35,7 @@ npm install
 docker compose up db minio -d
 ```
 
-This starts PostgreSQL on port 5432 and MinIO on ports 9000/9001.
+This starts PostgreSQL on host port 5433 by default (configurable via `POSTGRES_PORT`) and MinIO on ports 9000/9001.
 
 ### 3. Set up the database
 

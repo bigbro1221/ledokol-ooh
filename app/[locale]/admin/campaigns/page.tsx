@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import { auth, isGoogleLinked } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
 const STATUS_STYLES: Record<string, string> = {
   ACTIVE: 'bg-[rgba(16,185,129,0.12)] text-[var(--success)]',
@@ -11,6 +13,11 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default async function CampaignsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const session = await auth();
+  if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
   const campaigns = await prisma.campaign.findMany({
     include: {
       client: { select: { name: true } },

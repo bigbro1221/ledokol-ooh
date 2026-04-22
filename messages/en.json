@@ -16,7 +16,9 @@
     "password": "Password",
     "loginTitle": "Sign in",
     "loginDescription": "Enter your credentials",
-    "invalidCredentials": "Invalid email or password"
+    "invalidCredentials": "Invalid email or password",
+    "signInWithGoogle": "Sign in with Google",
+    "mustLinkGoogleBanner": "You must link a Google account to continue."
   },
   "admin": {
     "title": "Admin Panel",

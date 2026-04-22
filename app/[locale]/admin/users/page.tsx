@@ -1,11 +1,18 @@
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import { auth, isGoogleLinked } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
 const ROLE_LABELS: Record<string, string> = { ADMIN: 'Админ', CLIENT: 'Клиент' };
 
 export default async function UsersPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const session = await auth();
+  if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
   const users = await prisma.user.findMany({
     select: {
       id: true, email: true, role: true, enabled: true,

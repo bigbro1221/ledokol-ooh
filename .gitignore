@@ -38,3 +38,4 @@ npm-debug.log*
 
 # claude code (machine-specific)
 .claude/settings.local.json
+.claude/worktrees/

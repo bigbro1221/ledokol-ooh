@@ -1,8 +1,13 @@
 # Auth Roadmap — Ledokol OOH Dashboard
 
 > **Owner:** Beck Rakhimov  
-> **Last updated:** 2026-04-19  
+> **Last updated:** 2026-04-22  
 > **Stack:** Next.js 14 · TypeScript · Prisma 6 · PostgreSQL · NextAuth 5 (beta)
+
+> **Shipping log:**  
+> • 2026-04-22 — Google OAuth shipped (sign-in + account linking). See §1.9 below.
+> • 2026-04-22 — Google signup blocked in signIn callback (email must exist in User table)
+> • 2026-04-22 — Mandatory Google linking enforced via soft gate (non-linked users redirected to /profile)
 
 ---
 
@@ -252,16 +257,20 @@ Flow:
 4. On success: set `verifiedAt = now()`, generate 8 recovery codes (`crypto.randomBytes(5).toString('hex')`), store bcrypt hashes in `RecoveryCode`, display the plaintext codes **once** with a download/copy prompt.
 5. Codes are displayed with a clear warning: "These codes will not be shown again."
 
-#### 1.9 Google SSO
+#### 1.9 Google SSO ✅ **SHIPPED 2026-04-22**
 
-NextAuth already supports the Google provider — wire it up with env vars `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+**Implementation:** `@auth/prisma-adapter` + NextAuth Google provider.  
+**Env vars:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (see `.env.example`).  
+**Callback URL to register:** `https://<domain>/api/auth/callback/google`
 
-Behavior:
-- Google sign-in is an **alternative login path** (not a replacement).
-- On first Google sign-in: look up `User` by `googleId` OR by email. If found by email (existing account), link the Google ID. If not found at all, deny (this is not a public sign-up app — only invited users can log in).
-- After linking, the user can sign in with either Google or password+TOTP.
+**Behavior as shipped:**
+- **Sign in with Google** — shown on the login page when both env vars are set; hidden otherwise. Existing credentials users can sign in with Google (matching email auto-links the account on first use).
+- **Link Google account** — card on `/profile` page. Shows current link status; "Link" button triggers OAuth flow and returns to `/profile`. Unlink button intentionally omitted to avoid locking users out.
+- **New emails are blocked** — users must be admin-provisioned first. An unknown Google email hits a DB constraint (missing required `passwordHash`/`role` fields) and is rejected with an error page.
+- **`allowDangerousEmailAccountLinking: true`** — required so existing credentials users can link Google without being treated as account-takeover attempts. Safe in this app because only admin-provisioned accounts exist.
+- **`Account` model** added to Prisma schema (NextAuth OAuth account store). JWT strategy retained — no `Session` table needed.
 
-Open question: Should linking Google auto-satisfy 2FA? Recommended: yes for the advisory screen, but TOTP enrollment should remain independent if the org later requires TOTP specifically.
+Open question (still valid): Should linking Google auto-satisfy TOTP when `twoFactorRequired` flips in Phase 2?
 
 #### 1.10 TOTP at login
 
@@ -306,7 +315,7 @@ Caching strategy for middleware: since Next.js middleware runs on the edge (or N
 - [ ] Invite acceptance page: token validation, password set, status → ACTIVE
 - [ ] 2FA advisory screen post-invite (Enable now / Remind me later / Skip)
 - [ ] TOTP enrollment with QR code and recovery code issuance
-- [ ] Google SSO wired up as alternative login path
+- [x] Google SSO wired up as alternative login path — **shipped 2026-04-22**
 - [ ] TOTP challenge at login for enrolled users
 - [ ] Recovery code flow with forced re-enrollment on use
 - [ ] `AppSettings.twoFactorRequired` read in middleware (advisory only while `false`)

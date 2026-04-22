@@ -16,7 +16,9 @@
     "password": "Пароль",
     "loginTitle": "Вход в систему",
     "loginDescription": "Введите данные для входа",
-    "invalidCredentials": "Неверный email или пароль"
+    "invalidCredentials": "Неверный email или пароль",
+    "signInWithGoogle": "Войти через Google",
+    "mustLinkGoogleBanner": "Для продолжения необходимо привязать Google аккаунт."
   },
   "admin": {
     "title": "Панель администратора",

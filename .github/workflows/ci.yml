@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [release]
 
 jobs:
   check:
@@ -43,7 +43,7 @@ jobs:
   docker:
     needs: check
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/release' && github.event_name == 'push'
     permissions:
       contents: read
       packages: write

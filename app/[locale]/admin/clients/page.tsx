@@ -1,9 +1,16 @@
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Plus, ChevronRight } from 'lucide-react';
+import { auth, isGoogleLinked } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
 export default async function ClientsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const session = await auth();
+  if (!session?.user) redirect(`/${locale}/login`);
+  if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
+    redirect(`/${locale}/profile?mustLinkGoogle=1`);
+  }
   const clients = await prisma.client.findMany({
     include: { _count: { select: { campaigns: true, users: true } } },
     orderBy: { createdAt: 'desc' },
