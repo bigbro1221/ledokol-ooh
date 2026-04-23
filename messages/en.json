@@ -15,10 +15,21 @@
     "email": "Email",
     "password": "Password",
     "loginTitle": "Sign in",
-    "loginDescription": "Enter your credentials",
+    "loginDescription": "Enter your email to receive a login code",
     "invalidCredentials": "Invalid email or password",
     "signInWithGoogle": "Sign in with Google",
-    "mustLinkGoogleBanner": "You must link a Google account to continue."
+    "mustLinkGoogleBanner": "You must link a Google account to continue.",
+    "sendCode": "Send code",
+    "enterCode": "6-digit code",
+    "useDifferentEmail": "Use a different email",
+    "resendIn": "Resend in {seconds}s",
+    "resendNow": "Resend code",
+    "wrongCode": "Incorrect code or it has expired. Please try again.",
+    "tooManyAttempts": "Too many attempts. Please request a new code.",
+    "codeExpired": "Code has expired. Please request a new one.",
+    "genericError": "Something went wrong. Please try again.",
+    "rateLimited": "Too many requests. Please wait {seconds} seconds.",
+    "codeSentTo": "We sent a code to {email}"
   },
   "admin": {
     "title": "Admin Panel",

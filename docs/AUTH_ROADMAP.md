@@ -1,540 +1,309 @@
 # Auth Roadmap — Ledokol OOH Dashboard
 
 > **Owner:** Beck Rakhimov  
-> **Last updated:** 2026-04-22  
+> **Last updated:** 2026-04-23  
 > **Stack:** Next.js 14 · TypeScript · Prisma 6 · PostgreSQL · NextAuth 5 (beta)
 
 > **Shipping log:**  
-> • 2026-04-22 — Google OAuth shipped (sign-in + account linking). See §1.9 below.
-> • 2026-04-22 — Google signup blocked in signIn callback (email must exist in User table)
-> • 2026-04-22 — Mandatory Google linking enforced via soft gate (non-linked users redirected to /profile)
+> • 2026-04-22 — Google OAuth shipped (sign-in + account linking on `/profile`).  
+> • 2026-04-22 — `signIn` callback blocks Google signup for emails not in User table.  
+> • 2026-04-22 — Mandatory Google-link gate: non-linked users redirected to `/profile?mustLinkGoogle=1`.  
+> • 2026-04-23 — Phase A: SES email client, suppression table, SNS webhook, MX + typo validation on user creation.  
+> • 2026-04-23 — Phase B: Passwordless OTP login — `EmailLoginCode` + `RateLimitEntry` schema, DB-backed rate limiter, `POST /api/auth/send-code`, double-submit CSRF, `lib/auth.ts` Credentials rewrite, login form two-view UI, login-code email template (RU/EN/UZ), `session.maxAge` set to 24 h.
 
 ---
 
-## Phase 0 — Current State Audit
+## Locked-in design (passwordless)
 
-### What exists
-
-| Area | Detail |
-|------|--------|
-| Auth library | NextAuth 5.0.0-beta.25, Credentials provider only |
-| Session | Stateless JWT (no server-side session store) |
-| Password | bcryptjs (cost 12), stored as `passwordHash` on `User` |
-| User creation | Admin fills a form at `/admin/users/new` and sets the password on behalf of the user |
-| Role model | Two roles: `ADMIN`, `CLIENT` (enforced in middleware + `requireAdmin()` helper) |
-| Account disable | `enabled` boolean on `User`; disabled users are rejected at the `authorize` callback |
-| Rate limiting | In-memory map in `lib/api-auth.ts` — 10 attempts per 60 s per key; resets on server restart |
-
-### What is broken / missing
-
-1. **Admin sets the user's password.** This means the password is shared over some out-of-band channel (Slack, email) in plaintext. The user never "owns" their credential from day one.
-2. **No invite or email verification.** The system has no concept of a pending/unverified user, no token infrastructure, and no email-sending capability at all.
-3. **No self-service password reset.** A forgotten password requires admin intervention.
-4. **No 2FA.** The only factor is a password the user may not have even chosen.
-5. **Rate limiter is in-memory only.** It resets on every Next.js cold start / serverless invocation, giving essentially no protection in production.
-6. **`passwordHash` is non-nullable.** Invite flow requires a password-less "pending" state, which is impossible with the current schema.
+| Concern | Decision |
+|---------|----------|
+| Passwords | **None.** `passwordHash` will be dropped in Phase C migration. |
+| Activation | Admin creates user (INVITED) → magic link email → user clicks → must link Google → status ACTIVE. |
+| Login | Email input → **"Send code"** (6-digit OTP, 10-min TTL) **or** "Sign in with Google". No passwords. |
+| 2FA / TOTP | **Dropped.** Google accounts carry their own 2FA. No TOTP, no recovery codes. |
+| Google linking | Mandatory for all users. Already enforced as a soft gate (redirect). |
+| Session | 24 h JWT. Re-verify via code or Google after expiry. |
+| Rate limits | 60 s resend cooldown; 5 codes / email / hour; 20 codes / IP / hour. |
+| Existing users | Migration: clear `passwordHash`, set status ACTIVE, they hit the Google-link gate on next login. |
 
 ---
 
-## Phase 1 — MVP (Invite Flow + Optional 2FA + Google SSO)
+## Phase 0 — Current State (as of 2026-04-23)
 
-**Goal:** Users choose their own password from day one; 2FA is available but not forced; admins never handle plaintext credentials.
+| Area | State |
+|------|-------|
+| Auth library | NextAuth 5.0.0-beta.25, Credentials + Google providers |
+| Session | Stateless JWT, 24 h not yet enforced (NextAuth default) |
+| Password | bcryptjs (cost 12), `passwordHash` non-nullable on `User` — **to be dropped in Phase C** |
+| User creation | Admin form at `/admin/users/new`, sets password on behalf of user |
+| Google SSO | Shipped — sign-in + account linking on `/profile` |
+| Mandatory Google link | Shipped — soft gate via redirect on all protected pages |
+| Role model | `ADMIN` / `CLIENT`, enforced in middleware + `requireAdmin()` |
+| Account disable | `enabled` boolean on `User`; disabled users rejected at `authorize` |
+| Rate limiting | In-memory map in `lib/api-auth.ts` — 10 attempts / 60 s / key; resets on cold start |
+| Email | **Not wired.** Phase A sets up the plumbing. |
 
-### Deliverables
+---
 
-#### 1.1 Schema changes (Prisma + PostgreSQL)
+## Phase A — Email Plumbing ✅ IN PROGRESS
 
-New/modified models — see the [DB Migration Sketch](#db-migration-sketch) section at the bottom for exact SQL/Prisma.
+**Goal:** Safe, reliable transactional email before anything else is built on top of it.
 
-- `User.passwordHash` → nullable (no password until invite is accepted)
-- `User.status` → new `UserStatus` enum: `INVITED | ACTIVE | DISABLED`
-- `User.inviteTokenHash` → SHA-256 hash of the raw one-time token (never stored raw)
-- `User.inviteTokenExpiry` → 7-day window from invite send
-- `User.googleId` → nullable, unique (links Google OAuth account)
-- New model `TotpCredential` → per-user TOTP secret + verified-at timestamp
-- New model `RecoveryCode` → bcrypt-hashed single-use backup codes (8 per enrollment)
-- New model `AppSettings` → single-row config table; seeded with `twoFactorRequired = false`
-- New model `SuppressedEmail` → tracks email addresses that must not receive transactional mail (reason, event type, soft bounce count)
+### A.1 SES client (`lib/mail.ts`) ✅
+- `sendEmail({ to, subject, html, text, tags?, replyTo? })` returning `{ messageId }`.
+- Reads `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SES_FROM_ADDRESS`.
+- Pre-send suppression check — throws `SuppressedEmailError` if address is suppressed.
+- Structured error logging on SES failure.
 
-#### 1.2 Email infrastructure
+### A.2 Suppression table + helpers ✅
+Schema: `SuppressedEmail` model with `SuppressionReason` enum (`HARD_BOUNCE`, `SOFT_BOUNCE_REPEATED`, `COMPLAINT`, `MANUAL`).
 
-No email provider is currently installed. Recommend **Resend** (`resend` npm package) — it is Next.js-native, has a generous free tier, and requires minimal config. Fall-back option: Nodemailer + SMTP (works with any provider).
+Helpers in `lib/suppression.ts`:
+- `isSuppressed(email)` — soft-bounce rows below threshold are tracked but not blocking.
+- `suppress({ email, reason, eventType, rawPayload? })` — hard suppress (upsert).
+- `unsuppress(email)` — sets `removedAt`; row stays for audit trail.
+- `recordSoftBounce(email, ...)` — increments counter; auto-suppresses at threshold (default 5).
 
-Required env vars: `RESEND_API_KEY`, `EMAIL_FROM`.
+### A.3 SES → SNS webhook (`app/api/webhooks/ses/route.ts`) ✅
+- Validates SNS message signature (via `sns-validator`; skipped in non-production).
+- Auto-confirms `SubscriptionConfirmation` by fetching `SubscribeURL`.
+- `Bounce:Permanent` → `suppress(..., HARD_BOUNCE)`.
+- `Bounce:Transient` → `recordSoftBounce(...)`.
+- `Complaint` → `suppress(..., COMPLAINT)`.
+- Asserts expected `SES_SNS_TOPIC_ARN` when set.
 
-Templates needed:
-- Invite / welcome (includes one-time link, 7-day expiry notice)
-- Re-invite / resend (same template, new token)
-- (Phase 2+) Recovery code used warning, new device sign-in notice
+### A.4 Email validation (`lib/email-validation.ts` + `lib/email-suggestions.ts`) ✅
+- Pure client-safe typo suggestion in `lib/email-suggestions.ts` (Levenshtein ≤ 2, common domains list).
+- Full server-side pipeline in `lib/email-validation.ts`:
+  1. RFC 5322 syntax check.
+  2. Domain typo suggestion → returns `suggestion` field (UI can show "Did you mean…?").
+  3. MX record lookup via `node:dns/promises` with 24 h in-process cache.
+  4. Suppression advisory (soft warning — admin can override).
+- Integrated into `/admin/users/new` form (client-side live hint) and `POST /api/users` (server-side hard block on MX failure).
 
-#### 1.3 SES bounce and complaint handling
+### A.5 Infrastructure setup (manual, one-time)
+- [ ] Create SNS topic `ledokol-ses-events`.
+- [ ] In SES → Configuration Sets: add SNS event destination for Bounce + Complaint.
+- [ ] Subscribe SNS topic to `https://<domain>/api/webhooks/ses`.
+- [ ] Enable SES account-level suppression: `aws ses put-account-suppression-attributes --suppressed-reasons BOUNCE COMPLAINT`.
+- [ ] Set `SES_SNS_TOPIC_ARN` env var.
 
-**Why this must ship in Phase 1, not later:** SES tracks your sending reputation continuously. Every hard bounce and complaint counts against your account. The penalty is not immediate — invites will appear to send fine for weeks — but then bulk deliverability degrades silently: invites start landing in spam, and eventually SES throttles or suspends the account. By the time the symptoms are obvious, the damage to reputation is already done. The fix must be in place before the first invite email goes out.
+### Phase A checklist
+- [x] `lib/mail.ts` — SES client with suppression pre-check
+- [x] `lib/suppression.ts` — isSuppressed / suppress / unsuppress / recordSoftBounce
+- [x] `prisma/schema.prisma` — `SuppressedEmail` model, `SuppressionReason` enum
+- [x] `app/api/webhooks/ses/route.ts` — SNS webhook
+- [x] `lib/email-validation.ts` — server-side MX + suppression validation
+- [x] `lib/email-suggestions.ts` — client-safe typo correction
+- [x] `/admin/users/new` form — live typo hint
+- [x] `POST /api/users` — server-side email validation before user creation
+- [x] `.env.example` — SES env vars documented
+- [ ] Infrastructure setup (SNS topic, SES config set, subscription — manual)
+- [ ] Admin suppression UI at `/admin/settings/email-suppressions` (Phase E)
 
-**Architecture overview:**
+---
 
-SES publishes bounce and complaint notifications to an SNS topic. Two viable subscriber options:
+## Phase B — Passwordless Login (6-digit OTP) ✅ DONE
 
-1. **SNS → HTTPS webhook** (recommended for this stack) — SNS POSTs to `POST /api/webhooks/ses` directly. Zero infrastructure beyond deploying the route. Works well at low-to-medium invite volumes.
-2. **SNS → SQS → worker** — better if you want retry guarantees or expect high volume. Adds an SQS queue and a polling consumer (a separate process or Lambda). Overkill for Phase 1.
+**Goal:** Replace credential-based login with email OTP. Google SSO remains as the fast path.
 
-**Infrastructure setup (one-time):**
-- Create an SNS topic (e.g., `ledokol-ses-events`).
-- In SES → Configuration Sets, create a configuration set and add an SNS event destination publishing `Bounce` and `Complaint` notification types.
-- Subscribe the SNS topic to `https://<your-domain>/api/webhooks/ses`. SNS will send a `SubscriptionConfirmation` request first — the handler must respond by fetching the `SubscribeURL` to activate the subscription.
-- Attach the configuration set to every `SendEmail` call (`ConfigurationSetName` parameter).
+### B.1 Schema additions ✅
+- `EmailLoginCode` model: userId FK, bcrypt codeHash, expiresAt, attemptCount, consumedAt, ipAddress, userAgent. Indexed on (userId, consumedAt) + expiresAt.
+- `RateLimitEntry` model: key, windowEnd, count. Unique on (key, windowEnd). Opportunistically pruned on each send-code request.
+- `User.passwordHash` made nullable (`String?`) — safe change, no data loss.
 
-**Webhook handler — `POST /api/webhooks/ses`:**
+### B.2 Rate limiting (persistent, survives restarts) ✅ — **G6 mitigated**
+- DB-backed sliding-window counter in `lib/rate-limit.ts`.
+- Per-email: 5 send-code requests / hour; 60 s resend cooldown enforced server-side.
+- Per-IP: 20 send-code requests / hour.
+- `pruneExpired()` called opportunistically on each request (fire-and-forget).
 
-The handler must:
-1. Verify the SNS message signature (AWS publishes the signing cert URL in the message; use `@aws-sdk/sns-message-validator` or verify manually). **Do not skip this — unauthenticated webhook endpoints are a common attack vector.**
-2. Handle `Type: SubscriptionConfirmation` by GET-fetching `SubscribeURL`.
-3. Handle `Type: Notification` — parse the nested `Message` field (JSON string within JSON):
-   - `notificationType: "Bounce"` → extract `bounce.bounceType` (`Permanent` or `Transient`), `bounce.bounceSubType`, and `bounce.bouncedRecipients[].emailAddress`.
-   - `notificationType: "Complaint"` → extract `complaint.complainedRecipients[].emailAddress`.
+### B.3 Endpoints ✅
+- `POST /api/auth/send-code` — syntax-only email validation, rate limits, suppression check, 60 s cooldown, generates 6-digit code, bcrypt-hashes (cost 10), invalidates prior codes, sends via `lib/mail.ts`. Always returns `{ ok: true, retryInSeconds: 60 }` (prevents email enumeration). 429 on rate-limit breach.
+- Verify step handled by NextAuth Credentials `authorize()` in `lib/auth.ts` — code compared via bcrypt, attemptCount capped at 5 (auto-consumes on breach).
+- `GET /api/auth/csrf-token` — issues double-submit CSRF cookie + returns token.
 
-**Suppression logic:**
+### B.4 CSRF protection ✅ — **G1 mitigated**
+- Double-submit cookie pattern: `GET /api/auth/csrf-token` sets non-httpOnly `ledokol.csrf` cookie (SameSite=Strict) and returns token as JSON.
+- `POST /api/auth/send-code` validates `x-csrf-token` header matches cookie value.
+- NextAuth's built-in CSRF covers the `signIn('credentials', ...)` verify step.
 
-| Event | Action |
-|-------|--------|
-| Hard bounce (`bounceType: Permanent`) | Immediately upsert into `SuppressedEmail` with `reason: HARD_BOUNCE` |
-| Complaint | Immediately upsert into `SuppressedEmail` with `reason: COMPLAINT` |
-| Soft bounce (`bounceType: Transient`) | Increment `softBounceCount` on `SuppressedEmail` (upsert); suppress (set `suppressedAt`) once count reaches threshold (recommended: 5 consecutive) |
+### B.5 Login page UI ✅
+- Two-view component (`view: 'email' | 'code'`) in `app/[locale]/login/login-form.tsx`.
+- Email view: email input + "Send code" primary button + Google button (when configured).
+- Code view: numeric 6-digit input, 60 s cooldown with resend button, "Use a different email" escape hatch.
+- Password field removed entirely.
 
-The `SuppressedEmail` table is described in the [DB Migration Sketch](#db-migration-sketch) below.
+### B.6 Email template ✅
+- `lib/email-templates/login-code.ts` — `renderLoginCodeEmail({ code, locale })`.
+- All three locales (RU/EN/UZ). Plain-text + HTML. Code displayed large and centered with brand header.
 
-**Pre-send check:**
+### B.7 Session ✅
+- `session: { strategy: 'jwt', maxAge: 24 * 60 * 60 }` enforced in NextAuth config.
 
-Every function that calls the email provider must check the suppression table first:
+### Phase B checklist
+- [x] `EmailLoginCode` + `RateLimitEntry` models in schema; `User.passwordHash` nullable
+- [x] Persistent rate limiter (DB-backed) — `lib/rate-limit.ts`
+- [x] `POST /api/auth/send-code` with suppression pre-check + rate limits
+- [x] CSRF protection — double-submit cookie (`GET /api/auth/csrf-token`)
+- [x] NextAuth Credentials `authorize()` rewritten to accept `{ email, code }`
+- [x] Login page UI rework (email + code two-view layout)
+- [x] Login-code email template (RU/EN/UZ)
+- [x] Locale keys added to ru.json, en.json, uz.json
+- [x] `session.maxAge` set to 86400 s
 
-```typescript
-// lib/email.ts
-async function isSuppressed(email: string): Promise<boolean> {
-  const row = await prisma.suppressedEmail.findUnique({
-    where: { email },
-    select: { suppressedAt: true },
-  });
-  return row?.suppressedAt != null;
-}
-```
+---
 
-If suppressed: log the skip and return without sending. Do not throw — the calling code (e.g. "resend invite" button) should receive a clear API response indicating the address is suppressed, so the admin knows to un-suppress or update the email before retrying.
+## Phase C — Magic Link Activation (passwordless invite) ✅ DONE
 
-**SES account-level suppression (belt-and-suspenders):**
+**Goal:** Admin invites user → user activates via a clickable link, not a password. Then must link Google.
 
-Call `PutAccountSuppressionAttributes` once during infrastructure setup to enable SES's own suppression list for hard bounces and complaints:
+### C.1 Schema additions ✅
+- `UserStatus` enum: `INVITED | ACTIVE | DISABLED`.
+- `User.status UserStatus @default(ACTIVE)` — safe addition; all existing rows default to ACTIVE.
+- `ActivationToken` model: userId `@unique` (one token per user), tokenHash (bcrypt cost 10), expiresAt (7 days), consumedAt. Indexed on expiresAt.
+- `User.passwordHash` already made nullable in Phase B.
+- `User.activationToken ActivationToken?` relation.
 
-```bash
-aws ses put-account-suppression-attributes \
-  --suppressed-reasons BOUNCE COMPLAINT
-```
-
-This causes SES to automatically refuse to send to addresses it has previously recorded as hard-bounced or complained against, even if our application-level check misses something (e.g. a race condition or a missed webhook delivery).
-
-**Admin suppression management UI:**
-
-A page at `/admin/settings/email-suppressions` (or a tab within `/admin/users`) showing:
-
-- Table columns: email, linked user account (if any), reason, event type, soft bounce count, suppressed at.
-- **"Remove suppression" button** per row → calls `DELETE /api/admin/email-suppressions/[id]` → records `unsuppressedAt` and the admin `userId` who cleared it (do not hard-delete — keep the audit trail).
-- **Filter by reason** (HARD_BOUNCE / COMPLAINT / SOFT_BOUNCE_THRESHOLD) and by date range.
-- Useful for: admin invited a user with a typo in the email → fixed the email → needs to clear the suppression before resending the invite.
-
-**Open questions specific to 1.3:**
-- [ ] SNS message signature verification library — `@aws-sdk/sns-message-validator` vs manual verification
-- [ ] Soft bounce threshold — 5 is a common default; should it be configurable via `AppSettings`?
-- [ ] Should removing a suppression also automatically trigger a resend of the pending invite, or require a separate admin action?
-- [ ] Alert on complaint rate spike — SES has a CloudWatch metric `Reputation.ComplaintRate`; set an alarm at > 0.1 % (SES's own warning threshold)
-
-#### 1.4 Input-time email validation (protecting SES sender reputation)
-
-**Why this belongs in Phase 1:** Admin-driven invite flows are uniquely exposed to bounce-rate problems — admins type email addresses on behalf of other people, often from memory or copy-paste from a spreadsheet. At MVP invite volumes, a single typo (`@gmial.com`) can push the SES account's bounce rate above AWS's 5 % warning threshold. The mitigations below catch bad addresses *before* they reach SES and complement the reactive bounce-handling in section 1.3.
-
-**RFC 5322 syntax validation:**
-- Client-side: the invite form's email field must use a Zod/regex check that goes beyond the browser default — reject addresses without a TLD and reject local-only addresses like `user@localhost`.
-- Server-side: `POST /api/users` must re-validate the email with Zod before any DB write or email send. Never trust client-side-only validation.
-
-**Typo-correction suggestions (mailcheck.js):**
-
-Add `mailcheck` (or equivalent) to the admin invite form to flag common domain typos before submit:
-
-```
-"Did you mean john@gmail.com?" — shown inline below the email field, dismissed with a click
-```
-
-Domain list to cover at minimum: `gmail.com`, `googlemail.com`, `outlook.com`, `hotmail.com`, `yahoo.com`, `icloud.com`, `proton.me`, `protonmail.com`, `mail.ru`, `yandex.ru`. The suggestion is advisory — admin can dismiss and submit the original address.
-
-**MX record lookup (server-side, pre-invite):**
-
-Before creating the user and sending the invite, verify the domain has valid MX records:
-
-```typescript
-// lib/email.ts
-import { resolve } from 'node:dns/promises';
-
-async function domainHasMx(email: string): Promise<boolean> {
-  const domain = email.split('@')[1];
-  try {
-    const records = await resolve(domain, 'MX');
-    return records.length > 0;
-  } catch {
-    return false; // NXDOMAIN or no MX records
-  }
-}
-```
-
-Cache results keyed by domain for 24 h (in-memory `Map` is fine for a single-process server; switch to Redis if running multiple replicas). Return a 422 with a human-readable error if lookup fails:
-
-```json
-{ "error": "EMAIL_DOMAIN_NO_MX", "message": "The domain example.com has no mail servers. Check the address and try again." }
-```
-
-**Two-step invite confirmation UX:**
-
-After the admin fills in the invite form and clicks "Send invite", show a preview screen before dispatch:
-
-> **Confirm invite**  
-> An invite will be sent to: **john.smith@acme.com**  
-> Role: Client · Company: Acme Corp  
-> [Send invite] [Go back and edit]
-
-This gives the admin one last chance to spot a surface-level typo. The "Send invite" button on the confirmation screen is what triggers `POST /api/users`.
-
-**Pre-send suppression warning (upgrade from silent skip):**
-
-The pre-send check in section 1.3 short-circuits silently. In admin-initiated flows (invite and resend-invite), change the behaviour: return a warning response that the UI surfaces as:
-
-> **This address was previously suppressed (hard bounce). Are you sure?**  
-> [Remove suppression and send] [Cancel]
-
-"Remove suppression and send" calls a combined endpoint that clears the `SuppressedEmail` record and dispatches the invite in a single transaction.
-
-**Open questions specific to 1.4:**
-- [ ] Should a failed MX lookup hard-block the invite, or show a warning and allow admin override?
-- [ ] MX cache invalidation — 24 h TTL is fine for most cases, but a domain could add MX records mid-day; consider a manual "retry" path.
-
-#### 1.5 Invite flow — admin side
-
-- Remove the `password` field from the Create User form.
-- `POST /api/users` no longer accepts `password`. Instead:
-  1. Generate `crypto.randomBytes(32)` → raw token
-  2. Store `SHA-256(token)` as `inviteTokenHash`, `now() + 7 days` as `inviteTokenExpiry`, `status = INVITED`
-  3. Send invite email with link: `/invite/accept?token=<rawToken>`
-- Add a "Resend invite" button on the user list/edit page → calls `POST /api/users/[id]/resend-invite` → rotates token, resets expiry, resends email.
-- Status column on the user list should show `INVITED | ACTIVE | DISABLED`.
-
-#### 1.6 Invite acceptance — user side
-
-New pages:
-- `/invite/accept?token=…` — validates token (hash lookup, expiry check, status=INVITED), then shows a set-password form.
-- On submit: hash password, set `passwordHash`, flip `status → ACTIVE`, clear `inviteTokenHash` / `inviteTokenExpiry`.
-- Immediately sign the user in and redirect to the 2FA advisory screen (1.7).
+### C.2 Activation flow ✅
+1. Admin creates user → `POST /api/users` → no password required → `status = INVITED` → `issueActivationToken(userId)` → `renderActivationEmail` + `sendEmail`. Invite sent flag in API response.
+2. Magic link URL: `/{locale}/activate?token=<userId>.<base64url-rawToken>`.
+3. Activation page (server component) validates token via `peekActivationToken` (no consumption on load).
+4. User clicks "Link Google account" → Server Action: `consumeActivationToken` (marks consumed) → sets `activation-session` cookie (15 min, httpOnly, SameSite=lax) → redirects to Google OAuth via NextAuth.
+5. Google OAuth completes → `/{locale}/activate/complete` server component reads cookie + session → verifies email match → sets `status = ACTIVE` → clears cookie → redirects to dashboard.
 
 Token validation rules:
-- Token not found → generic "link is invalid or expired" error (don't leak which).
-- Token found but expired → show "link expired, request a new one" with a mailto/contact link.
-- Token found, valid, but `status != INVITED` → "account already activated, go to login".
+- Not found / bcrypt mismatch → "invalid".
+- Consumed → "has already been used — contact admin".
+- Expired → "expired — contact admin for a new one".
+- User not INVITED (already ACTIVE) → "already activated".
 
-#### 1.7 Post-invite 2FA advisory screen
+### C.3 Admin "Resend activation" ✅
+- Status badge shown on `/admin/users/[id]` with "Повторить приглашение" button when status=INVITED.
+- `POST /api/admin/users/[id]/resend-activation` — upserts ActivationToken (rotates token + resets expiry), resends email. Returns 400 if user is not INVITED, 422 if email is suppressed.
 
-Shown once, immediately after the user sets their password. Not shown again unless they visit Settings.
+### C.4 Existing user migration ✅ — `scripts/migrate-existing-users-phase-c.ts`
+- Run: `npx tsx scripts/migrate-existing-users-phase-c.ts`
+- Finds all users where `passwordHash IS NOT NULL`.
+- Confirms `status = ACTIVE` for each (skips INVITED/DISABLED).
+- **Result: 4 users confirmed ACTIVE (admin@ledokol.uz, client@tbank.uz, client@tbc.uz, client@laimon.uz).**
+- `passwordHash` column NOT dropped — deferred to Phase D (safer rollback posture until new flow is verified in production).
 
-Three options:
-- **Enable 2FA now** → TOTP enrollment flow (1.8) or Google SSO link (1.9)
-- **Remind me later** → session cookie / user preference; shown again next login for N days (suggested: 7)
-- **Skip for now** → dismisses permanently until admin forces it (Phase 2)
-
-Middleware must not enforce 2FA at this stage — `AppSettings.twoFactorRequired = false` is the gate.
-
-#### 1.8 TOTP enrollment
-
-Library: `otpauth` (maintained, browser + Node, no native deps).
-
-Flow:
-1. Server generates a TOTP secret (`OTPAuth.Secret.generate()`), stores it as `TotpCredential` with `verifiedAt = NULL` (unverified).
-2. Render QR code (client-side via `qrcode` package) and the plain-text secret for manual entry.
-3. User enters a 6-digit code. Server verifies with a ±1 step window to tolerate clock skew.
-4. On success: set `verifiedAt = now()`, generate 8 recovery codes (`crypto.randomBytes(5).toString('hex')`), store bcrypt hashes in `RecoveryCode`, display the plaintext codes **once** with a download/copy prompt.
-5. Codes are displayed with a clear warning: "These codes will not be shown again."
-
-#### 1.9 Google SSO ✅ **SHIPPED 2026-04-22**
-
-**Implementation:** `@auth/prisma-adapter` + NextAuth Google provider.  
-**Env vars:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (see `.env.example`).  
-**Callback URL to register:** `https://<domain>/api/auth/callback/google`
-
-**Behavior as shipped:**
-- **Sign in with Google** — shown on the login page when both env vars are set; hidden otherwise. Existing credentials users can sign in with Google (matching email auto-links the account on first use).
-- **Link Google account** — card on `/profile` page. Shows current link status; "Link" button triggers OAuth flow and returns to `/profile`. Unlink button intentionally omitted to avoid locking users out.
-- **New emails are blocked** — users must be admin-provisioned first. An unknown Google email hits a DB constraint (missing required `passwordHash`/`role` fields) and is rejected with an error page.
-- **`allowDangerousEmailAccountLinking: true`** — required so existing credentials users can link Google without being treated as account-takeover attempts. Safe in this app because only admin-provisioned accounts exist.
-- **`Account` model** added to Prisma schema (NextAuth OAuth account store). JWT strategy retained — no `Session` table needed.
-
-Open question (still valid): Should linking Google auto-satisfy TOTP when `twoFactorRequired` flips in Phase 2?
-
-#### 1.10 TOTP at login
-
-Modified `authorize` callback:
-1. Validate email + password as today.
-2. Check if `TotpCredential` exists and `verifiedAt IS NOT NULL`.
-3. If yes: return a partial token (`totpRequired: true`) and redirect to a `/auth/totp` challenge page before issuing a full session.
-4. On the challenge page: verify the submitted code; if valid, exchange partial token for a full session.
-
-Implementation note: NextAuth 5 (beta) handles this cleanly with a custom `signIn` callback and a separate challenge route. Alternatively, a short-lived encrypted cookie can carry the partial state.
-
-#### 1.11 Recovery code flow
-
-On the TOTP challenge page: "Lost your authenticator?" link.
-- User pastes one of their recovery codes.
-- Server looks up `RecoveryCode` by `userId` + bcrypt verify, where `usedAt IS NULL`.
-- If valid: mark code `usedAt = now()`, sign the user in, then **immediately redirect to forced TOTP re-enrollment** (not optional this time).
-- Issue 8 fresh recovery codes on successful re-enrollment.
-
-#### 1.12 AppSettings read in middleware
-
-`middleware.ts` must call a lightweight DB read (or cache) for `AppSettings.twoFactorRequired`. When `false` (Phase 1), enrollment is advisory only and the middleware never blocks. When `true` (Phase 2), users without a verified `TotpCredential` are gated at the middleware level.
-
-Caching strategy for middleware: since Next.js middleware runs on the edge (or Node runtime depending on config), use a short in-memory cache (60 s TTL) or a Redis-backed cache if latency matters.
-
-### Phase 1 implementation checklist
-
-- [ ] Schema migration: `UserStatus` enum, nullable `passwordHash`, invite token fields, `googleId` on `User`
-- [ ] New models: `TotpCredential`, `RecoveryCode`, `AppSettings`
-- [ ] **`SuppressedEmail` table and pre-send check** in every email-sending path
-- [ ] Email provider wired up (SES or Resend) with configuration set attached to all sends
-- [ ] **SNS topic + webhook subscriber** at `POST /api/webhooks/ses` with signature verification
-- [ ] Bounce/complaint handler: hard bounce → suppress, complaint → suppress, soft bounce → count → suppress at threshold
-- [ ] SES account-level suppression enabled via `PutAccountSuppressionAttributes`
-- [ ] **Admin suppression management UI** at `/admin/settings/email-suppressions`
-- [ ] RFC 5322 syntax validation on invite form — client-side (Zod) and server-side (`POST /api/users`)
-- [ ] Mailcheck.js typo-correction hint on invite form ("Did you mean…?")
-- [ ] MX record lookup + 24 h domain cache before creating invite; 422 on no MX records
-- [ ] Two-step invite confirmation UX — preview screen before dispatch
-- [ ] Pre-send suppression warning in admin UI (upgrade from silent skip to "address previously bounced — proceed?")
-- [ ] Invite flow: admin creates user → invite email sent, status = INVITED
-- [ ] Invite acceptance page: token validation, password set, status → ACTIVE
-- [ ] 2FA advisory screen post-invite (Enable now / Remind me later / Skip)
-- [ ] TOTP enrollment with QR code and recovery code issuance
-- [x] Google SSO wired up as alternative login path — **shipped 2026-04-22**
-- [ ] TOTP challenge at login for enrolled users
-- [ ] Recovery code flow with forced re-enrollment on use
-- [ ] `AppSettings.twoFactorRequired` read in middleware (advisory only while `false`)
-- [ ] All new UI strings added to `/messages/*.json` (RU/EN/UZ/TR)
-
-### Open questions for Phase 1
-
-- [ ] Email provider choice — Resend vs Nodemailer vs AWS SES (S3 is already on AWS; SES would be zero new vendors)
-- [ ] TOTP window tolerance — ±1 step (30 s each = ±30 s) is standard; should it be tighter?
-- [ ] Partial-session approach for 2FA challenge — NextAuth 5 beta internals are still shifting; may need a workaround
-- [ ] Should Google SSO count as satisfying TOTP when `twoFactorRequired` flips in Phase 2?
-- [ ] Recovery code length/format — 10 hex chars (5 bytes) = ~10^12 space; is that enough? Standard is usually 16 base-32 chars
-- [ ] Localization — invite emails and all new screens need RU/EN/UZ/TR strings in `/messages/*.json`
+### Phase C checklist
+- [x] `UserStatus` enum + `User.status` field in schema
+- [x] `ActivationToken` model in schema
+- [x] `lib/activation.ts` — `issueActivationToken`, `peekActivationToken`, `consumeActivationToken`, `buildActivationUrl`
+- [x] `lib/email-templates/activation.ts` — RU/EN/UZ, text + HTML
+- [x] `POST /api/users` — password removed, auto-issues token + sends email, returns `inviteSent`
+- [x] `POST /api/admin/users/[id]/resend-activation` — admin only, INVITED users only
+- [x] `app/[locale]/activate/page.tsx` — server component + server action for Google link
+- [x] `app/[locale]/activate/complete/page.tsx` — verifies email match, sets ACTIVE, redirects
+- [x] `components/admin/user-form.tsx` — password field removed, status badge, resend button
+- [x] `GET /api/users/[id]` and `PUT /api/users/[id]` — `status` field included
+- [x] Migration script ran — 4 users confirmed ACTIVE, 0 skipped
+- [ ] Drop `passwordHash` column — deferred to Phase D (do NOT drop until new flow verified in production)
+- [ ] Remove password field from `/admin/users/new` form
 
 ---
 
-## Phase 2 — Post-launch: Enforce 2FA + Admin Reporting
+## Phase D — Session Hardening
 
-**Trigger:** Decision to flip `AppSettings.twoFactorRequired = true`.
+**Goal:** Enforce 24 h session lifetime with explicit re-verification.
 
-### Deliverables
+### D.1 JWT expiry
+- Set `session: { strategy: 'jwt', maxAge: 24 * 60 * 60 }` in NextAuth config.
+- After expiry, user lands on login page → re-verifies via OTP or Google.
 
-- **Grandfather period.** At flip time, existing users who have not enrolled get a grace period (recommended: 14 days). Store `gracePeriodUntil DateTime?` on `TotpCredential` (or on `User`). Middleware allows login but immediately redirects to enrollment until the grace period expires.
-- **Hard gate after grace period.** After `gracePeriodUntil`, users without a verified TOTP cannot proceed past middleware — they see a mandatory enrollment screen with no "skip" option.
-- **Admin dashboard widget.** At `/admin/settings` or `/admin/users`: table showing enrollment rate (verified/total), breakdown by role, list of users still in grace period with days remaining.
-- **Admin force-re-enrollment.** Button to invalidate a user's TOTP secret (e.g., lost device, suspected compromise) — deletes `TotpCredential` and `RecoveryCode` rows, sets a flag requiring re-enrollment on next login.
-- **Audit log entries** for: 2FA enabled, 2FA disabled by admin, recovery code used, grace period expiry.
+### D.2 Re-verify UX
+- Middleware detects expired session → redirects to login with `?reason=session_expired`.
+- Login page shows a contextual message: "Your session expired. Sign in again."
+- No partial-session or "remember me" complexity — just a clean 24 h window.
 
-### Open questions
+### D.3 Drop `passwordHash` column
+- Remove `User.passwordHash` after the new OTP/magic-link flow is verified in production. Deferred from Phase C for a safer rollback posture.
+- Safe to drop once: no active sessions are using password-based auth, and all users have completed activation.
 
-- [ ] Grace period duration — 14 days? configurable via another `AppSettings` field?
-- [ ] Notification strategy — email users before grace period expires (at D-7, D-1)?
-- [ ] What happens to Google-only users when TOTP is required — force TOTP enrollment in addition to Google, or exempt them?
+### D.4 Drop `enabled` column
+- Remove `User.enabled` after all code references are migrated to `UserStatus`.
 
----
-
-## Phase 3 — Hardening
-
-### Deliverables
-
-- **Passkeys / WebAuthn.** Replace TOTP as the preferred second factor. Libraries: `@simplewebauthn/server` + `@simplewebauthn/browser`. New model `Passkey` on `User`. Passkeys can also serve as a first factor (passwordless). NextAuth 5 has native WebAuthn support (experimental in beta).
-- **Additional SSO providers.** Microsoft (Azure AD), Apple Sign-In — each requires provider config in NextAuth and potentially `User.microsoftId`, `User.appleId` fields.
-- **SCIM provisioning.** If any enterprise clients want to manage users via their IdP (Okta, Azure AD), expose a SCIM 2.0 `/scim/v2/Users` endpoint. This is only relevant for B2B accounts. New `ScimToken` model for bearer auth.
-- **Session management UI.** Show active JWT sessions (requires moving from stateless JWT to server-side sessions or a session registry). Allow users to revoke individual sessions. Model: `Session` table with `userId`, `tokenHash`, `userAgent`, `ip`, `lastSeenAt`, `revokedAt`.
-- **Stateless → stateful JWT migration.** The current JWT strategy has no revocation path. For session management to work, NextAuth must use the `database` session strategy with a `Session` model in Prisma.
-
-### Open questions
-
-- [ ] Is there a B2B customer who would need SCIM in the near term?
-- [ ] Migration path from JWT to database sessions — existing JWT tokens will be invalidated; coordinate a rollout window
-- [ ] Apple Sign-In requires a paid Apple Developer account and specific domain verification
+### Phase D checklist
+- [ ] `maxAge: 86400` set in NextAuth session config
+- [ ] Middleware expired-session detection + contextual redirect
+- [ ] Login page `?reason=session_expired` message
+- [ ] `User.enabled` column removed (after Phase C migration confirmed stable)
 
 ---
 
-## Phase 4 — Nice-to-haves
+## Phase E — Admin Tools
 
-| Feature | Notes |
-|---------|-------|
-| Risk-based auth | Challenge with TOTP if login IP or device fingerprint is new. Requires storing `lastKnownIp` / `lastKnownDevice` and a challenge decision service. |
-| Device fingerprinting | Store `deviceHash` per session (UA + IP subnet + accept-language headers). Flag anomalies. Privacy implications in EU/UZ. |
-| Admin auth event log | Immutable append-only table: `AuthEvent { userId, type, ip, userAgent, createdAt }`. Types: LOGIN_SUCCESS, LOGIN_FAILURE, TOTP_VERIFIED, RECOVERY_CODE_USED, INVITE_SENT, PASSWORD_CHANGED, etc. |
-| Self-service password change | Authenticated users can change password — current password required, invalidates other sessions. |
-| Magic-link login | Alternative to password for users who prefer it. One-time token via email, 10-min expiry. |
-| IP allowlisting per client | `Client.allowedIpRanges String[]` — only allow logins for CLIENT users from specified CIDR ranges. |
+**Goal:** Give admins visibility and control over the auth system.
+
+### E.1 Suppression management UI (`/admin/settings/email-suppressions`)
+- Table: email, reason, suppressed at, removed at.
+- "Remove suppression" button → `DELETE /api/admin/email-suppressions/[id]` → sets `removedAt`.
+- Filter by reason, date range.
+
+### E.2 Account recovery (lost Google access)
+- Admin button on `/admin/users/[id]`: "Reset to invited".
+- Clears `inviteTokenHash`, regenerates token, sends fresh magic link.
+- User goes through activation flow again and links a new Google account.
+- No self-service recovery path — admin-mediated only.
+
+### E.3 Resend activation (from Phase C)
+Already described in Phase C.3 — included here for completeness.
+
+### Phase E checklist
+- [ ] Suppression management page + remove-suppression API
+- [ ] "Reset to invited" admin action
+- [ ] Audit log for admin auth actions (optional but useful)
 
 ---
 
-## DB Migration Sketch
+## Gaps & open questions
 
-This is a planning sketch, not final SQL. Review before applying.
+| # | Gap | Status |
+|---|-----|--------|
+| G1 | **CSRF protection** on `POST /api/auth/send-code` and `POST /api/auth/verify-code`. NextAuth handles CSRF for its own endpoints; the custom code endpoints need it too. Options: double-submit cookie, or rely on `SameSite=Strict` cookie + `Origin` header check. | ✅ Mitigated — double-submit cookie via `GET /api/auth/csrf-token` + `x-csrf-token` header check on send-code. NextAuth built-in CSRF covers the verify step. |
+| G2 | **Session re-verify after 24 h**: no in-app "your session is about to expire" warning. Users will be dropped to login without warning. Acceptable for now. | Accepted |
+| G3 | **Suppression list blocks OTP delivery**: user can't log in if their email is suppressed. Admin must un-suppress manually before user can receive a code. No self-service path. | Accepted — admin intervention documented in Phase E |
+| G4 | **Account recovery if Google account is lost**: covered by Phase E.2 (admin resets to INVITED). | Planned — Phase E |
+| G5 | **`enabled` boolean vs `UserStatus`**: currently both exist. `enabled` takes precedence in `authorize` callback. Phase C migration must keep them in sync until Phase D removes `enabled`. | Planned — Phase C/D |
+| G6 | **Rate limiter resets on cold start**: current in-memory map in `lib/api-auth.ts` loses state. Must be replaced with DB-backed limiter before Phase B ships. | ✅ Mitigated — `lib/rate-limit.ts` is DB-backed via `RateLimitEntry`, survives restarts. |
+| G7 | **MX cache is in-process**: fine for single-container Docker; loses cache on restart. Not a correctness issue, just a performance/cost note. | Accepted |
+| G8 | **Magic link vs OTP for activation**: activation uses a link (better UX — one click), login uses a code (safer — avoids email-client prefetch following the link and consuming it). This distinction is intentional. | Decided |
 
-### New enum
+---
+
+## DB migration sketch (Phase C)
 
 ```sql
+-- Safe: nullable passwordHash
+ALTER TABLE "User" ALTER COLUMN "passwordHash" DROP NOT NULL;
+
+-- New enum
 CREATE TYPE "UserStatus" AS ENUM ('INVITED', 'ACTIVE', 'DISABLED');
-```
 
-### Altered `User` table
-
-```sql
+-- New columns on User
 ALTER TABLE "User"
-  ADD COLUMN "status"            "UserStatus" NOT NULL DEFAULT 'ACTIVE',
-  ADD COLUMN "inviteTokenHash"   TEXT,         -- SHA-256(raw token), never the raw token
-  ADD COLUMN "inviteTokenExpiry" TIMESTAMPTZ,
-  ADD COLUMN "googleId"          TEXT UNIQUE;
+  ADD COLUMN "status"             "UserStatus" NOT NULL DEFAULT 'ACTIVE',
+  ADD COLUMN "inviteTokenHash"    TEXT,
+  ADD COLUMN "inviteTokenExpiry"  TIMESTAMPTZ;
 
--- Migrate enabled=false → DISABLED; enabled=true stays ACTIVE (default)
+-- Data migration: enabled=false → DISABLED
 UPDATE "User" SET status = 'DISABLED' WHERE enabled = false;
 
--- Make passwordHash nullable (users in INVITED state have no password yet)
-ALTER TABLE "User" ALTER COLUMN "passwordHash" DROP NOT NULL;
-```
-
-> **Risk note:** Making `passwordHash` nullable is a safe schema change (no data loss). All existing rows keep their values. The `enabled` column should be kept during Phase 1 and dropped in Phase 2 once all code references are migrated.
-
-### New `TotpCredential` table
-
-```sql
-CREATE TABLE "TotpCredential" (
-  "id"         TEXT        PRIMARY KEY DEFAULT gen_random_uuid(),
-  "userId"     TEXT        NOT NULL UNIQUE REFERENCES "User"(id) ON DELETE CASCADE,
-  "secret"     TEXT        NOT NULL,    -- TOTP secret (consider AES encryption at rest)
-  "verifiedAt" TIMESTAMPTZ,             -- NULL = enrollment started but not confirmed
-  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+-- Phase B OTP table
+CREATE TABLE "LoginOtp" (
+  "id"        TEXT        PRIMARY KEY DEFAULT gen_random_uuid(),
+  "email"     TEXT        NOT NULL,
+  "codeHash"  TEXT        NOT NULL,
+  "expiresAt" TIMESTAMPTZ NOT NULL,
+  "usedAt"    TIMESTAMPTZ,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX "LoginOtp_email_idx" ON "LoginOtp"("email");
+CREATE INDEX "LoginOtp_expiresAt_idx" ON "LoginOtp"("expiresAt");
 ```
-
-### New `RecoveryCode` table
-
-```sql
-CREATE TABLE "RecoveryCode" (
-  "id"       TEXT        PRIMARY KEY DEFAULT gen_random_uuid(),
-  "userId"   TEXT        NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
-  "codeHash" TEXT        NOT NULL,    -- bcrypt(raw code, 10)
-  "usedAt"   TIMESTAMPTZ              -- NULL = available; set when consumed
-);
-CREATE INDEX "RecoveryCode_userId_idx" ON "RecoveryCode"("userId");
-```
-
-### New `SuppressedEmail` table
-
-```sql
-CREATE TABLE "SuppressedEmail" (
-  "id"              TEXT        PRIMARY KEY DEFAULT gen_random_uuid(),
-  "email"           TEXT        NOT NULL UNIQUE,
-  "reason"          TEXT        NOT NULL,      -- 'HARD_BOUNCE' | 'COMPLAINT' | 'SOFT_BOUNCE_THRESHOLD'
-  "eventType"       TEXT        NOT NULL,      -- raw SES notificationType for debugging
-  "softBounceCount" INT         NOT NULL DEFAULT 0,
-  "suppressedAt"    TIMESTAMPTZ,               -- NULL = being tracked (soft bounce below threshold)
-  "unsuppressedAt"  TIMESTAMPTZ,               -- set when admin manually clears
-  "unsuppressedBy"  TEXT        REFERENCES "User"(id) ON DELETE SET NULL
-);
-CREATE INDEX "SuppressedEmail_suppressedAt_idx" ON "SuppressedEmail"("suppressedAt");
-```
-
-> **Note:** A row is only "active" (blocks sends) when `suppressedAt IS NOT NULL`. Soft bounce tracking creates the row with `suppressedAt = NULL` and increments `softBounceCount`; once it hits the threshold the row is updated to set `suppressedAt`. This keeps audit history without a separate tracking table.
-
-### New `AppSettings` table
-
-```sql
-CREATE TABLE "AppSettings" (
-  "id"                INT     PRIMARY KEY DEFAULT 1,  -- single-row sentinel
-  "twoFactorRequired" BOOLEAN NOT NULL DEFAULT false,
-  "updatedAt"         TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Seed the single row
-INSERT INTO "AppSettings" ("twoFactorRequired") VALUES (false);
-```
-
-### Prisma schema additions (for reference)
-
-```prisma
-enum UserStatus {
-  INVITED
-  ACTIVE
-  DISABLED
-}
-
-// Additions to User model:
-//   status            UserStatus     @default(ACTIVE)
-//   passwordHash      String?        // was non-nullable
-//   inviteTokenHash   String?
-//   inviteTokenExpiry DateTime?
-//   googleId          String?        @unique
-//   totp              TotpCredential?
-//   recoveryCodes     RecoveryCode[]
-
-model TotpCredential {
-  id         String    @id @default(uuid())
-  userId     String    @unique
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  secret     String
-  verifiedAt DateTime?
-  createdAt  DateTime  @default(now())
-}
-
-model RecoveryCode {
-  id       String    @id @default(uuid())
-  userId   String
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codeHash String
-  usedAt   DateTime?
-
-  @@index([userId])
-}
-
-model AppSettings {
-  id                Int      @id @default(1)
-  twoFactorRequired Boolean  @default(false)
-  updatedAt         DateTime @updatedAt
-}
-
-model SuppressedEmail {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  reason          String    // 'HARD_BOUNCE' | 'COMPLAINT' | 'SOFT_BOUNCE_THRESHOLD'
-  eventType       String    // raw SES notificationType
-  softBounceCount Int       @default(0)
-  suppressedAt    DateTime? // NULL = tracked but not yet suppressed (soft bounce below threshold)
-  unsuppressedAt  DateTime?
-  unsuppressedBy  String?   // admin User.id who cleared it
-  admin           User?     @relation(fields: [unsuppressedBy], references: [id], onDelete: SetNull)
-
-  @@index([suppressedAt])
-}
-```
-
-### New npm packages needed (Phase 1)
-
-| Package | Purpose |
-|---------|---------|
-| `resend` | Transactional email — or omit if using SES directly via `@aws-sdk/client-ses` |
-| `@aws-sdk/client-ses` | SES `SendEmail` calls (AWS SDK already in use for S3; SES client is a separate sub-package) |
-| `@aws-sdk/sns-message-validator` | Verify SNS message signatures in the webhook handler |
-| `otpauth` | TOTP secret generation + code verification |
-| `qrcode` | QR code rendering for TOTP enrollment (client-side) |
-
-Google SSO: no new package — NextAuth already includes the Google provider; just needs env vars.
 
 ---
 

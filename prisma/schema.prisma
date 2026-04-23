@@ -12,6 +12,12 @@ enum UserRole {
   CLIENT
 }
 
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
 enum Language {
   RU
   EN
@@ -48,21 +54,24 @@ enum DateFormat {
 }
 
 model User {
-  id            String           @id @default(uuid())
-  email         String           @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  passwordHash  String
-  role          UserRole
-  enabled       Boolean          @default(true)
-  language      Language         @default(RU)
-  clientId      String?
-  client        Client?          @relation(fields: [clientId], references: [id])
-  preferences   UserPreferences?
-  accounts      Account[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id               String             @id @default(uuid())
+  email            String             @unique
+  emailVerified    DateTime?
+  name             String?
+  image            String?
+  passwordHash     String?
+  role             UserRole
+  status           UserStatus         @default(ACTIVE)
+  enabled          Boolean            @default(true)
+  language         Language           @default(RU)
+  clientId         String?
+  client           Client?            @relation(fields: [clientId], references: [id])
+  preferences      UserPreferences?
+  accounts         Account[]
+  emailLoginCodes  EmailLoginCode[]
+  activationToken  ActivationToken?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 }
 
 model Account {
@@ -231,4 +240,61 @@ model AppSettings {
   twoFactorRequired Boolean  @default(false)
   updatedAt         DateTime @updatedAt
   createdAt         DateTime @default(now())
+}
+
+enum SuppressionReason {
+  HARD_BOUNCE
+  SOFT_BOUNCE_REPEATED
+  COMPLAINT
+  MANUAL
+}
+
+model SuppressedEmail {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  reason          SuppressionReason
+  eventType       String?
+  softBounceCount Int               @default(0)
+  suppressedAt    DateTime          @default(now())
+  removedAt       DateTime?
+  lastRawPayload  String?           @db.Text
+}
+
+model ActivationToken {
+  id         String    @id @default(uuid())
+  userId     String    @unique
+  tokenHash  String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model EmailLoginCode {
+  id           String    @id @default(uuid())
+  userId       String
+  codeHash     String
+  expiresAt    DateTime
+  attemptCount Int       @default(0)
+  consumedAt   DateTime?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, consumedAt])
+  @@index([expiresAt])
+}
+
+model RateLimitEntry {
+  id        String   @id @default(uuid())
+  key       String
+  windowEnd DateTime
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([key, windowEnd])
+  @@index([windowEnd])
 }

@@ -9,7 +9,7 @@ const intlMiddleware = createMiddleware({
   localePrefix: 'always',
 });
 
-const publicPaths = ['/login', '/api/auth', '/api/health'];
+const publicPaths = ['/login', '/activate', '/api/auth', '/api/health'];
 
 function isPublicPath(pathname: string): boolean {
   return publicPaths.some(

@@ -15,10 +15,21 @@
     "email": "Электронная почта",
     "password": "Пароль",
     "loginTitle": "Вход в систему",
-    "loginDescription": "Введите данные для входа",
+    "loginDescription": "Введите email, чтобы получить код входа",
     "invalidCredentials": "Неверный email или пароль",
     "signInWithGoogle": "Войти через Google",
-    "mustLinkGoogleBanner": "Для продолжения необходимо привязать Google аккаунт."
+    "mustLinkGoogleBanner": "Для продолжения необходимо привязать Google аккаунт.",
+    "sendCode": "Отправить код",
+    "enterCode": "6-значный код",
+    "useDifferentEmail": "Использовать другой email",
+    "resendIn": "Отправить повторно через {seconds}с",
+    "resendNow": "Отправить код повторно",
+    "wrongCode": "Неверный код или срок его действия истёк. Попробуйте ещё раз.",
+    "tooManyAttempts": "Слишком много попыток. Запросите новый код.",
+    "codeExpired": "Срок действия кода истёк. Запросите новый.",
+    "genericError": "Что-то пошло не так. Попробуйте ещё раз.",
+    "rateLimited": "Слишком много запросов. Подождите {seconds} секунд.",
+    "codeSentTo": "Мы отправили код на {email}"
   },
   "admin": {
     "title": "Панель администратора",

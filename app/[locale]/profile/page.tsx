@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { getUserPreferences } from '@/lib/user-preferences';
 import { DateFormatPicker } from '@/components/ui/date-format-picker';
 import { GoogleLinkButton } from '@/components/auth/google-link-button';
+import { LogoutButton } from '@/components/ui/logout-button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LocaleSwitcher } from '@/components/ui/locale-switcher';
 import type { DateFormat } from '@/lib/format-period';
 import { getTranslations } from 'next-intl/server';
 
@@ -22,6 +25,7 @@ export default async function ProfilePage({
   const { locale } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const t = await getTranslations({ locale, namespace: 'auth' });
+  const tCommon = await getTranslations({ locale, namespace: 'common' });
   const session = await auth();
   if (!session?.user) redirect(`/${locale}/login`);
 
@@ -70,12 +74,17 @@ export default async function ProfilePage({
           >
             &larr; {isAdmin ? 'Администрирование' : 'Дашборд'}
           </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <LocaleSwitcher currentLocale={locale} />
+            <ThemeToggle />
+            <LogoutButton label={tCommon('logout')} callbackUrl={`/${locale}/login`} />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-[800px] px-4 py-12 sm:px-8">
         {resolvedSearchParams?.mustLinkGoogle === "1" && (
-          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-100">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 font-medium text-red-800 dark:border-red-800/50 dark:bg-red-950/40 dark:text-red-300">
             {t("mustLinkGoogleBanner")}
           </div>
         )}

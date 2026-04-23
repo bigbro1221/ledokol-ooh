@@ -11,14 +11,25 @@
     "logout": ""
   },
   "auth": {
-    "login": "",
-    "email": "",
+    "login": "Kirish",
+    "email": "Elektron pochta",
     "password": "",
-    "loginTitle": "",
-    "loginDescription": "",
-    "invalidCredentials": "",
+    "loginTitle": "Tizimga kirish",
+    "loginDescription": "Kirish kodini olish uchun emailingizni kiriting",
+    "invalidCredentials": "Email yoki parol noto'g'ri",
     "signInWithGoogle": "Google orqali kirish",
-    "mustLinkGoogleBanner": "Davom etish uchun Google hisobingizni bog'lashingiz kerak."
+    "mustLinkGoogleBanner": "Davom etish uchun Google hisobingizni bog'lashingiz kerak.",
+    "sendCode": "Kod yuborish",
+    "enterCode": "6 xonali kod",
+    "useDifferentEmail": "Boshqa email ishlatish",
+    "resendIn": "{seconds} soniyadan so'ng qayta yuborish",
+    "resendNow": "Kodni qayta yuborish",
+    "wrongCode": "Kod noto'g'ri yoki muddati tugagan. Qayta urinib ko'ring.",
+    "tooManyAttempts": "Juda ko'p urinish. Yangi kod so'rang.",
+    "codeExpired": "Kod muddati tugagan. Yangi kod so'rang.",
+    "genericError": "Xatolik yuz berdi. Qayta urinib ko'ring.",
+    "rateLimited": "Juda ko'p so'rov. {seconds} soniya kuting.",
+    "codeSentTo": "{email} manziliga kod yubordik"
   },
   "admin": {
     "title": "",

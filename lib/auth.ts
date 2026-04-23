@@ -34,7 +34,7 @@ export function isGoogleOAuthConfigured(): boolean {
 
 export async function isGoogleLinked(userId: string): Promise<boolean> {
   const count = await prisma.account.count({
-    where: { userId, provider: "google" },
+    where: { userId, provider: 'google' },
   });
   return count > 0;
 }
@@ -44,10 +44,6 @@ const googleProvider = isGoogleOAuthConfigured()
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       // Allow linking Google to an existing credentials-based account.
-      // Without this, NextAuth rejects OAuth sign-in when a user with the
-      // same email already exists under a different provider. Since our
-      // users are admin-provisioned (credentials only at creation), this
-      // flag is required for the "link Google" flow on the profile page.
       allowDangerousEmailAccountLinking: true,
     })
   : null;
@@ -60,32 +56,62 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
+        code: { label: 'Code', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.code) return null;
 
-        const email = credentials.email as string;
-        const password = credentials.password as string;
+        const email = (credentials.email as string).trim().toLowerCase();
+        const code = credentials.code as string;
 
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.enabled || !user.passwordHash) return null;
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
+        });
+        if (!user || !user.enabled) return null;
 
-        const isValid = await compare(password, user.passwordHash);
+        const loginCode = await prisma.emailLoginCode.findFirst({
+          where: {
+            userId: user.id,
+            consumedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (!loginCode) return null;
+
+        const updated = await prisma.emailLoginCode.update({
+          where: { id: loginCode.id },
+          data: { attemptCount: { increment: 1 } },
+        });
+
+        if (updated.attemptCount > 5) {
+          await prisma.emailLoginCode.update({
+            where: { id: loginCode.id },
+            data: { consumedAt: new Date() },
+          });
+          return null;
+        }
+
+        const isValid = await compare(code, loginCode.codeHash);
         if (!isValid) return null;
+
+        await prisma.emailLoginCode.update({
+          where: { id: loginCode.id },
+          data: { consumedAt: new Date() },
+        });
 
         return { id: user.id, email: user.email, role: user.role, clientId: user.clientId };
       },
     }),
     ...(googleProvider ? [googleProvider] : []),
   ],
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: 24 * 60 * 60 },
   pages: { signIn: '/login' },
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account?.provider === "credentials") return true;
+      if (account?.provider === 'credentials') return true; // authorize() already checks enabled
 
-      if (account?.provider === "google") {
+      if (account?.provider === 'google') {
         const email = user?.email ?? profile?.email;
         if (!email) return false;
 

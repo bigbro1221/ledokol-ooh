@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { suggestEmailCorrection } from '@/lib/email-suggestions';
 
 interface UserFormProps {
   locale: string;
@@ -10,34 +11,60 @@ interface UserFormProps {
     id: string;
     email: string;
     role: string;
+    status: string;
     enabled: boolean;
     clientId: string | null;
     language: string;
   };
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  INVITED: 'Приглашён',
+  ACTIVE: 'Активен',
+  DISABLED: 'Отключён',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  INVITED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  DISABLED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+};
+
 export function UserForm({ locale, clients, initial }: UserFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState('');
   const [role, setRole] = useState(initial?.role || 'CLIENT');
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
+  const [emailValue, setEmailValue] = useState(initial?.email ?? '');
+  const [resendLoading, setResendLoading] = useState(false);
   const isEdit = !!initial;
+
+  function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setEmailValue(val);
+    setEmailSuggestion(suggestEmailCorrection(val));
+  }
+
+  function applySuggestion() {
+    setEmailValue(emailSuggestion!);
+    setEmailSuggestion(null);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setToast('');
 
     const fd = new FormData(e.currentTarget);
     const data: Record<string, unknown> = {
-      email: fd.get('email') as string,
+      email: emailValue,
       role: fd.get('role') as string,
       clientId: (fd.get('clientId') as string) || null,
       language: fd.get('language') as string,
     };
-
-    const password = fd.get('password') as string;
-    if (password) data.password = password;
 
     if (isEdit) {
       data.enabled = fd.get('enabled') === 'on';
@@ -46,23 +73,52 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
     const url = isEdit ? `/api/users/${initial.id}` : '/api/users';
     const method = isEdit ? 'PUT' : 'POST';
 
-    if (!isEdit && !password) {
-      setError('Пароль обязателен');
-      setLoading(false);
-      return;
-    }
-
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
     setLoading(false);
 
     if (!res.ok) {
       const err = await res.json();
-      setError(err.errors?.fieldErrors?.email?.[0] || err.errors?.fieldErrors?.password?.[0] || 'Ошибка сохранения');
+      setError(
+        err.errors?.fieldErrors?.email?.[0] ||
+          err.errors?.fieldErrors?.password?.[0] ||
+          'Ошибка сохранения',
+      );
+      return;
+    }
+
+    if (!isEdit) {
+      const result = await res.json();
+      if (result.inviteSent) {
+        setToast(`Приглашение отправлено на ${emailValue}`);
+      }
+      setTimeout(() => {
+        router.push(`/${locale}/admin/users`);
+        router.refresh();
+      }, 1500);
       return;
     }
 
     router.push(`/${locale}/admin/users`);
     router.refresh();
+  }
+
+  async function handleResendActivation() {
+    if (!initial?.id) return;
+    setResendLoading(true);
+    setError('');
+    setToast('');
+    const res = await fetch(`/api/admin/users/${initial.id}/resend-activation`, { method: 'POST' });
+    setResendLoading(false);
+    if (!res.ok) {
+      const err = await res.json();
+      setError(err.error ?? 'Не удалось отправить повторное приглашение');
+      return;
+    }
+    setToast('Приглашение отправлено повторно');
   }
 
   return (
@@ -73,23 +129,43 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
           name="email"
           type="email"
           required
-          defaultValue={initial?.email}
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--border-em)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary-subtle)]"
+          value={emailValue}
+          onChange={handleEmailChange}
+          disabled={isEdit}
+          className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--border-em)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary-subtle)] disabled:opacity-60"
         />
+        {emailSuggestion && !isEdit && (
+          <p className="mt-1 text-xs text-[var(--text-3)]">
+            Вы имели в виду{' '}
+            <button
+              type="button"
+              onClick={applySuggestion}
+              className="font-medium text-[var(--brand-primary)] hover:underline"
+            >
+              {emailSuggestion}
+            </button>
+            ?
+          </p>
+        )}
       </div>
 
-      <div>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          {isEdit ? 'Новый пароль (оставьте пустым чтобы не менять)' : 'Пароль'}
-        </label>
-        <input
-          name="password"
-          type="password"
-          minLength={6}
-          required={!isEdit}
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--border-em)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary-subtle)]"
-        />
-      </div>
+      {isEdit && initial.status && (
+        <div className="flex items-center gap-3">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[initial.status] ?? ''}`}>
+            {STATUS_LABELS[initial.status] ?? initial.status}
+          </span>
+          {initial.status === 'INVITED' && (
+            <button
+              type="button"
+              onClick={handleResendActivation}
+              disabled={resendLoading}
+              className="text-xs text-[var(--brand-primary)] hover:underline disabled:opacity-50"
+            >
+              {resendLoading ? 'Отправка...' : 'Повторить приглашение'}
+            </button>
+          )}
+        </div>
+      )}
 
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">Роль</label>
@@ -148,6 +224,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
       )}
 
       {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
+      {toast && <p className="text-sm text-green-600 dark:text-green-400">{toast}</p>}
 
       <div className="flex gap-3">
         <button
@@ -155,7 +232,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
           disabled={loading}
           className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
         >
-          {loading ? '...' : isEdit ? 'Сохранить' : 'Создать'}
+          {loading ? '...' : isEdit ? 'Сохранить' : 'Создать и отправить приглашение'}
         </button>
         <button
           type="button"
