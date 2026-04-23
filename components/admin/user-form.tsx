@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { suggestEmailCorrection } from '@/lib/email-suggestions';
+import { useTranslations } from 'next-intl';
 
 interface UserFormProps {
   locale: string;
@@ -32,6 +33,11 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function UserForm({ locale, clients, initial }: UserFormProps) {
   const router = useRouter();
+  const tc = useTranslations('common');
+  const ta = useTranslations('auth');
+  const tf = useTranslations('forms');
+  const tRoles = useTranslations('roles');
+  const tLang = useTranslations('languages');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -124,7 +130,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
   return (
     <form onSubmit={handleSubmit} className="max-w-lg space-y-4">
       <div>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">Email</label>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">{ta('email')}</label>
         <input
           name="email"
           type="email"
@@ -168,27 +174,27 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">Роль</label>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">{tf('role')}</label>
         <select
           name="role"
           value={role}
           onChange={(e) => setRole(e.target.value)}
           className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--border-em)] focus:outline-none"
         >
-          <option value="ADMIN">Администратор</option>
-          <option value="CLIENT">Клиент</option>
+          <option value="ADMIN">{tRoles('ADMIN')}</option>
+          <option value="CLIENT">{tRoles('CLIENT')}</option>
         </select>
       </div>
 
       {role === 'CLIENT' && (
         <div>
-          <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">Компания</label>
+          <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">{tf('company')}</label>
           <select
             name="clientId"
             defaultValue={initial?.clientId || ''}
             className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--border-em)] focus:outline-none"
           >
-            <option value="">Не привязан</option>
+            <option value="">{tf('notLinked')}</option>
             {clients.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -197,16 +203,16 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">Язык</label>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">{tf('language')}</label>
         <select
           name="language"
           defaultValue={initial?.language || 'RU'}
           className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--border-em)] focus:outline-none"
         >
-          <option value="RU">Русский</option>
-          <option value="EN">English</option>
-          <option value="UZ">O&apos;zbek</option>
-          <option value="TR">Türkçe</option>
+          <option value="RU">{tLang('RU')}</option>
+          <option value="EN">{tLang('EN')}</option>
+          <option value="UZ">{tLang('UZ')}</option>
+          <option value="TR">{tLang('TR')}</option>
         </select>
       </div>
 
@@ -219,7 +225,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
             id="enabled"
             className="h-4 w-4 rounded border-[var(--border)]"
           />
-          <label htmlFor="enabled" className="text-sm">Аккаунт активен</label>
+          <label htmlFor="enabled" className="text-sm">{tf('accountEnabled')}</label>
         </div>
       )}
 
@@ -232,14 +238,14 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
           disabled={loading}
           className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
         >
-          {loading ? '...' : isEdit ? 'Сохранить' : 'Создать и отправить приглашение'}
+          {loading ? '...' : isEdit ? tc('save') : tc('create')}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="rounded-[var(--radius-md)] border border-[var(--border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--surface-2)]"
         >
-          Отмена
+          {tc('cancel')}
         </button>
       </div>
     </form>

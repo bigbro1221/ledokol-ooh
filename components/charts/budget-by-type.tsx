@@ -1,6 +1,7 @@
 'use client';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 const CHART_COLORS = [
   'var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)',
@@ -22,13 +23,14 @@ interface Entry {
 }
 
 export function BudgetByType({ data, total, currency = 'UZS' }: { data: Entry[]; total: number; currency?: string }) {
+  const t = useTranslations('charts');
   if (data.length === 0 || total === 0) return null;
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="mb-6">
-        <h3 className="text-[15px] font-semibold tracking-tight">Бюджет по типам</h3>
-        <p className="mt-0.5 text-xs text-[var(--text-3)]">Распределение стоимости по типу поверхности</p>
+        <h3 className="text-[15px] font-semibold tracking-tight">{t('budgetByTypeTitle')}</h3>
+        <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('budgetByTypeSubtitle')}</p>
       </div>
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
         <div className="relative h-[180px] w-[180px] flex-shrink-0">
@@ -57,7 +59,7 @@ export function BudgetByType({ data, total, currency = 'UZS' }: { data: Entry[];
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Всего</span>
+            <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('total')}</span>
             <span className="text-lg font-semibold">{fmtBudget(total)}</span>
             <span className="text-[10px] text-[var(--text-3)]">{currency}</span>
           </div>

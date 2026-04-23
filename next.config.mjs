@@ -5,6 +5,9 @@ const withNextIntl = createNextIntlPlugin('./lib/i18n.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  experimental: {
+    instrumentationHook: true,
+  },
 };
 
 export default withNextIntl(nextConfig);

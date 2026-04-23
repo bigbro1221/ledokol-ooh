@@ -2,7 +2,8 @@ import { prisma } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import Link from 'next/link';
-import { Upload, FileSpreadsheet, Layers, Pencil, Table2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Layers, Pencil, Table2, Film } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { StatusToggle } from '@/components/admin/status-toggle';
 import { PeriodManager } from '@/components/admin/period-manager';
 import { DeleteCampaignButton } from '@/components/admin/delete-campaign-button';
@@ -25,6 +26,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const tCreatives = await getTranslations({ locale, namespace: 'creatives' });
   const campaign = await prisma.campaign.findUnique({
     where: { id },
     include: {
@@ -92,6 +94,12 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               <Table2 size={13} strokeWidth={1.5} /> Поверхности
             </Link>
           )}
+          <Link
+            href={`/${locale}/admin/campaigns/${id}/creatives`}
+            className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
+          >
+            <Film size={13} strokeWidth={1.5} /> {tCreatives('button')}
+          </Link>
           {totalScreens > 0 && !campaign.splitByPeriods && (
             <ClearScreensButton campaignId={id} />
           )}

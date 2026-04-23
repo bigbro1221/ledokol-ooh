@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Building2, Megaphone, Monitor, Users, Plus, Upload } from 'lucide-react';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 export default async function AdminOverviewPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -11,6 +12,8 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const t = await getTranslations({ locale, namespace: 'admin' });
+  const tStatus = await getTranslations({ locale, namespace: 'campaignStatus' });
 
   const [clientCount, campaignCount, screenCount, userCount, activeCampaigns, recentCampaigns] = await Promise.all([
     prisma.client.count(),
@@ -26,28 +29,28 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
   ]);
 
   const stats = [
-    { label: 'Клиенты', value: clientCount, icon: Building2, href: `/${locale}/admin/clients` },
-    { label: 'Кампании', value: campaignCount, icon: Megaphone, href: `/${locale}/admin/campaigns`, sub: `${activeCampaigns} активных` },
-    { label: 'Поверхности', value: screenCount, icon: Monitor, href: `/${locale}/admin/campaigns` },
-    { label: 'Пользователи', value: userCount, icon: Users, href: `/${locale}/admin/users` },
+    { label: t('clients'), value: clientCount, icon: Building2, href: `/${locale}/admin/clients` },
+    { label: t('campaigns'), value: campaignCount, icon: Megaphone, href: `/${locale}/admin/campaigns`, sub: `${activeCampaigns} ${t('activeShort')}` },
+    { label: t('tableScreens'), value: screenCount, icon: Monitor, href: `/${locale}/admin/campaigns` },
+    { label: t('users'), value: userCount, icon: Users, href: `/${locale}/admin/users` },
   ];
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Обзор</h1>
+        <h1 className="text-xl font-semibold">{t('overview')}</h1>
         <div className="flex gap-2">
           <Link
             href={`/${locale}/admin/clients/new`}
             className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-1.5 text-xs transition-colors hover:bg-[var(--surface-2)]"
           >
-            <Plus size={14} strokeWidth={1.5} /> Клиент
+            <Plus size={14} strokeWidth={1.5} /> {t('newClient')}
           </Link>
           <Link
             href={`/${locale}/admin/campaigns/new`}
             className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
           >
-            <Plus size={14} strokeWidth={1.5} /> Кампания
+            <Plus size={14} strokeWidth={1.5} /> {t('newCampaign')}
           </Link>
         </div>
       </div>
@@ -73,7 +76,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
       {/* Recent campaigns */}
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
         <div className="border-b border-[var(--border)] px-5 py-4">
-          <h2 className="text-[15px] font-semibold">Последние кампании</h2>
+          <h2 className="text-[15px] font-semibold">{t('latestCampaigns')}</h2>
         </div>
         <div className="divide-y divide-[var(--border)]">
           {recentCampaigns.map(c => (
@@ -91,16 +94,16 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
                 : c.status === 'DRAFT' ? 'bg-[var(--surface-3)] text-[var(--text-3)]'
                 : 'bg-[var(--surface-3)] text-[var(--text-3)]'
               }`}>
-                {c.status}
+                {tStatus(c.status)}
               </span>
               <span className="text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
-                {c._count.screens} экр.
+                {c._count.screens} {t('screensShort')}
               </span>
               <Upload size={14} className="text-[var(--text-4)]" />
             </Link>
           ))}
           {recentCampaigns.length === 0 && (
-            <div className="px-5 py-8 text-center text-sm text-[var(--text-3)]">Нет кампаний</div>
+            <div className="px-5 py-8 text-center text-sm text-[var(--text-3)]">{t('noCampaigns')}</div>
           )}
         </div>
       </div>

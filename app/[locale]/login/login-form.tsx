@@ -1,10 +1,11 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LocaleToggle } from '@/components/ui/locale-toggle';
 
 function validateCallbackUrl(callbackUrl: string | null): string {
   const DEFAULT_REDIRECT = '/dashboard';
@@ -30,19 +31,39 @@ interface Props {
   googleConfigured: boolean;
 }
 
+function mapOAuthError(code: string | null, t: (key: string) => string): string {
+  if (!code) return '';
+  switch (code) {
+    case 'OAuthAccountNotLinked':
+      return t('errorOAuthConflict');
+    case 'AccessDenied':
+      return t('errorAccessDenied');
+    default:
+      return t('errorGeneric');
+  }
+}
+
 export function LoginForm({ googleConfigured }: Props) {
   const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const urlError = mapOAuthError(searchParams.get('error'), t);
   const [view, setView] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(urlError);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+
+  // Clear stale session on OAuth error so the next attempt starts clean
+  useEffect(() => {
+    if (searchParams.get('error')) {
+      signOut({ redirect: false });
+    }
+  }, [searchParams]);
 
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -132,6 +153,10 @@ export function LoginForm({ googleConfigured }: Props) {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
+    // Kill any lingering session before starting OAuth — otherwise NextAuth
+    // may refuse the new Google account if the cached session user doesn't
+    // match the OAuth user (throws OAuthAccountNotLinked).
+    await signOut({ redirect: false });
     const callbackUrl = validateCallbackUrl(searchParams.get('callbackUrl'));
     await signIn('google', { callbackUrl });
   }
@@ -145,7 +170,8 @@ export function LoginForm({ googleConfigured }: Props) {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="fixed right-6 top-6">
+      <div className="fixed right-6 top-6 flex items-center gap-2">
+        <LocaleToggle />
         <ThemeToggle />
       </div>
 
@@ -224,7 +250,7 @@ export function LoginForm({ googleConfigured }: Props) {
                 <>
                   <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-[var(--border)]" />
-                    <span className="text-[11px] text-[var(--text-4)]">или</span>
+                    <span className="text-[11px] text-[var(--text-4)]">{t('or')}</span>
                     <div className="h-px flex-1 bg-[var(--border)]" />
                   </div>
 

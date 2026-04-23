@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 const STATUS_STYLES: Record<string, string> = {
   ACTIVE: 'bg-[rgba(16,185,129,0.12)] text-[var(--success)]',
@@ -18,6 +19,9 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const t = await getTranslations({ locale, namespace: 'admin' });
+  const tStatus = await getTranslations({ locale, namespace: 'campaignStatus' });
+  const dateLocale = locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU';
   const campaigns = await prisma.campaign.findMany({
     include: {
       client: { select: { name: true } },
@@ -29,12 +33,12 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Кампании</h1>
+        <h1 className="text-xl font-semibold">{t('campaigns')}</h1>
         <Link
           href={`/${locale}/admin/campaigns/new`}
           className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
-          <Plus size={16} strokeWidth={1.5} /> Новая кампания
+          <Plus size={16} strokeWidth={1.5} /> {t('newCampaign')}
         </Link>
       </div>
 
@@ -42,11 +46,11 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-[var(--surface-2)]">
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Название</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Клиент</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Статус</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Период</th>
-              <th className="border-b border-[var(--border)] px-4 py-3 text-right text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Поверхности</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableClientName')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableCompany')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableStatus')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tablePeriod')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-right text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableScreens')}</th>
             </tr>
           </thead>
           <tbody>
@@ -60,11 +64,11 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
                 <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-2)]">{c.client.name}</td>
                 <td className="border-b border-[var(--border)] px-4 py-3">
                   <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] ${STATUS_STYLES[c.status] || ''}`}>
-                    {c.status}
+                    {tStatus(c.status)}
                   </span>
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
-                  {c.periodStart.toLocaleDateString('ru-RU')} — {c.periodEnd.toLocaleDateString('ru-RU')}
+                  {c.periodStart.toLocaleDateString(dateLocale)} — {c.periodEnd.toLocaleDateString(dateLocale)}
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3 text-right text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
                   {c._count.screens}
@@ -74,7 +78,7 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
             {campaigns.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
-                  Нет кампаний. Создайте первую.
+                  {t('noCampaignsLong')}
                 </td>
               </tr>
             )}

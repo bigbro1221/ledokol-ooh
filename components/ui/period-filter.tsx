@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface Period {
   id: string;
@@ -25,6 +26,8 @@ export function PeriodFilter({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [expanded, setExpanded] = useState(false);
+  const tc = useTranslations('common');
+  const tf = useTranslations('filters');
 
   const select = useCallback((id: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -65,7 +68,7 @@ export function PeriodFilter({
         onClick={clearRange}
         className={`${pillBase} ${!isFiltered ? pillActive : pillIdle}`}
       >
-        Весь период
+        {tf('allPeriods')}
       </button>
       {visible.map((p, i) => {
         const isFrom = p.id === selectedFrom;
@@ -88,7 +91,7 @@ export function PeriodFilter({
           onClick={() => setExpanded(true)}
           className={`${pillBase} border border-dashed border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border-hi)] hover:text-[var(--text-2)]`}
         >
-          Ещё {hidden}
+          {tc('more')} {hidden}
         </button>
       )}
       {expanded && hidden > 0 && (
@@ -96,7 +99,7 @@ export function PeriodFilter({
           onClick={() => setExpanded(false)}
           className={`${pillBase} border border-dashed border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border-hi)] hover:text-[var(--text-2)]`}
         >
-          Скрыть
+          {tc('collapse')}
         </button>
       )}
     </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 function fmt(n: number): string {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -29,9 +31,9 @@ interface Props {
 }
 
 export function PlanFactBreakdown({ title, subtitle, data, unit = 'OTS' }: Props) {
+  const t = useTranslations('charts');
   if (data.length === 0) return null;
 
-  const maxPlan = Math.max(...data.map(d => d.plan), 1);
   const anyFact = data.some(d => d.fact > 0);
 
   return (
@@ -45,11 +47,11 @@ export function PlanFactBreakdown({ title, subtitle, data, unit = 'OTS' }: Props
           <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.06em] text-[var(--text-4)]">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-[2px] bg-[var(--surface-3)]" />
-              План
+              {t('plan')}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-[2px] bg-[var(--brand-primary)]" />
-              Факт
+              {t('fact')}
             </span>
           </div>
         )}
@@ -58,14 +60,13 @@ export function PlanFactBreakdown({ title, subtitle, data, unit = 'OTS' }: Props
       <div className="space-y-3">
         {data.map(row => {
           const pct = row.plan > 0 && row.fact > 0 ? (row.fact / row.plan) * 100 : null;
-          const planWidth = (row.plan / maxPlan) * 100;
-          const factWidth = (row.fact / maxPlan) * 100;
+          // All rows share a full-width track: the bar answers "how well is
+          // plan being executed?", not "whose city is bigger?". Absolute
+          // magnitudes live in the numeric columns on the right.
+          const planWidth = 100;
           const color = completionColor(pct);
-
-          // Cap fact display at plan width so it never bleeds into numbers.
-          // Over-delivery is communicated by the % number and color.
-          const factDisplayWidth = Math.min(factWidth, planWidth);
-          // Show a small overflow notch when fact > plan
+          const factRatio = row.plan > 0 ? row.fact / row.plan : 0;
+          const factDisplayWidth = Math.min(100, factRatio * 100);
           const overDelivery = row.fact > 0 && row.fact > row.plan;
 
           return (
@@ -119,8 +120,8 @@ export function PlanFactBreakdown({ title, subtitle, data, unit = 'OTS' }: Props
 
       {/* Column headers */}
       <div className="mt-3 flex justify-end gap-3 pr-0 text-[10px] uppercase tracking-[0.06em] text-[var(--text-4)]" style={{ fontFamily: 'var(--font-mono)' }}>
-        <span className="w-14 text-right">План {unit}</span>
-        <span className="w-14 text-right">Факт</span>
+        <span className="w-14 text-right">{t('plan')} {unit}</span>
+        <span className="w-14 text-right">{t('fact')}</span>
         <span className="w-12 text-right">%</span>
       </div>
     </div>

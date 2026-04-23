@@ -6,10 +6,8 @@ import { getUserPreferences } from '@/lib/user-preferences';
 import type { DateFormat } from '@/lib/format-period';
 import type { ScreenType } from '@prisma/client';
 import type { ScreenRow } from '@/components/screens/screens-table';
-
-const TYPE_LABELS: Record<string, string> = {
-  LED: 'LED экраны', STATIC: 'Статика', STOP: 'LED остановки', AIRPORT: 'Аэропорт', BUS: 'Транспорт',
-};
+import { getTranslations } from 'next-intl/server';
+import { getFileUrl } from '@/lib/minio';
 
 export default async function DashboardPage({
   params,
@@ -25,6 +23,15 @@ export default async function DashboardPage({
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const td = await getTranslations({ locale, namespace: 'dashboard' });
+  const tTypes = await getTranslations({ locale, namespace: 'screenTypes' });
+  const TYPE_LABELS: Record<string, string> = {
+    LED: tTypes('LEDscreens'),
+    STATIC: tTypes('STATIC'),
+    STOP: tTypes('STOPLed'),
+    AIRPORT: tTypes('AIRPORT'),
+    BUS: tTypes('BUS'),
+  };
 
   const clientFilter = session.user.role === 'CLIENT' && session.user.clientId
     ? { client: { users: { some: { id: session.user.id } } } }
@@ -42,8 +49,8 @@ export default async function DashboardPage({
   if (!selectedId) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
-        <h2 className="text-[28px] font-medium" style={{ fontFamily: 'var(--font-display)' }}>Нет кампаний</h2>
-        <p className="mt-3 text-sm text-[var(--text-3)]">Команда Ledokol загрузит ваш первый медиаплан.</p>
+        <h2 className="text-[28px] font-medium" style={{ fontFamily: 'var(--font-display)' }}>{td('noCampaignsTitle')}</h2>
+        <p className="mt-3 text-sm text-[var(--text-3)]">{td('noCampaignsSubtitle')}</p>
       </div>
     );
   }
@@ -85,6 +92,22 @@ export default async function DashboardPage({
   if (!campaign) redirect(`/${locale}/dashboard`);
 
   const initialDateFormat = prefs.dateFormat.toLowerCase() as DateFormat;
+
+  const creativeRows = await prisma.creative.findMany({
+    where: { campaignId: selectedId },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, name: true, fileKey: true, thumbnailKey: true, mimeType: true, width: true, height: true, sizeBytes: true },
+  });
+  const creatives = await Promise.all(creativeRows.map(async c => ({
+    id: c.id,
+    name: c.name,
+    mimeType: c.mimeType,
+    width: c.width,
+    height: c.height,
+    sizeBytes: Number(c.sizeBytes),
+    url: await getFileUrl(c.fileKey),
+    thumbnailUrl: c.thumbnailKey ? await getFileUrl(c.thumbnailKey) : null,
+  })));
 
   // Periods that have at least one metrics row with data
   const periodsWithData = campaign.splitByPeriods
@@ -328,6 +351,7 @@ export default async function DashboardPage({
       periodsWithData={periodsWithData.map(p => ({ id: p.id, name: p.name }))}
       selectedFrom={selectedFrom}
       selectedTo={selectedTo}
+      creatives={creatives}
     />
   );
 }

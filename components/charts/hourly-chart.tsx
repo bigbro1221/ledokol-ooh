@@ -1,6 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 interface HourEntry {
   hour: string;
@@ -8,11 +9,12 @@ interface HourEntry {
 }
 
 export function HourlyChart({ data }: { data: HourEntry[] }) {
+  const t = useTranslations('charts');
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="mb-6">
-        <h3 className="text-[15px] font-semibold tracking-tight">Часы</h3>
-        <p className="mt-0.5 text-xs text-[var(--text-3)]">Распределение показов по часам</p>
+        <h3 className="text-[15px] font-semibold tracking-tight">{t('impressionsHourlyTitle')}</h3>
+        <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('impressionsHourlySubtitle')}</p>
       </div>
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -32,7 +34,7 @@ export function HourlyChart({ data }: { data: HourEntry[] }) {
               width={35}
             />
             <Tooltip
-              formatter={(value) => [Number(value).toLocaleString('ru-RU'), 'Показы']}
+              formatter={(value) => [Number(value).toLocaleString('ru-RU'), t('impressions')]}
               contentStyle={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',

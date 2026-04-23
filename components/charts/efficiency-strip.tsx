@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 function fmt(n: number): string {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -33,13 +35,6 @@ function computeAvgImpressionsPerDay(
   return Math.round(totalOts / elapsedDays);
 }
 
-const AVG_LABEL: Record<string, string> = {
-  ru: 'Сред. показов/день',
-  en: 'Avg. impressions/day',
-  uz: "O'rtacha ko'rsatish/kun",
-  tr: 'Ort. gösterim/gün',
-};
-
 interface Props {
   totalBudget: number;
   totalOtsPlan: number;
@@ -55,8 +50,9 @@ interface Props {
 export function EfficiencyStrip({
   totalBudget, totalOtsPlan, totalOtsFact, totalScreens,
   periodStart, periodEnd, status,
-  locale = 'ru', currency = 'UZS',
+  currency = 'UZS',
 }: Props) {
+  const t = useTranslations('charts');
   const cpmPlan = totalBudget > 0 && totalOtsPlan > 0
     ? totalBudget / (totalOtsPlan / 1000)
     : null;
@@ -74,14 +70,14 @@ export function EfficiencyStrip({
   );
 
   const cells: { label: string; value: string; sub?: string }[] = [];
-  if (cpmPlan !== null) cells.push({ label: 'CPM план', value: fmt(cpmPlan), sub: `${currency} / 1000 показов` });
-  if (cpmFact !== null) cells.push({ label: 'CPM факт', value: fmt(cpmFact), sub: `${currency} / 1000 факт.` });
-  if (avgOtsPerScreen !== null) cells.push({ label: 'Средн. OTS', value: fmt(avgOtsPerScreen), sub: 'на поверхность' });
-  if (avgBudgetPerScreen !== null) cells.push({ label: 'Средн. бюджет', value: fmt(avgBudgetPerScreen), sub: `${currency} / поверхность` });
+  if (cpmPlan !== null) cells.push({ label: t('cpmPlan'), value: fmt(cpmPlan), sub: `${currency} ${t('cpmPlanUnit')}` });
+  if (cpmFact !== null) cells.push({ label: t('cpmFact'), value: fmt(cpmFact), sub: `${currency} ${t('cpmFactUnit')}` });
+  if (avgOtsPerScreen !== null) cells.push({ label: t('avgOts'), value: fmt(avgOtsPerScreen), sub: t('avgOtsUnit') });
+  if (avgBudgetPerScreen !== null) cells.push({ label: t('avgBudget'), value: fmt(avgBudgetPerScreen), sub: `${currency} ${t('avgBudgetUnit')}` });
   if (avgImpressions !== null) cells.push({
-    label: AVG_LABEL[locale] ?? AVG_LABEL.ru,
+    label: t('avgImpressionsShort'),
     value: avgImpressions.toLocaleString('ru-RU'),
-    sub: 'показов в день',
+    sub: t('impressionsPerDayUnit'),
   });
 
   if (cells.length === 0) return null;

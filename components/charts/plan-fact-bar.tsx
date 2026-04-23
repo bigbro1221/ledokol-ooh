@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 function fmt(n: number): string {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -13,6 +15,7 @@ interface PlanFactBarProps {
 }
 
 export function PlanFactBar({ plan, fact }: PlanFactBarProps) {
+  const t = useTranslations('charts');
   const hasFact = fact > 0;
   const pct = plan > 0 && hasFact ? (fact / plan) * 100 : null;
   const fillPct = pct !== null ? Math.min(pct, 100) : 0;
@@ -25,10 +28,10 @@ export function PlanFactBar({ plan, fact }: PlanFactBarProps) {
     :              'var(--danger)';
 
   const trendLabel =
-    pct === null         ? 'Нет факт. данных'
-    : pct >= 100         ? 'Выше плана'
-    : pct >= 80          ? 'В процессе'
-    :                      'Ниже плана';
+    pct === null         ? t('planCompletionNoFact')
+    : pct >= 100         ? t('planCompletionAbove')
+    : pct >= 80          ? t('planCompletionInProgress')
+    :                      t('planCompletionBelow');
 
   const delta = fact - plan;
 
@@ -36,7 +39,7 @@ export function PlanFactBar({ plan, fact }: PlanFactBarProps) {
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold tracking-tight">Выполнение плана</h3>
+        <h3 className="text-[15px] font-semibold tracking-tight">{t('planCompletionTitle')}</h3>
         {pct !== null && (
           <span
             className="rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.04em]"
@@ -76,19 +79,19 @@ export function PlanFactBar({ plan, fact }: PlanFactBarProps) {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2 text-center" style={{ fontFamily: 'var(--font-mono)' }}>
         <div>
-          <div className="text-[11px] text-[var(--text-4)] uppercase tracking-[0.06em]">План</div>
+          <div className="text-[11px] text-[var(--text-4)] uppercase tracking-[0.06em]">{t('plan')}</div>
           <div className="text-[13px] font-medium text-[var(--text)]">
             {plan > 0 ? fmt(plan) : '—'}
           </div>
         </div>
         <div>
-          <div className="text-[11px] text-[var(--text-4)] uppercase tracking-[0.06em]">Факт</div>
+          <div className="text-[11px] text-[var(--text-4)] uppercase tracking-[0.06em]">{t('fact')}</div>
           <div className="text-[13px] font-medium" style={{ color: hasFact ? color : 'var(--text-3)' }}>
             {hasFact ? fmt(fact) : '—'}
           </div>
         </div>
         <div>
-          <div className="text-[11px] text-[var(--text-4)] uppercase tracking-[0.06em]">Дельта</div>
+          <div className="text-[11px] text-[var(--text-4)] uppercase tracking-[0.06em]">{t('delta')}</div>
           <div
             className="text-[13px] font-medium"
             style={{

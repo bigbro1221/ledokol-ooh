@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export function RegeocodeButton({ campaignId }: { campaignId: string }) {
+  const t = useTranslations('regeocode');
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [result, setResult] = useState<{ matched: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -16,14 +18,14 @@ export function RegeocodeButton({ campaignId }: { campaignId: string }) {
       const res = await fetch(`/api/campaigns/${campaignId}/geocode`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? 'Ошибка геокодирования');
+        setError(data.error ?? t('errorTitle'));
         setState('error');
       } else {
         setResult(data);
         setState('done');
       }
     } catch {
-      setError('Сетевая ошибка');
+      setError(t('errorNetwork'));
       setState('error');
     }
   }
@@ -39,11 +41,11 @@ export function RegeocodeButton({ campaignId }: { campaignId: string }) {
           ? <Loader2 size={13} strokeWidth={1.5} className="animate-spin" />
           : <MapPin size={13} strokeWidth={1.5} />
         }
-        Обновить геопривязку
+        {t('button')}
       </button>
       {state === 'done' && result && (
         <span className="text-xs text-[var(--success)]">
-          {result.matched} / {result.total} адресов привязано
+          {result.matched} / {result.total} {t('successSuffix')}
         </span>
       )}
       {state === 'error' && error && (

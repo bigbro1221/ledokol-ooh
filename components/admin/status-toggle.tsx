@@ -2,14 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 const STATUSES = ['DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED'] as const;
-const LABELS: Record<string, string> = {
-  DRAFT: 'Черновик',
-  ACTIVE: 'Активна',
-  PAUSED: 'Пауза',
-  COMPLETED: 'Завершена',
-};
 const STYLES: Record<string, string> = {
   ACTIVE: 'bg-[rgba(16,185,129,0.12)] text-[var(--success)] border-[var(--success)]',
   PAUSED: 'bg-[rgba(234,179,8,0.12)] text-[var(--warning)] border-[var(--warning)]',
@@ -19,6 +14,7 @@ const STYLES: Record<string, string> = {
 
 export function StatusToggle({ campaignId, currentStatus }: { campaignId: string; currentStatus: string }) {
   const router = useRouter();
+  const t = useTranslations('campaignStatus');
   const [loading, setLoading] = useState(false);
 
   async function setStatus(status: string) {
@@ -43,7 +39,7 @@ export function StatusToggle({ campaignId, currentStatus }: { campaignId: string
             s === currentStatus ? STYLES[s] : 'border-[var(--border)] text-[var(--text-4)] hover:border-[var(--border-hi)] hover:text-[var(--text-2)]'
           }`}
         >
-          {LABELS[s]}
+          {t(s)}
         </button>
       ))}
     </div>

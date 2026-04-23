@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { LogoutButton } from '@/components/ui/logout-button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LocaleToggle } from '@/components/ui/locale-toggle';
 import { UserNav } from '@/components/ui/user-nav';
 import { LayoutDashboard, Users, Building2, Megaphone, Menu, X, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
@@ -51,12 +52,13 @@ function AdminSidebar({ locale, onClose }: { locale: string; onClose: () => void
   const tc = useTranslations('common');
   const pathname = usePathname();
 
+  const tn = useTranslations('nav');
   const links = [
     { href: `/${locale}/admin`, label: t('dashboard'), icon: LayoutDashboard, exact: true },
     { href: `/${locale}/admin/clients`, label: t('clients'), icon: Building2 },
     { href: `/${locale}/admin/campaigns`, label: t('campaigns'), icon: Megaphone },
-    { href: `/${locale}/admin/users`, label: 'Пользователи', icon: Users },
-    { href: `/${locale}/dashboard`, label: 'Клиентский дашборд', icon: BarChart3, divider: true },
+    { href: `/${locale}/admin/users`, label: t('users'), icon: Users },
+    { href: `/${locale}/dashboard`, label: tn('clientDashboard'), icon: BarChart3, divider: true },
   ];
 
   return (
@@ -91,7 +93,8 @@ function AdminSidebar({ locale, onClose }: { locale: string; onClose: () => void
         <UserNav locale={locale} />
         <div className="mt-1 flex items-center gap-1">
           <LogoutButton label={tc('logout')} />
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <LocaleToggle />
             <ThemeToggle />
           </div>
         </div>
