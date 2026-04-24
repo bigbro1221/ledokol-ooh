@@ -295,7 +295,54 @@
     "confirmDelete": "Delete creative?"
   },
   "months": {
-    "full": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    "short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    "full": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "short": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ]
+  },
+  "nav": {
+    "clientDashboard": "Client dashboard",
+    "adminPanel": "Admin panel"
+  },
+  "roles": {
+    "ADMIN": "Administrator",
+    "CLIENT": "Client",
+    "adminShort": "Admin"
+  },
+  "languages": {
+    "RU": "Russian",
+    "EN": "English",
+    "UZ": "Uzbek",
+    "TR": "Turkish"
+  },
+  "campaignStatus": {
+    "DRAFT": "Draft",
+    "ACTIVE": "Active",
+    "PAUSED": "Paused",
+    "COMPLETED": "Completed"
   }
 }

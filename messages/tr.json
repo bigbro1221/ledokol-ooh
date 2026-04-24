@@ -28,5 +28,26 @@
     "title": "",
     "myCampaigns": "",
     "selectCampaign": ""
+  },
+  "nav": {
+    "clientDashboard": "Müşteri paneli",
+    "adminPanel": "Yönetici paneli"
+  },
+  "roles": {
+    "ADMIN": "Yönetici",
+    "CLIENT": "Müşteri",
+    "adminShort": "Yönetici"
+  },
+  "languages": {
+    "RU": "Rusça",
+    "EN": "İngilizce",
+    "UZ": "Özbekçe",
+    "TR": "Türkçe"
+  },
+  "campaignStatus": {
+    "DRAFT": "Taslak",
+    "ACTIVE": "Aktif",
+    "PAUSED": "Duraklatıldı",
+    "COMPLETED": "Tamamlandı"
   }
 }

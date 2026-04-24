@@ -295,7 +295,54 @@
     "confirmDelete": "Kreativni o'chirasizmi?"
   },
   "months": {
-    "full": ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"],
-    "short": ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"]
+    "full": [
+      "Yanvar",
+      "Fevral",
+      "Mart",
+      "Aprel",
+      "May",
+      "Iyun",
+      "Iyul",
+      "Avgust",
+      "Sentabr",
+      "Oktabr",
+      "Noyabr",
+      "Dekabr"
+    ],
+    "short": [
+      "Yan",
+      "Fev",
+      "Mar",
+      "Apr",
+      "May",
+      "Iyn",
+      "Iyl",
+      "Avg",
+      "Sen",
+      "Okt",
+      "Noy",
+      "Dek"
+    ]
+  },
+  "nav": {
+    "clientDashboard": "Mijoz paneli",
+    "adminPanel": "Admin panel"
+  },
+  "roles": {
+    "ADMIN": "Administrator",
+    "CLIENT": "Mijoz",
+    "adminShort": "Admin"
+  },
+  "languages": {
+    "RU": "Ruscha",
+    "EN": "Inglizcha",
+    "UZ": "O'zbekcha",
+    "TR": "Turkcha"
+  },
+  "campaignStatus": {
+    "DRAFT": "Qoralama",
+    "ACTIVE": "Faol",
+    "PAUSED": "Pauzada",
+    "COMPLETED": "Yakunlangan"
   }
 }
