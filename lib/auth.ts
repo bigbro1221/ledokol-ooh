@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
+import { cookies } from 'next/headers';
 import { compare } from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import type { UserRole } from '@prisma/client';
@@ -22,17 +23,41 @@ const googleProvider = isGoogleOAuthConfigured()
   ? Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // Allow linking Google to an existing credentials-based account.
-      allowDangerousEmailAccountLinking: true,
       // Force Google to show the account chooser every time instead of
       // silently picking whichever account the browser is signed into.
       authorization: { params: { prompt: 'select_account' } },
     })
   : null;
 
+async function getInvitedUserIdFromCookie(): Promise<string | null> {
+  const store = await cookies();
+  return store.get('activation-session')?.value ?? null;
+}
+
+const basePrismaAdapter = PrismaAdapter(prisma) as any;
+const authAdapter = {
+  ...basePrismaAdapter,
+  // Disable email-based auto-linking — User.email no longer has to match the
+  // Google account's email. The activation-session cookie drives linking.
+  getUserByEmail: async () => null,
+  // The adapter only reaches createUser when (a) no Account row exists for this
+  // (provider, providerAccountId) and (b) getUserByEmail returned null. We use
+  // this as our gate: only allow "signup" during the activation flow, and
+  // redirect the insert to the invited user row instead of creating a new one.
+  createUser: async () => {
+    const invitedId = await getInvitedUserIdFromCookie();
+    if (!invitedId) throw new Error('OAuthSignupNotAllowed');
+    const invited = await prisma.user.findUnique({ where: { id: invitedId } });
+    if (!invited || !invited.enabled || invited.status !== 'INVITED') {
+      throw new Error('OAuthSignupNotAllowed');
+    }
+    return invited;
+  },
+};
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: authAdapter,
   providers: [
     Credentials({
       name: 'credentials',
@@ -91,38 +116,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: { signIn: '/login' },
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (account?.provider === 'credentials') return true; // authorize() already checks enabled
 
       if (account?.provider === 'google') {
-        const email = user?.email ?? profile?.email;
-        if (!email) return false;
+        if (!user?.id) return false;
 
-        // The app user this Google identity maps to (matched by email)
         const appUser = await prisma.user.findUnique({
-          where: { email },
+          where: { id: user.id },
           select: { id: true, enabled: true },
         });
         if (!appUser || !appUser.enabled) return false;
 
-        // Reject if this Google account is already linked to a DIFFERENT user.
-        // The DB unique index on (provider, providerAccountId) prevents duplicate
-        // rows, but allowDangerousEmailAccountLinking can bypass it at the app
-        // layer — this check closes that gap.
-        if (account.providerAccountId) {
-          const existingLink = await prisma.account.findUnique({
-            where: {
-              provider_providerAccountId: {
-                provider: 'google',
-                providerAccountId: account.providerAccountId,
-              },
-            },
-            select: { userId: true },
-          });
-          if (existingLink && existingLink.userId !== appUser.id) {
-            return false;
-          }
-        }
+        // If an activation session is in progress, the signed-in user must be
+        // the invited one. This closes a hole where a rogue Google account
+        // could email-match (or be linked to) a different app user mid-flow.
+        const invitedId = await getInvitedUserIdFromCookie();
+        if (invitedId && invitedId !== appUser.id) return false;
 
         return true;
       }

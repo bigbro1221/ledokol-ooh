@@ -39,37 +39,33 @@ export default async function ActivateCompletePage({ params }: Props) {
   }
 
   const session = await auth();
-  const sessionEmail = session?.user?.email;
 
-  if (!session || !sessionEmail) {
+  if (!session?.user?.id) {
     redirect(`/api/auth/signin/google?callbackUrl=/${locale}/activate/complete`);
+  }
+
+  // The signIn callback guarantees session.user.id === cookie userId when the
+  // activation cookie is set. Treat any mismatch as a tampered flow.
+  if (session.user.id !== userId) {
+    cookieStore.delete('activation-session');
+    return <ErrorCard message="Activation flow mismatch." hint="Please request a new activation link." />;
   }
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, status: true },
+    select: { id: true, status: true },
   });
 
   if (!user) {
+    cookieStore.delete('activation-session');
     return <ErrorCard message="Account not found." />;
   }
 
   if (user.status !== 'INVITED') {
-    // Already activated — clear stale cookie and go to dashboard
     cookieStore.delete('activation-session');
     redirect(`/${locale}/dashboard`);
   }
 
-  if (user.email.toLowerCase() !== sessionEmail.toLowerCase()) {
-    return (
-      <ErrorCard
-        message={`Wrong Google account. Please sign in with ${user.email}.`}
-        hint={`You signed in as ${sessionEmail}. Sign out of Google and try again.`}
-      />
-    );
-  }
-
-  // Activate: set status = ACTIVE, clear cookie
   await prisma.user.update({
     where: { id: userId },
     data: { status: 'ACTIVE' },
