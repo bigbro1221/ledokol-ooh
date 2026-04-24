@@ -27,8 +27,8 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ messageId: st
     throw new SuppressedEmailError(opts.to);
   }
 
-  const from = process.env.MAIL_FROM_ADDRESS;
-  if (!from) throw new Error('MAIL_FROM_ADDRESS env var is not set');
+  const from = process.env.POSTMARK_FROM_ADDRESS ?? process.env.MAIL_FROM_ADDRESS;
+  if (!from) throw new Error('POSTMARK_FROM_ADDRESS env var is not set');
 
   const stream = process.env.POSTMARK_MESSAGE_STREAM || 'outbound';
 
