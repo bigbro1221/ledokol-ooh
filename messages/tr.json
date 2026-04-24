@@ -16,7 +16,11 @@
     "password": "",
     "loginTitle": "",
     "loginDescription": "",
-    "invalidCredentials": ""
+    "invalidCredentials": "",
+    "errorGoogleInUse": "Bu Google hesabı başka bir kullanıcıya bağlı. Google'dan çıkış yapın ve tekrar deneyin.",
+    "errorGoogleNotInvited": "Bu Google hesabı hiçbir kullanıcıya bağlı değil. Lütfen bir davet için yöneticinize başvurun.",
+    "errorEmailNotRegistered": "Bu e-posta sistemde kayıtlı değil. Lütfen yöneticinize başvurun.",
+    "errorAccountDisabled": "Hesabınız devre dışı bırakıldı. Lütfen yöneticinize başvurun."
   },
   "admin": {
     "title": "",

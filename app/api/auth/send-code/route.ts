@@ -60,7 +60,9 @@ export async function POST(req: NextRequest) {
     select: { id: true, enabled: true, language: true },
   });
 
-  if (!user || !user.enabled) return NextResponse.json(GENERIC_OK);
+  if (!user || !user.enabled) {
+    return NextResponse.json({ error: 'EmailNotRegistered' }, { status: 404 });
+  }
 
   const suppressed = await isSuppressed(email);
   if (suppressed) return NextResponse.json(GENERIC_OK);

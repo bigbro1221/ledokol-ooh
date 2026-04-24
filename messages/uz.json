@@ -50,7 +50,11 @@
     "codeExpired": "Kod muddati tugagan. Yangi kod so'rang.",
     "genericError": "Xatolik yuz berdi. Qayta urinib ko'ring.",
     "rateLimited": "Juda ko'p so'rov. {seconds} soniya kuting.",
-    "codeSentTo": "{email} manziliga kod yubordik"
+    "codeSentTo": "{email} manziliga kod yubordik",
+    "errorGoogleInUse": "Ushbu Google hisobi boshqa foydalanuvchiga biriktirilgan. Google'dan chiqing va qayta urinib ko'ring.",
+    "errorGoogleNotInvited": "Ushbu Google hisobi hech qanday foydalanuvchiga biriktirilmagan. Iltimos, taklif uchun administratorga murojaat qiling.",
+    "errorEmailNotRegistered": "Bu email ro'yxatdan o'tmagan. Iltimos, administratorga murojaat qiling.",
+    "errorAccountDisabled": "Hisobingiz o'chirilgan. Iltimos, administratorga murojaat qiling."
   },
   "admin": {
     "title": "Administrator paneli",

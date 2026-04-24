@@ -36,6 +36,14 @@ function mapOAuthError(code: string | null, t: (key: string) => string): string 
   switch (code) {
     case 'OAuthAccountNotLinked':
       return t('errorOAuthConflict');
+    case 'GoogleInUse':
+      return t('errorGoogleInUse');
+    case 'GoogleNotInvited':
+    case 'Callback':
+    case 'OAuthCreateAccount':
+      return t('errorGoogleNotInvited');
+    case 'AccountDisabled':
+      return t('errorAccountDisabled');
     case 'AccessDenied':
       return t('errorAccessDenied');
     default:
@@ -99,6 +107,11 @@ export function LoginForm({ googleConfigured }: Props) {
         const wait = data.retryAfter ?? 60;
         setError(t('rateLimited', { seconds: wait }));
         startCooldown(wait);
+        return;
+      }
+
+      if (res.status === 404) {
+        setError(t('errorEmailNotRegistered'));
         return;
       }
 

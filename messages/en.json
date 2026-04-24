@@ -50,7 +50,11 @@
     "codeExpired": "Code has expired. Please request a new one.",
     "genericError": "Something went wrong. Please try again.",
     "rateLimited": "Too many requests. Please wait {seconds} seconds.",
-    "codeSentTo": "We sent a code to {email}"
+    "codeSentTo": "We sent a code to {email}",
+    "errorGoogleInUse": "This Google account is already linked to another user. Sign out of Google and try again.",
+    "errorGoogleNotInvited": "This Google account is not linked to any user. Please contact an administrator for an invitation.",
+    "errorEmailNotRegistered": "This email is not registered. Please contact an administrator.",
+    "errorAccountDisabled": "Your account is disabled. Please contact an administrator."
   },
   "admin": {
     "title": "Admin panel",

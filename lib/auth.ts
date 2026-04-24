@@ -120,19 +120,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (account?.provider === 'credentials') return true; // authorize() already checks enabled
 
       if (account?.provider === 'google') {
-        if (!user?.id) return false;
+        if (!user?.id) return '/login?error=GoogleNotInvited';
 
         const appUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { id: true, enabled: true },
         });
-        if (!appUser || !appUser.enabled) return false;
+        if (!appUser) return '/login?error=GoogleNotInvited';
+        if (!appUser.enabled) return '/login?error=AccountDisabled';
 
         // If an activation session is in progress, the signed-in user must be
-        // the invited one. This closes a hole where a rogue Google account
-        // could email-match (or be linked to) a different app user mid-flow.
+        // the invited one. Rejecting here means the Google account resolved
+        // to a DIFFERENT app user — either already linked elsewhere or matched
+        // by some other mechanism. Treat as "already in use".
         const invitedId = await getInvitedUserIdFromCookie();
-        if (invitedId && invitedId !== appUser.id) return false;
+        if (invitedId && invitedId !== appUser.id) return '/login?error=GoogleInUse';
 
         return true;
       }
