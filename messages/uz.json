@@ -348,5 +348,18 @@
     "ACTIVE": "Faol",
     "PAUSED": "Pauzada",
     "COMPLETED": "Yakunlangan"
+  },
+  "screenTypes": {
+    "LED": "LED",
+    "LEDscreens": "LED ekranlar",
+    "STATIC": "Statik",
+    "STOP": "To'xtash joylari",
+    "STOPLed": "LED to'xtash joylari",
+    "AIRPORT": "Aeroport",
+    "BUS": "Transport"
+  },
+  "meta": {
+    "title": "OOH Dashboard — Ledokol Group",
+    "description": "Ledokol Group tashqi reklama paneli: kampaniyalar, ekranlar, media-rejalar va tahlil."
   }
 }

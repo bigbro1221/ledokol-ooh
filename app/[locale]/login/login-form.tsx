@@ -4,6 +4,7 @@ import { signIn, signOut } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LocaleToggle } from '@/components/ui/locale-toggle';
 
@@ -191,12 +192,14 @@ export function LoginForm({ googleConfigured }: Props) {
       <div className="w-full max-w-[380px]">
         {/* Logo + heading */}
         <div className="mb-10 text-center">
-          <div
-            className="mb-4 text-[28px] font-semibold tracking-tight"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            Ledokol<span className="text-[var(--brand-primary)]">.</span>
-          </div>
+          <Image
+            src="/ledokol-logo.svg"
+            alt="Ledokol"
+            width={140}
+            height={36}
+            priority
+            className="mx-auto mb-6 h-12 w-auto"
+          />
           <h1
             className="text-[22px] font-medium tracking-[-0.02em]"
             style={{ fontFamily: 'var(--font-display)' }}

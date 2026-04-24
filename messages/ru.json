@@ -348,5 +348,18 @@
     "ACTIVE": "Активна",
     "PAUSED": "На паузе",
     "COMPLETED": "Завершена"
+  },
+  "screenTypes": {
+    "LED": "LED",
+    "LEDscreens": "LED экраны",
+    "STATIC": "Статика",
+    "STOP": "Остановки",
+    "STOPLed": "LED остановки",
+    "AIRPORT": "Аэропорт",
+    "BUS": "Транспорт"
+  },
+  "meta": {
+    "title": "OOH Dashboard — Ledokol Group",
+    "description": "Панель наружной рекламы Ledokol Group: кампании, экраны, медиапланы и аналитика."
   }
 }

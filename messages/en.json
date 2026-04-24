@@ -348,5 +348,18 @@
     "ACTIVE": "Active",
     "PAUSED": "Paused",
     "COMPLETED": "Completed"
+  },
+  "screenTypes": {
+    "LED": "LED",
+    "LEDscreens": "LED screens",
+    "STATIC": "Static",
+    "STOP": "Stops",
+    "STOPLed": "LED stops",
+    "AIRPORT": "Airport",
+    "BUS": "Transport"
+  },
+  "meta": {
+    "title": "OOH Dashboard — Ledokol Group",
+    "description": "Ledokol Group outdoor advertising dashboard: campaigns, screens, media plans and analytics."
   }
 }

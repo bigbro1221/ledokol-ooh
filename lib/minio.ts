@@ -40,8 +40,19 @@ export async function uploadFile(key: string, body: Buffer, contentType: string)
 }
 
 export async function getFileUrl(key: string): Promise<string> {
+  // Route through our own /api/storage proxy so the URL works from browsers —
+  // presigned S3 URLs embed the internal Docker hostname (minio:9000), which
+  // isn't reachable from outside the app container.
+  return `/api/storage/${key.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+/**
+ * Returns a time-limited presigned S3 URL. Only safe for server-to-server use
+ * (e.g. admin exports that hit MinIO directly) — don't send this to browsers.
+ */
+export async function getSignedFileUrl(key: string, expiresInSec = 3600): Promise<string> {
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
-  return getSignedUrl(s3, command, { expiresIn: 3600 });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSec });
 }
 
 export async function deleteFile(key: string): Promise<void> {

@@ -53,5 +53,18 @@
     "ACTIVE": "Aktif",
     "PAUSED": "Duraklatıldı",
     "COMPLETED": "Tamamlandı"
+  },
+  "screenTypes": {
+    "LED": "LED",
+    "LEDscreens": "LED ekranlar",
+    "STATIC": "Statik",
+    "STOP": "Duraklar",
+    "STOPLed": "LED duraklar",
+    "AIRPORT": "Havalimanı",
+    "BUS": "Ulaşım"
+  },
+  "meta": {
+    "title": "OOH Dashboard — Ledokol Group",
+    "description": "Ledokol Group açık hava reklamcılığı paneli: kampanyalar, ekranlar, medya planları ve analitik."
   }
 }
