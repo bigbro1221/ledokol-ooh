@@ -10,7 +10,8 @@
 > • 2026-04-22 — Mandatory Google-link gate: non-linked users redirected to `/profile?mustLinkGoogle=1`.  
 > • 2026-04-23 — Phase A: SES email client, suppression table, SNS webhook, MX + typo validation on user creation.  
 > • 2026-04-23 — Phase B: Passwordless OTP login — `EmailLoginCode` + `RateLimitEntry` schema, DB-backed rate limiter, `POST /api/auth/send-code`, double-submit CSRF, `lib/auth.ts` Credentials rewrite, login form two-view UI, login-code email template (RU/EN/UZ), `session.maxAge` set to 24 h.
-
+> • 2026-04-23 — AWS SES production access denied by Trust & Safety (no specifics given). Postmark migration attempted — DNS verified and packages installed, but aborted mid-implementation after session infrastructure issues. SES remains in sandbox. Mail provider decision deferred; current users workable by verifying recipient addresses in SES manually.
+> • 2026-04-24 — **Postmark migration completed.** Account set up under `artyom@ledokolgroup.com`, domain DNS verified, Beck added as account admin. Code swap: `lib/mail.ts` now uses `postmark` ServerClient; `/api/webhooks/postmark` replaces the SES/SNS webhook (Basic Auth protected); `@aws-sdk/client-ses` + `sns-validator` removed from deps. Env vars renamed: `SES_FROM_ADDRESS` → `MAIL_FROM_ADDRESS`, AWS keys → `POSTMARK_SERVER_TOKEN` + `POSTMARK_WEBHOOK_USER/PASSWORD`.
 ---
 
 ## Locked-in design (passwordless)
@@ -49,11 +50,11 @@
 
 **Goal:** Safe, reliable transactional email before anything else is built on top of it.
 
-### A.1 SES client (`lib/mail.ts`) ✅
+### A.1 Mail client (`lib/mail.ts`) ✅ — Postmark
 - `sendEmail({ to, subject, html, text, tags?, replyTo? })` returning `{ messageId }`.
-- Reads `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SES_FROM_ADDRESS`.
+- Reads `POSTMARK_SERVER_TOKEN`, `MAIL_FROM_ADDRESS`, `POSTMARK_MESSAGE_STREAM` (optional, defaults to `outbound`).
 - Pre-send suppression check — throws `SuppressedEmailError` if address is suppressed.
-- Structured error logging on SES failure.
+- Structured error logging on Postmark failure.
 
 ### A.2 Suppression table + helpers ✅
 Schema: `SuppressedEmail` model with `SuppressionReason` enum (`HARD_BOUNCE`, `SOFT_BOUNCE_REPEATED`, `COMPLAINT`, `MANUAL`).
@@ -64,13 +65,12 @@ Helpers in `lib/suppression.ts`:
 - `unsuppress(email)` — sets `removedAt`; row stays for audit trail.
 - `recordSoftBounce(email, ...)` — increments counter; auto-suppresses at threshold (default 5).
 
-### A.3 SES → SNS webhook (`app/api/webhooks/ses/route.ts`) ✅
-- Validates SNS message signature (via `sns-validator`; skipped in non-production).
-- Auto-confirms `SubscriptionConfirmation` by fetching `SubscribeURL`.
-- `Bounce:Permanent` → `suppress(..., HARD_BOUNCE)`.
-- `Bounce:Transient` → `recordSoftBounce(...)`.
-- `Complaint` → `suppress(..., COMPLAINT)`.
-- Asserts expected `SES_SNS_TOPIC_ARN` when set.
+### A.3 Postmark webhook (`app/api/webhooks/postmark/route.ts`) ✅
+- Basic Auth guard using `POSTMARK_WEBHOOK_USER` + `POSTMARK_WEBHOOK_PASSWORD` (Postmark's webhook UI exposes Basic Auth fields directly).
+- `RecordType: "Bounce"` with hard types (`HardBounce`, `BadEmailAddress`, `ManuallyDeactivated`, `Blocked`, `BlockedISP`, `DnsError`, `DMARCPolicy`, `Unknown`) → `suppress(..., HARD_BOUNCE)`.
+- `RecordType: "Bounce"` with soft types (`Transient`, `SoftBounce`, `SMTPApiError`) → `recordSoftBounce(...)`.
+- `RecordType: "SpamComplaint"` → `suppress(..., COMPLAINT)`.
+- Unhandled types are logged and acked (200) so Postmark won't retry noise.
 
 ### A.4 Email validation (`lib/email-validation.ts` + `lib/email-suggestions.ts`) ✅
 - Pure client-safe typo suggestion in `lib/email-suggestions.ts` (Levenshtein ≤ 2, common domains list).
@@ -81,24 +81,24 @@ Helpers in `lib/suppression.ts`:
   4. Suppression advisory (soft warning — admin can override).
 - Integrated into `/admin/users/new` form (client-side live hint) and `POST /api/users` (server-side hard block on MX failure).
 
-### A.5 Infrastructure setup (manual, one-time)
-- [ ] Create SNS topic `ledokol-ses-events`.
-- [ ] In SES → Configuration Sets: add SNS event destination for Bounce + Complaint.
-- [ ] Subscribe SNS topic to `https://<domain>/api/webhooks/ses`.
-- [ ] Enable SES account-level suppression: `aws ses put-account-suppression-attributes --suppressed-reasons BOUNCE COMPLAINT`.
-- [ ] Set `SES_SNS_TOPIC_ARN` env var.
+### A.5 Infrastructure setup (manual, one-time) — Postmark
+- [x] Postmark account created under `artyom@ledokolgroup.com`; domain DNS (DKIM/Return-Path) verified.
+- [x] Beck added as account admin.
+- [ ] Create a Server in Postmark and copy its Server API Token into `POSTMARK_SERVER_TOKEN`.
+- [ ] Configure webhooks (Server → Webhooks): add bounce + spam-complaint webhook pointing at `https://<domain>/api/webhooks/postmark`. Enable "Include bounce content" if desired. Set Basic Auth username/password matching `POSTMARK_WEBHOOK_USER` / `POSTMARK_WEBHOOK_PASSWORD`.
+- [ ] Set `MAIL_FROM_ADDRESS` to an address on the verified sender domain.
 
 ### Phase A checklist
-- [x] `lib/mail.ts` — SES client with suppression pre-check
+- [x] `lib/mail.ts` — Postmark client with suppression pre-check
 - [x] `lib/suppression.ts` — isSuppressed / suppress / unsuppress / recordSoftBounce
 - [x] `prisma/schema.prisma` — `SuppressedEmail` model, `SuppressionReason` enum
-- [x] `app/api/webhooks/ses/route.ts` — SNS webhook
+- [x] `app/api/webhooks/postmark/route.ts` — Postmark bounce/complaint webhook
 - [x] `lib/email-validation.ts` — server-side MX + suppression validation
 - [x] `lib/email-suggestions.ts` — client-safe typo correction
 - [x] `/admin/users/new` form — live typo hint
 - [x] `POST /api/users` — server-side email validation before user creation
-- [x] `.env.example` — SES env vars documented
-- [ ] Infrastructure setup (SNS topic, SES config set, subscription — manual)
+- [x] `.env.example` — Postmark env vars documented
+- [ ] Infrastructure setup (Postmark server, webhook config — manual, see A.5)
 - [ ] Admin suppression UI at `/admin/settings/email-suppressions` (Phase E)
 
 ---

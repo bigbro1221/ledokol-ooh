@@ -1,19 +1,17 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { ServerClient } from 'postmark';
 import { isSuppressed, SuppressedEmailError } from '@/lib/suppression';
 
 export { SuppressedEmailError };
 
-const ses = new SESClient({
-  region: process.env.AWS_REGION ?? 'eu-central-1',
-  ...(process.env.AWS_ACCESS_KEY_ID
-    ? {
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        },
-      }
-    : {}),
-});
+let client: ServerClient | null = null;
+
+function getClient(): ServerClient {
+  if (client) return client;
+  const token = process.env.POSTMARK_SERVER_TOKEN;
+  if (!token) throw new Error('POSTMARK_SERVER_TOKEN env var is not set');
+  client = new ServerClient(token);
+  return client;
+}
 
 export interface SendEmailOptions {
   to: string;
@@ -29,28 +27,25 @@ export async function sendEmail(opts: SendEmailOptions): Promise<{ messageId: st
     throw new SuppressedEmailError(opts.to);
   }
 
-  const from = process.env.SES_FROM_ADDRESS;
-  if (!from) throw new Error('SES_FROM_ADDRESS env var is not set');
+  const from = process.env.MAIL_FROM_ADDRESS;
+  if (!from) throw new Error('MAIL_FROM_ADDRESS env var is not set');
+
+  const stream = process.env.POSTMARK_MESSAGE_STREAM || 'outbound';
 
   try {
-    const cmd = new SendEmailCommand({
-      Source: from,
-      Destination: { ToAddresses: [opts.to] },
-      Message: {
-        Subject: { Data: opts.subject, Charset: 'UTF-8' },
-        Body: {
-          Html: { Data: opts.html, Charset: 'UTF-8' },
-          Text: { Data: opts.text, Charset: 'UTF-8' },
-        },
-      },
-      ...(opts.replyTo ? { ReplyToAddresses: [opts.replyTo] } : {}),
-      ...(opts.tags?.length ? { Tags: opts.tags } : {}),
+    const result = await getClient().sendEmail({
+      From: from,
+      To: opts.to,
+      Subject: opts.subject,
+      HtmlBody: opts.html,
+      TextBody: opts.text,
+      MessageStream: stream,
+      ...(opts.replyTo ? { ReplyTo: opts.replyTo } : {}),
+      ...(opts.tags?.length ? { Tag: opts.tags[0].Value } : {}),
     });
-
-    const result = await ses.send(cmd);
-    return { messageId: result.MessageId! };
+    return { messageId: result.MessageID };
   } catch (err) {
-    console.error('[mail] SES send failed', {
+    console.error('[mail] Postmark send failed', {
       to: opts.to,
       subject: opts.subject,
       error: err instanceof Error ? err.message : String(err),

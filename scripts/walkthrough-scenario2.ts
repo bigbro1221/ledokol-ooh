@@ -53,7 +53,7 @@ async function main() {
   console.log(`   ${redacted}`);
   console.log('   (built by lib/activation.ts → buildActivationUrl)\n');
 
-  // Step 4: Attempt email send (SES will fail — verify clean error handling)
+  // Step 4: Attempt email send (Postmark will fail in dev — verify clean error handling)
   const { subject, html: _html, text } = renderActivationEmail({ activationUrl, locale: 'ru' });
   console.log('4. Email template rendered:');
   console.log(`   Subject: "${subject}"`);
@@ -62,15 +62,15 @@ async function main() {
   let emailOutcome = '';
   try {
     await sendEmail({ to: TEST_EMAIL, subject, html: _html, text });
-    emailOutcome = 'Email sent (SES creds present — unexpected in dev)';
+    emailOutcome = 'Email sent (Postmark token present — unexpected in dev)';
   } catch (err) {
     if (err instanceof SuppressedEmailError) {
       emailOutcome = `SuppressedEmailError (email on suppression list)`;
-    } else if (err instanceof Error && err.message.includes('SES_FROM_ADDRESS')) {
+    } else if (err instanceof Error && /POSTMARK_SERVER_TOKEN|MAIL_FROM_ADDRESS/.test(err.message)) {
       emailOutcome = `Config error: ${err.message}`;
     } else {
-      // Expected: SES SDK throws network/credential error
-      emailOutcome = `SES SDK error (expected in dev — no AWS creds): ${err instanceof Error ? err.constructor.name : 'unknown'}: "${err instanceof Error ? err.message.slice(0, 80) : String(err).slice(0, 80)}"`;
+      // Expected: Postmark SDK throws auth/network error
+      emailOutcome = `Postmark SDK error (expected in dev — no token): ${err instanceof Error ? err.constructor.name : 'unknown'}: "${err instanceof Error ? err.message.slice(0, 80) : String(err).slice(0, 80)}"`;
     }
   }
   console.log(`5. sendEmail outcome: ${emailOutcome}\n`);

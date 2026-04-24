@@ -623,7 +623,7 @@ Current live implementation in `app/[locale]/dashboard/`.
 
 Not in scope for initial launch:
 
-- **Auth rework** — invite-only registration, optional 2FA, TOTP, Google SSO, recovery codes, SES transactional email with bounce/complaint handling. Full roadmap: `docs/AUTH_ROADMAP.md`.
+- **Auth rework** — invite-only registration, optional 2FA, TOTP, Google SSO, recovery codes, Postmark transactional email with bounce/complaint handling. Full roadmap: `docs/AUTH_ROADMAP.md`.
 - Operator API integrations (daily/hourly impressions, live spend)
 - Wire `computeCampaignTotal` into UI financial fields (formula exists, UI still uses manual inputs)
 - Multi-operator support (when XLSX starts listing Media Lux, Apex Media, etc.)
