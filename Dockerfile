@@ -47,6 +47,10 @@ COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
 COPY --from=deps /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=deps /app/node_modules/@prisma/engines-version ./node_modules/@prisma/engines-version
 
+# Install Postmark with its full transitive tree — Next.js standalone tracer
+# doesn't follow postmark's CJS requires reliably, so let npm resolve them.
+RUN npm install --no-save --no-package-lock --omit=dev postmark@4.0.7
+
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
