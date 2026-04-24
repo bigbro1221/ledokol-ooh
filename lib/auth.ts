@@ -32,7 +32,6 @@ const googleProvider = isGoogleOAuthConfigured()
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     Credentials({
