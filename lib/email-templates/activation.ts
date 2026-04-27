@@ -79,8 +79,6 @@ export function renderActivationEmail({
                 <tr>
                   <td style="background:#0C5DC6;border-radius:8px;">
                     <a href="${activationUrl}"
-                       target="_blank"
-                       rel="noopener noreferrer"
                        style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:-0.01em;">
                       ${c.cta}
                     </a>
