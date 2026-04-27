@@ -71,6 +71,13 @@ export default async function ActivateCompletePage({ params }: Props) {
     data: { status: 'ACTIVE' },
   });
 
+  // Burn the activation token now that the flow has succeeded. updateMany
+  // lets this be idempotent if the user lands here twice (e.g. browser back).
+  await prisma.activationToken.updateMany({
+    where: { userId, consumedAt: null },
+    data: { consumedAt: new Date() },
+  });
+
   cookieStore.delete('activation-session');
 
   redirect(`/${locale}/dashboard`);

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { peekActivationToken, consumeActivationToken } from '@/lib/activation';
+import { peekActivationToken } from '@/lib/activation';
 import { prisma } from '@/lib/db';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
@@ -53,15 +53,19 @@ export default async function ActivatePage({ params, searchParams }: Props) {
     return <ErrorCard message="This account is already activated or does not exist." />;
   }
 
-  // Server Action: consume token, set session cookie, redirect to Google OAuth
+  // Server Action: set session cookie + redirect to Google OAuth.
+  // The activation token is NOT consumed here — it's consumed at
+  // /activate/complete after status flips to ACTIVE. That way, if the OAuth
+  // round-trip fails (user dismisses, in-app browser blocks the redirect,
+  // network blip), the user can come back to the same link and retry.
   async function handleActivate() {
     'use server';
-    const result = await consumeActivationToken(token!);
-    if (!result) {
-      redirect(`/${locale}/activate?token=${encodeURIComponent(token!)}&error=expired`);
+    const recheck = await peekActivationToken(token!);
+    if (recheck.status !== 'valid') {
+      redirect(`/${locale}/activate?token=${encodeURIComponent(token!)}`);
     }
     const cookieStore = await cookies();
-    cookieStore.set('activation-session', result.userId, {
+    cookieStore.set('activation-session', recheck.userId, {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
