@@ -44,13 +44,22 @@ const authAdapter = {
   // (provider, providerAccountId) and (b) getUserByEmail returned null. We use
   // this as our gate: only allow "signup" during the activation flow, and
   // redirect the insert to the invited user row instead of creating a new one.
-  createUser: async () => {
+  createUser: async (data: unknown) => {
     const invitedId = await getInvitedUserIdFromCookie();
-    if (!invitedId) throw new Error('OAuthSignupNotAllowed');
-    const invited = await prisma.user.findUnique({ where: { id: invitedId } });
-    if (!invited || !invited.enabled || invited.status !== 'INVITED') {
+    if (!invitedId) {
+      console.error('[auth] createUser blocked: no activation cookie', { incomingEmail: (data as { email?: string }).email });
       throw new Error('OAuthSignupNotAllowed');
     }
+    const invited = await prisma.user.findUnique({ where: { id: invitedId } });
+    if (!invited) {
+      console.error('[auth] createUser blocked: invited user row missing', { invitedId });
+      throw new Error('OAuthSignupNotAllowed');
+    }
+    if (!invited.enabled || invited.status !== 'INVITED') {
+      console.error('[auth] createUser blocked: invited user not eligible', { invitedId, status: invited.status, enabled: invited.enabled });
+      throw new Error('OAuthSignupNotAllowed');
+    }
+    console.log('[auth] createUser linking google account to invited user', { invitedEmail: invited.email });
     return invited;
   },
 };
