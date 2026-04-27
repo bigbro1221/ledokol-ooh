@@ -41,7 +41,13 @@ export default async function ActivateCompletePage({ params }: Props) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect(`/api/auth/signin/google?callbackUrl=/${locale}/activate/complete`);
+    cookieStore.delete('activation-session');
+    return (
+      <ErrorCard
+        message="Sign-in did not complete."
+        hint="Please use your activation link again."
+      />
+    );
   }
 
   // The signIn callback guarantees session.user.id === cookie userId when the
