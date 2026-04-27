@@ -127,6 +127,23 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
     setToast('Приглашение отправлено повторно');
   }
 
+  async function handleResetToInvited() {
+    if (!initial?.id) return;
+    if (!confirm('Сбросить пользователя в статус «Приглашён»? Все связанные Google-аккаунты будут отвязаны, и будет отправлено новое приглашение.')) return;
+    setResendLoading(true);
+    setError('');
+    setToast('');
+    const res = await fetch(`/api/admin/users/${initial.id}/reset-to-invited`, { method: 'POST' });
+    setResendLoading(false);
+    if (!res.ok) {
+      const err = await res.json();
+      setError(err.error ?? 'Не удалось сбросить статус');
+      return;
+    }
+    setToast('Статус сброшен. Новое приглашение отправлено.');
+    router.refresh();
+  }
+
   return (
     <form onSubmit={handleSubmit} className="max-w-lg space-y-4">
       <div>
@@ -168,6 +185,16 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
               className="text-xs text-[var(--brand-primary)] hover:underline disabled:opacity-50"
             >
               {resendLoading ? 'Отправка...' : 'Повторить приглашение'}
+            </button>
+          )}
+          {initial.status !== 'INVITED' && (
+            <button
+              type="button"
+              onClick={handleResetToInvited}
+              disabled={resendLoading}
+              className="text-xs text-[var(--text-3)] hover:text-[var(--danger)] hover:underline disabled:opacity-50"
+            >
+              {resendLoading ? 'Сброс...' : 'Сбросить и переотправить приглашение'}
             </button>
           )}
         </div>
