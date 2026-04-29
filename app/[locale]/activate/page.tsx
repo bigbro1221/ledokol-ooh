@@ -1,8 +1,7 @@
-import { cookies } from 'next/headers';
 import { peekActivationToken } from '@/lib/activation';
 import { prisma } from '@/lib/db';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { ActivateButton } from './activate-button';
+import { ActivateClient } from './activate-client';
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -49,29 +48,12 @@ export default async function ActivatePage({ params, searchParams }: Props) {
     select: { email: true, status: true },
   });
 
-  if (!user || user.status !== 'INVITED') {
-    return <ErrorCard message="This account is already activated or does not exist." />;
+  if (!user) {
+    return <ErrorCard message="Account not found." />;
   }
 
-  // Server Action invoked by the client button before kicking off Google OAuth.
-  // Sets the activation-session cookie keyed to the invited user. The activation
-  // token is NOT consumed here — that happens at /activate/complete, so users
-  // can retry if anything fails on the OAuth round-trip.
-  async function prepareActivation(): Promise<{ ok: true } | { ok: false; error: string }> {
-    'use server';
-    const recheck = await peekActivationToken(token!);
-    if (recheck.status !== 'valid') {
-      return { ok: false, error: 'Activation link is no longer valid.' };
-    }
-    const cookieStore = await cookies();
-    cookieStore.set('activation-session', recheck.userId, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 15,
-      secure: process.env.NODE_ENV === 'production',
-    });
-    return { ok: true };
+  if (user.status !== 'INVITED') {
+    return <ErrorCard message="This account is already activated." />;
   }
 
   return (
@@ -94,15 +76,11 @@ export default async function ActivatePage({ params, searchParams }: Props) {
         </div>
 
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-8">
-          <p className="mb-6 text-[14px] leading-relaxed text-[var(--text-2)]">
-            Link your Google account to activate your Ledokol OOH Dashboard account.
-          </p>
-
-          <ActivateButton
-            prepareAction={prepareActivation}
-            callbackUrl={`/${locale}/activate/complete`}
-            label="Link Google account"
-            errorLabel="Could not start activation. Please try again."
+          <ActivateClient
+            token={token}
+            callbackUrl={`/${locale}/profile?mustLinkGoogle=1`}
+            loadingLabel="Activating your account…"
+            errorLabel="Activation failed. Please request a new link from your admin."
           />
         </div>
 
