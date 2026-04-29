@@ -185,25 +185,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { id: user.id },
           select: { id: true, enabled: true },
         });
-        if (!appUser) {
-          console.log('[auth] signIn google rejecting: user row missing', { userId: user.id });
+
+        // Returning-user path: the Google account resolved to an existing
+        // app user (Auth.js found an Account row, then loaded the user).
+        if (appUser) {
+          if (!appUser.enabled) {
+            console.log('[auth] signIn google rejecting: account disabled', { userId: user.id });
+            return '/login?error=AccountDisabled';
+          }
+          // If logged in as a DIFFERENT user, reject — prevents Google-linked
+          // account A from hijacking session B.
+          const existing = lateBound.auth ? await lateBound.auth() : null;
+          if (existing?.user?.id && existing.user.id !== appUser.id) {
+            console.log('[auth] signIn google rejecting: GoogleInUse', { existingUserId: existing.user.id, linkedUserId: appUser.id });
+            return '/login?error=GoogleInUse';
+          }
+          return true;
+        }
+
+        // New-link path: Auth.js didn't find an Account row, so it synthesized
+        // a candidate user.id (UUID) that doesn't exist in the DB yet. This
+        // is the "logged-in user clicking Link Google on /profile" flow.
+        // Allow it only if there's an active session — createUser will redirect
+        // the insert to that session user, and linkAccount binds Google to them.
+        const existing = lateBound.auth ? await lateBound.auth() : null;
+        console.log('[auth] signIn google new-link path', { hasExisting: !!existing, existingUserId: existing?.user?.id, syntheticUserId: user.id });
+        if (!existing?.user?.id) {
+          console.log('[auth] signIn google rejecting: no session for new link');
           return '/login?error=GoogleNotInvited';
         }
-        if (!appUser.enabled) {
-          console.log('[auth] signIn google rejecting: account disabled', { userId: user.id });
+        const sessionUser = await prisma.user.findUnique({
+          where: { id: existing.user.id },
+          select: { enabled: true },
+        });
+        if (!sessionUser || !sessionUser.enabled) {
+          console.log('[auth] signIn google rejecting: session user disabled or missing');
           return '/login?error=AccountDisabled';
         }
-
-        // If a session already exists, the Google account must resolve to the
-        // same app user. Otherwise this is "Google linked to user A, but user
-        // B is currently logged in trying to use it" — reject as in-use.
-        const existing = lateBound.auth ? await lateBound.auth() : null;
-        console.log('[auth] signIn google existing session check', { hasExisting: !!existing, existingUserId: existing?.user?.id, linkedUserId: appUser.id });
-        if (existing?.user?.id && existing.user.id !== appUser.id) {
-          console.log('[auth] signIn google rejecting: GoogleInUse');
-          return '/login?error=GoogleInUse';
-        }
-
         return true;
       }
 
