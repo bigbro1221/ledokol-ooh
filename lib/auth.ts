@@ -37,19 +37,31 @@ const lateBound: { auth?: () => Promise<Session | null> } = {};
 const basePrismaAdapter = PrismaAdapter(prisma) as any;
 const authAdapter = {
   ...basePrismaAdapter,
+  getUserByAccount: async (input: { provider: string; providerAccountId: string }) => {
+    const result = await basePrismaAdapter.getUserByAccount(input);
+    console.log('[auth] getUserByAccount', { provider: input.provider, sub: input.providerAccountId, found: !!result, email: result?.email });
+    return result;
+  },
   // Disable email-based auto-linking — User.email no longer has to match the
   // Google account's email.
-  getUserByEmail: async () => null,
+  getUserByEmail: async (email: string) => {
+    console.log('[auth] getUserByEmail (returning null by override)', { email });
+    return null;
+  },
   // The adapter only reaches createUser when (a) no Account row exists for this
-  // (provider, providerAccountId) and (b) getUserByEmail returned null. That
-  // happens whenever a user clicks "Link Google" on /profile while logged in.
-  // We redirect the would-be insert to the current session's user so the
-  // linkAccount call binds the Google identity to them — instead of creating
-  // a phantom new user from the Google profile.
+  // (provider, providerAccountId) and (b) getUserByEmail returned null.
   createUser: async (data: unknown) => {
-    const session = lateBound.auth ? await lateBound.auth() : null;
+    const incomingEmail = (data as { email?: string }).email;
+    console.log('[auth] createUser entry', { incomingEmail, lateBoundDefined: !!lateBound.auth });
+    let session: Session | null = null;
+    try {
+      session = lateBound.auth ? await lateBound.auth() : null;
+    } catch (e) {
+      console.error('[auth] createUser auth() threw', { error: e instanceof Error ? e.message : String(e) });
+    }
+    console.log('[auth] createUser session', { hasSession: !!session, sessionUserId: session?.user?.id, sessionUserEmail: session?.user?.email });
     if (!session?.user?.id) {
-      console.error('[auth] createUser blocked: no active session', { incomingEmail: (data as { email?: string }).email });
+      console.error('[auth] createUser blocked: no active session', { incomingEmail });
       throw new Error('OAuthSignupNotAllowed');
     }
     const current = await prisma.user.findUnique({ where: { id: session.user.id } });
@@ -57,8 +69,13 @@ const authAdapter = {
       console.error('[auth] createUser blocked: session user missing or disabled', { sessionUserId: session.user.id });
       throw new Error('OAuthSignupNotAllowed');
     }
-    console.log('[auth] createUser linking google account to session user', { sessionUserEmail: current.email });
+    console.log('[auth] createUser linking google to session user', { sessionUserEmail: current.email });
     return current;
+  },
+  linkAccount: async (input: unknown) => {
+    const i = input as { userId: string; provider: string; providerAccountId: string };
+    console.log('[auth] linkAccount', { userId: i.userId, provider: i.provider, sub: i.providerAccountId });
+    return basePrismaAdapter.linkAccount(input);
   },
 };
 
@@ -153,25 +170,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ user, account }) {
+      console.log('[auth] signIn callback', { provider: account?.provider, userId: user?.id, userEmail: user?.email });
       if (account?.provider === 'credentials' || account?.provider === 'activation-token') {
         return true; // authorize() already gated everything
       }
 
       if (account?.provider === 'google') {
-        if (!user?.id) return '/login?error=GoogleNotInvited';
+        if (!user?.id) {
+          console.log('[auth] signIn google rejecting: no user.id from adapter');
+          return '/login?error=GoogleNotInvited';
+        }
 
         const appUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { id: true, enabled: true },
         });
-        if (!appUser) return '/login?error=GoogleNotInvited';
-        if (!appUser.enabled) return '/login?error=AccountDisabled';
+        if (!appUser) {
+          console.log('[auth] signIn google rejecting: user row missing', { userId: user.id });
+          return '/login?error=GoogleNotInvited';
+        }
+        if (!appUser.enabled) {
+          console.log('[auth] signIn google rejecting: account disabled', { userId: user.id });
+          return '/login?error=AccountDisabled';
+        }
 
         // If a session already exists, the Google account must resolve to the
         // same app user. Otherwise this is "Google linked to user A, but user
         // B is currently logged in trying to use it" — reject as in-use.
         const existing = lateBound.auth ? await lateBound.auth() : null;
+        console.log('[auth] signIn google existing session check', { hasExisting: !!existing, existingUserId: existing?.user?.id, linkedUserId: appUser.id });
         if (existing?.user?.id && existing.user.id !== appUser.id) {
+          console.log('[auth] signIn google rejecting: GoogleInUse');
           return '/login?error=GoogleInUse';
         }
 
