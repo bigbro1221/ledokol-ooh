@@ -83,7 +83,8 @@
     "tablePeriod": "Davr",
     "tableScreens": "Ekranlar",
     "statusEnabled": "Faol",
-    "statusDisabled": "O'chirilgan"
+    "statusDisabled": "O'chirilgan",
+    "authEvents": "Kirish loglari"
   },
   "forms": {
     "company": "Kompaniya",
@@ -109,7 +110,9 @@
     "yandexHelp": "XLSX yuklashda nuqtalarni geokodlash uchun ishlatiladi",
     "splitByPeriodsLabel": "Oylarga bo'lish",
     "splitByPeriodsHelp": "Har bir oy — alohida XLSX va moliyaviy ma'lumotlar",
-    "draftRestored": "To'ldirilmagan qoralama tiklandi"
+    "draftRestored": "To'ldirilmagan qoralama tiklandi",
+    "reportsUrl": "Hisobotlar havolasi",
+    "reportsHelp": "Ixtiyoriy. Masalan, Google Drive papkasi havolasi."
   },
   "profile": {
     "cardTitle": "Profil",
@@ -148,7 +151,8 @@
     "heatmapOpenNewTab": "Yangi oynada ochish ↗",
     "cityOne": "shahar",
     "cityFew": "shahar",
-    "cityMany": "shahar"
+    "cityMany": "shahar",
+    "reports": "Hisobotlar"
   },
   "filters": {
     "allCities": "Barcha shaharlar",
@@ -283,7 +287,7 @@
     "tableResolution": "O'lchami",
     "tableSize": "Fayl hajmi",
     "typeVideo": "Video",
-    "empty": "Kreativlar yo'q",
+    "empty": "Hali fayllar yo'q",
     "dropHere": "Video fayllarni shu yerga tashlang",
     "or": "yoki",
     "pickFiles": "Fayllarni tanlash",
@@ -296,7 +300,10 @@
     "ofTotal": "dan",
     "mb": "MB",
     "kb": "KB",
-    "confirmDelete": "Kreativni o'chirasizmi?"
+    "confirmDelete": "Kreativni o'chirasizmi?",
+    "openCreative": "{i}/{total} kreativni ochish",
+    "lightboxLabel": "Kreativni ko'rish",
+    "lightboxClose": "Yopish"
   },
   "months": {
     "full": [

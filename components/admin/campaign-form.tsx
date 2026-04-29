@@ -16,6 +16,7 @@ interface CampaignFormProps {
     splitByPeriods: boolean;
     heatmapUrl?: string | null;
     yandexMapUrl?: string | null;
+    reportsUrl?: string | null;
     acRate?: string | null;
   };
 }
@@ -28,6 +29,7 @@ interface DraftState {
   splitByPeriods: boolean;
   heatmapUrl: string;
   yandexMapUrl: string;
+  reportsUrl: string;
   acRate: string;
 }
 
@@ -68,6 +70,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   const [splitByPeriods, setSplitByPeriods] = useState(initial?.splitByPeriods ?? false);
   const [heatmapUrl, setHeatmapUrl] = useState(initial?.heatmapUrl ?? '');
   const [yandexMapUrl, setYandexMapUrl] = useState(initial?.yandexMapUrl ?? '');
+  const [reportsUrl, setReportsUrl] = useState(initial?.reportsUrl ?? '');
   const [acRate, setAcRate] = useState(initial?.acRate ?? '');
 
   const [loading, setLoading] = useState(false);
@@ -95,6 +98,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       setSplitByPeriods(draft.splitByPeriods);
       setHeatmapUrl(draft.heatmapUrl);
       setYandexMapUrl(draft.yandexMapUrl);
+      setReportsUrl(draft.reportsUrl ?? '');
       setAcRate(draft.acRate ?? '');
       if (draft.name || draft.clientId) setDraftRestored(true);
     }
@@ -108,8 +112,8 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   useEffect(() => {
     if (isEdit) return;
     if (skipFirstSave.current) { skipFirstSave.current = false; return; }
-    saveDraft({ name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl, acRate });
-  }, [isEdit, name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl, acRate]);
+    saveDraft({ name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl, reportsUrl, acRate });
+  }, [isEdit, name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl, reportsUrl, acRate]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -125,6 +129,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       splitByPeriods,
       heatmapUrl: heatmapUrl.trim() || null,
       yandexMapUrl: yandexMapUrl.trim() || null,
+      reportsUrl: reportsUrl.trim() || null,
       acRate: !isNaN(acRatePct) && acRatePct > 0 ? acRatePct / 100 : 0,
     };
 
@@ -304,6 +309,21 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
           </button>
         </div>
         <p className="mt-1 text-[11px] text-[var(--text-4)]">{tf('yandexHelp')}</p>
+      </div>
+
+      {/* Reports URL */}
+      <div>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+          {tf('reportsUrl')}
+        </label>
+        <input
+          type="url"
+          placeholder="https://drive.google.com/drive/u/0/folders/…"
+          value={reportsUrl}
+          onChange={e => setReportsUrl(e.target.value)}
+          className={inputCls}
+        />
+        <p className="mt-1 text-[11px] text-[var(--text-4)]">{tf('reportsHelp')}</p>
       </div>
 
       {/* Split by periods toggle */}

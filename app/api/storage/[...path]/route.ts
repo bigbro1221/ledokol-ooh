@@ -18,7 +18,7 @@ const s3 = new S3Client({
 });
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const auth = await requireAuth();
@@ -26,9 +26,11 @@ export async function GET(
 
   const { path } = await params;
   const key = path.map(decodeURIComponent).join('/');
+  const range = req.headers.get('range') ?? undefined;
 
   try {
-    const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+    // Forward Range header to S3 so video seek + progressive playback works.
+    const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key, Range: range }));
     if (!obj.Body) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const body = Readable.toWeb(obj.Body as Readable) as unknown as ReadableStream;
@@ -36,15 +38,24 @@ export async function GET(
     const headers: Record<string, string> = {
       'Content-Type': obj.ContentType || 'application/octet-stream',
       'Cache-Control': 'private, max-age=3600',
+      'Accept-Ranges': 'bytes',
     };
     if (obj.ContentLength != null) headers['Content-Length'] = String(obj.ContentLength);
+    if (obj.ContentRange) headers['Content-Range'] = obj.ContentRange;
     if (obj.ETag) headers['ETag'] = obj.ETag;
 
-    return new NextResponse(body, { headers });
+    // S3 returns 206 implicitly for Range requests via ContentRange. We mirror
+    // that to the client so the <video> element can seek.
+    const status = range && obj.ContentRange ? 206 : 200;
+
+    return new NextResponse(body, { status, headers });
   } catch (err) {
     const name = err instanceof Error ? err.name : 'Error';
     if (name === 'NoSuchKey' || name === 'NotFound') {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (name === 'InvalidRange') {
+      return new NextResponse('Range Not Satisfiable', { status: 416 });
     }
     console.error('[storage] fetch failed', { key, error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Storage error' }, { status: 500 });

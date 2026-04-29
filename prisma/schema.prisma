@@ -70,6 +70,7 @@ model User {
   accounts         Account[]
   emailLoginCodes  EmailLoginCode[]
   activationToken  ActivationToken?
+  authEvents       AuthEvent[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 }
@@ -127,6 +128,7 @@ model Campaign {
   sourceFileUrl  String?
   yandexMapUrl   String?
   heatmapUrl     String?
+  reportsUrl     String?
   totalBudgetUzs BigInt?
   totalBudgetRub BigInt?
   productionCost BigInt?
@@ -316,4 +318,28 @@ model RateLimitEntry {
 
   @@unique([key, windowEnd])
   @@index([windowEnd])
+}
+
+enum AuthEventLevel {
+  INFO
+  WARN
+  ERROR
+}
+
+model AuthEvent {
+  id        String         @id @default(uuid())
+  createdAt DateTime       @default(now())
+  type      String
+  level     AuthEventLevel @default(INFO)
+  userId    String?
+  userEmail String?
+  provider  String?
+  message   String
+  metadata  Json?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([type])
 }

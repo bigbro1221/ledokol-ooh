@@ -11,6 +11,7 @@ const UpdateCampaignSchema = z.object({
   splitByPeriods: z.boolean().optional(),
   heatmapUrl: z.string().url().optional().nullable(),
   yandexMapUrl: z.string().url().optional().nullable(),
+  reportsUrl: z.string().url().optional().nullable(),
   totalBudgetUzs: z.number().nullable().optional(),
   productionCost: z.number().nullable().optional(),
   acRate: z.number().min(0).max(1).optional(),

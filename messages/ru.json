@@ -83,7 +83,8 @@
     "tablePeriod": "Период",
     "tableScreens": "Поверхности",
     "statusEnabled": "Активен",
-    "statusDisabled": "Отключён"
+    "statusDisabled": "Отключён",
+    "authEvents": "Логи входов"
   },
   "forms": {
     "company": "Компания",
@@ -109,7 +110,9 @@
     "yandexHelp": "Используется для геокодирования пинов при загрузке XLSX",
     "splitByPeriodsLabel": "Разбить на месяцы",
     "splitByPeriodsHelp": "Каждый месяц — отдельный XLSX-файл и финансовые данные",
-    "draftRestored": "Восстановлен незаполненный черновик"
+    "draftRestored": "Восстановлен незаполненный черновик",
+    "reportsUrl": "Ссылка на отчёты",
+    "reportsHelp": "Опционально. Например, ссылка на папку Google Drive с отчётами по кампании."
   },
   "profile": {
     "cardTitle": "Профиль",
@@ -148,7 +151,8 @@
     "heatmapOpenNewTab": "Открыть в новой вкладке ↗",
     "cityOne": "город",
     "cityFew": "города",
-    "cityMany": "городов"
+    "cityMany": "городов",
+    "reports": "Отчёты"
   },
   "filters": {
     "allCities": "Все города",
@@ -283,7 +287,7 @@
     "tableResolution": "Разрешение экрана",
     "tableSize": "Размер файла",
     "typeVideo": "Видео",
-    "empty": "Нет креативов",
+    "empty": "Файлов пока нет",
     "dropHere": "Перетащите видео сюда",
     "or": "или",
     "pickFiles": "Выбрать файлы",
@@ -296,7 +300,10 @@
     "ofTotal": "из",
     "mb": "МБ",
     "kb": "КБ",
-    "confirmDelete": "Удалить креатив?"
+    "confirmDelete": "Удалить креатив?",
+    "openCreative": "Открыть креатив {i} из {total}",
+    "lightboxLabel": "Просмотр креатива",
+    "lightboxClose": "Закрыть"
   },
   "months": {
     "full": [

@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import type { UserRole } from '@prisma/client';
 import { authConfig } from './auth.config';
 import { consumeActivationToken } from '@/lib/activation';
+import { recordAuthEvent } from '@/lib/audit';
 
 export function isGoogleOAuthConfigured(): boolean {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
@@ -40,6 +41,14 @@ const authAdapter = {
   getUserByAccount: async (input: { provider: string; providerAccountId: string }) => {
     const result = await basePrismaAdapter.getUserByAccount(input);
     console.log('[auth] getUserByAccount', { provider: input.provider, sub: input.providerAccountId, found: !!result, email: result?.email });
+    recordAuthEvent({
+      type: 'getUserByAccount',
+      provider: input.provider,
+      userId: result?.id ?? null,
+      userEmail: result?.email ?? null,
+      message: result ? `Account found: ${result.email}` : 'Account not linked yet',
+      metadata: { providerAccountId: input.providerAccountId, found: !!result },
+    });
     return result;
   },
   // Disable email-based auto-linking — User.email no longer has to match the
@@ -51,7 +60,7 @@ const authAdapter = {
   // The adapter only reaches createUser when (a) no Account row exists for this
   // (provider, providerAccountId) and (b) getUserByEmail returned null.
   createUser: async (data: unknown) => {
-    const incomingEmail = (data as { email?: string }).email;
+    const incomingEmail = (data as { email?: string }).email ?? null;
     console.log('[auth] createUser entry', { incomingEmail, lateBoundDefined: !!lateBound.auth });
     let session: Session | null = null;
     try {
@@ -59,22 +68,48 @@ const authAdapter = {
     } catch (e) {
       console.error('[auth] createUser auth() threw', { error: e instanceof Error ? e.message : String(e) });
     }
-    console.log('[auth] createUser session', { hasSession: !!session, sessionUserId: session?.user?.id, sessionUserEmail: session?.user?.email });
     if (!session?.user?.id) {
       console.error('[auth] createUser blocked: no active session', { incomingEmail });
+      recordAuthEvent({
+        type: 'createUser',
+        level: 'ERROR',
+        userEmail: incomingEmail,
+        message: 'Blocked: no active session for OAuth link',
+        metadata: { incomingEmail },
+      });
       throw new Error('OAuthSignupNotAllowed');
     }
     const current = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!current || !current.enabled) {
       console.error('[auth] createUser blocked: session user missing or disabled', { sessionUserId: session.user.id });
+      recordAuthEvent({
+        type: 'createUser',
+        level: 'ERROR',
+        userId: session.user.id,
+        message: 'Blocked: session user missing or disabled',
+      });
       throw new Error('OAuthSignupNotAllowed');
     }
     console.log('[auth] createUser linking google to session user', { sessionUserEmail: current.email });
+    recordAuthEvent({
+      type: 'createUser',
+      userId: current.id,
+      userEmail: current.email,
+      message: `Linking OAuth account to ${current.email}`,
+      metadata: { incomingEmail },
+    });
     return current;
   },
   linkAccount: async (input: unknown) => {
     const i = input as { userId: string; provider: string; providerAccountId: string };
     console.log('[auth] linkAccount', { userId: i.userId, provider: i.provider, sub: i.providerAccountId });
+    recordAuthEvent({
+      type: 'linkAccount',
+      userId: i.userId,
+      provider: i.provider,
+      message: `Linked ${i.provider} account`,
+      metadata: { providerAccountId: i.providerAccountId },
+    });
     return basePrismaAdapter.linkAccount(input);
   },
 };
@@ -99,7 +134,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await prisma.user.findFirst({
           where: { email: { equals: email, mode: 'insensitive' } },
         });
-        if (!user || !user.enabled) return null;
+        if (!user || !user.enabled) {
+          recordAuthEvent({ type: 'otpLogin', level: 'ERROR', provider: 'credentials', userEmail: email, message: 'Rejected: user not found or disabled' });
+          return null;
+        }
 
         const loginCode = await prisma.emailLoginCode.findFirst({
           where: {
@@ -109,7 +147,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
           orderBy: { createdAt: 'desc' },
         });
-        if (!loginCode) return null;
+        if (!loginCode) {
+          recordAuthEvent({ type: 'otpLogin', level: 'ERROR', provider: 'credentials', userId: user.id, userEmail: user.email, message: 'Rejected: no valid code (expired or never sent)' });
+          return null;
+        }
 
         const updated = await prisma.emailLoginCode.update({
           where: { id: loginCode.id },
@@ -121,17 +162,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             where: { id: loginCode.id },
             data: { consumedAt: new Date() },
           });
+          recordAuthEvent({ type: 'otpLogin', level: 'WARN', provider: 'credentials', userId: user.id, userEmail: user.email, message: 'Rejected: too many code attempts; code consumed' });
           return null;
         }
 
         const isValid = await compare(code, loginCode.codeHash);
-        if (!isValid) return null;
+        if (!isValid) {
+          recordAuthEvent({ type: 'otpLogin', level: 'WARN', provider: 'credentials', userId: user.id, userEmail: user.email, message: 'Rejected: wrong code', metadata: { attemptCount: updated.attemptCount } });
+          return null;
+        }
 
         await prisma.emailLoginCode.update({
           where: { id: loginCode.id },
           data: { consumedAt: new Date() },
         });
 
+        recordAuthEvent({ type: 'otpLogin', provider: 'credentials', userId: user.id, userEmail: user.email, message: 'OTP login succeeded' });
         return { id: user.id, email: user.email, role: user.role, clientId: user.clientId };
       },
     }),
@@ -148,10 +194,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.token) return null;
         const result = await consumeActivationToken(credentials.token as string);
-        if (!result) return null;
+        if (!result) {
+          recordAuthEvent({ type: 'activate', level: 'ERROR', provider: 'activation-token', message: 'Rejected: activation token invalid/consumed/expired' });
+          return null;
+        }
 
         const user = await prisma.user.findUnique({ where: { id: result.userId } });
-        if (!user || !user.enabled) return null;
+        if (!user || !user.enabled) {
+          recordAuthEvent({ type: 'activate', level: 'ERROR', provider: 'activation-token', userId: result.userId, message: 'Rejected: user missing or disabled' });
+          return null;
+        }
 
         if (user.status === 'INVITED') {
           await prisma.user.update({
@@ -160,6 +212,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
         }
 
+        recordAuthEvent({ type: 'activate', provider: 'activation-token', userId: user.id, userEmail: user.email, message: `Activated ${user.email}; status set to ACTIVE` });
         return { id: user.id, email: user.email, role: user.role, clientId: user.clientId };
       },
     }),
@@ -172,56 +225,89 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account }) {
       console.log('[auth] signIn callback', { provider: account?.provider, userId: user?.id, userEmail: user?.email });
       if (account?.provider === 'credentials' || account?.provider === 'activation-token') {
-        return true; // authorize() already gated everything
+        recordAuthEvent({
+          type: 'signIn',
+          provider: account.provider,
+          userId: user?.id ?? null,
+          userEmail: user?.email ?? null,
+          message: `Signed in via ${account.provider}`,
+        });
+        return true;
       }
 
       if (account?.provider === 'google') {
         if (!user?.id) {
           console.log('[auth] signIn google rejecting: no user.id from adapter');
+          recordAuthEvent({ type: 'signIn', level: 'ERROR', provider: 'google', message: 'Rejected: no user.id from adapter' });
           return '/login?error=GoogleNotInvited';
         }
 
         const appUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { id: true, enabled: true },
+          select: { id: true, enabled: true, email: true },
         });
 
-        // Returning-user path: the Google account resolved to an existing
-        // app user (Auth.js found an Account row, then loaded the user).
+        // Returning-user path
         if (appUser) {
           if (!appUser.enabled) {
             console.log('[auth] signIn google rejecting: account disabled', { userId: user.id });
+            recordAuthEvent({ type: 'signIn', level: 'ERROR', provider: 'google', userId: appUser.id, userEmail: appUser.email, message: 'Rejected: account disabled' });
             return '/login?error=AccountDisabled';
           }
-          // If logged in as a DIFFERENT user, reject — prevents Google-linked
-          // account A from hijacking session B.
           const existing = lateBound.auth ? await lateBound.auth() : null;
           if (existing?.user?.id && existing.user.id !== appUser.id) {
             console.log('[auth] signIn google rejecting: GoogleInUse', { existingUserId: existing.user.id, linkedUserId: appUser.id });
+            recordAuthEvent({
+              type: 'signIn',
+              level: 'ERROR',
+              provider: 'google',
+              userId: appUser.id,
+              userEmail: appUser.email,
+              message: 'Rejected: Google linked to different user than current session',
+              metadata: { sessionUserId: existing.user.id },
+            });
             return '/login?error=GoogleInUse';
           }
+          recordAuthEvent({
+            type: 'signIn',
+            provider: 'google',
+            userId: appUser.id,
+            userEmail: appUser.email,
+            message: `Signed in via Google (existing link)`,
+          });
           return true;
         }
 
-        // New-link path: Auth.js didn't find an Account row, so it synthesized
-        // a candidate user.id (UUID) that doesn't exist in the DB yet. This
-        // is the "logged-in user clicking Link Google on /profile" flow.
-        // Allow it only if there's an active session — createUser will redirect
-        // the insert to that session user, and linkAccount binds Google to them.
+        // New-link path
         const existing = lateBound.auth ? await lateBound.auth() : null;
         console.log('[auth] signIn google new-link path', { hasExisting: !!existing, existingUserId: existing?.user?.id, syntheticUserId: user.id });
         if (!existing?.user?.id) {
           console.log('[auth] signIn google rejecting: no session for new link');
+          recordAuthEvent({
+            type: 'signIn',
+            level: 'ERROR',
+            provider: 'google',
+            userEmail: user.email ?? null,
+            message: 'Rejected: no session for new Google link (would-be self-signup)',
+          });
           return '/login?error=GoogleNotInvited';
         }
         const sessionUser = await prisma.user.findUnique({
           where: { id: existing.user.id },
-          select: { enabled: true },
+          select: { enabled: true, email: true },
         });
         if (!sessionUser || !sessionUser.enabled) {
           console.log('[auth] signIn google rejecting: session user disabled or missing');
+          recordAuthEvent({ type: 'signIn', level: 'ERROR', provider: 'google', userId: existing.user.id, message: 'Rejected: session user disabled or missing' });
           return '/login?error=AccountDisabled';
         }
+        recordAuthEvent({
+          type: 'signIn',
+          provider: 'google',
+          userId: existing.user.id,
+          userEmail: sessionUser.email,
+          message: `Approving new Google link to ${sessionUser.email}`,
+        });
         return true;
       }
 

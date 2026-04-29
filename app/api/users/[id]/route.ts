@@ -58,10 +58,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
-  if (!auth.ok) return auth.response;
+  const result = await requireAdmin();
+  if (!result.ok) return result.response;
 
   const { id } = await params;
+  if (result.session.user.id === id) {
+    return NextResponse.json({ error: 'You cannot delete your own account.' }, { status: 400 });
+  }
+
   await prisma.user.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

@@ -41,10 +41,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
-# Keep Prisma CLI available for migrations (db push / migrate deploy)
+# Keep Prisma CLI available for migrations (db push / migrate deploy).
+# @prisma/engines ships the migration engine binary so the CLI doesn't have
+# to download it at runtime — lets us do `docker exec app npx prisma db push`
+# without scp'ing the schema or installing prisma globally.
 COPY --from=deps /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
 COPY --from=deps /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=deps /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
 COPY --from=deps /app/node_modules/@prisma/engines-version ./node_modules/@prisma/engines-version
 
 # Install Postmark with its full transitive tree — Next.js standalone tracer

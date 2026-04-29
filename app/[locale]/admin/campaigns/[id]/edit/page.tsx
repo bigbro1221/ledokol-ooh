@@ -23,6 +23,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
         splitByPeriods: true,
         heatmapUrl: true,
         yandexMapUrl: true,
+        reportsUrl: true,
         acRate: true,
       },
     }),
@@ -52,6 +53,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
           splitByPeriods: campaign.splitByPeriods,
           heatmapUrl: campaign.heatmapUrl,
           yandexMapUrl: campaign.yandexMapUrl,
+          reportsUrl: campaign.reportsUrl,
           acRate: campaign.acRate ? String(Number(campaign.acRate) * 100) : '',
         }}
       />

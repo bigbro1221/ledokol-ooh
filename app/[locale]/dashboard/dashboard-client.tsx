@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
-import { LayoutGrid, Banknote, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { LayoutGrid, Banknote, MapPin, ChevronDown, ChevronUp, FileText, ExternalLink } from 'lucide-react';
 import { KPICard } from '@/components/charts/kpi-card';
 // TODO: disabled per product decision 2026-04-20; restore if re-enabled
 // import { ImpressionsDonut } from '@/components/charts/impressions-donut';
@@ -71,6 +71,7 @@ interface Props {
   availableTypes: string[];
   filters: { city: string; type: string };
   heatmapEmbedUrl: string | null;
+  reportsUrl: string | null;
   periodsWithData: { id: string; name: string }[];
   selectedFrom: string | null;
   selectedTo: string | null;
@@ -82,7 +83,7 @@ export function DashboardClient({
   budgetByType, totalBudgetFromScreens,
   planVsFactByCity, monthlyByCity, planVsFactByType,
   topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, availableTypes, filters,
-  heatmapEmbedUrl, periodsWithData, selectedFrom, selectedTo, creatives,
+  heatmapEmbedUrl, reportsUrl, periodsWithData, selectedFrom, selectedTo, creatives,
 }: Props) {
   const [monthlyExpanded, setMonthlyExpanded] = useState(false);
   const td = useTranslations('dashboard');
@@ -141,8 +142,22 @@ export function DashboardClient({
         </div>
       </div>
 
-      {/* Filters */}
-      <FilterBar cities={allCities} availableTypes={availableTypes} locale={locale} />
+      {/* Filters + reports link */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <FilterBar cities={allCities} availableTypes={availableTypes} locale={locale} />
+        {reportsUrl && (
+          <a
+            href={reportsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3.5 py-1.5 text-[12px] font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-primary-hover)] active:bg-[var(--brand-primary-active)] sm:text-[11px]"
+          >
+            <FileText size={14} strokeWidth={1.75} />
+            {td('reports')}
+            <ExternalLink size={11} strokeWidth={1.75} className="opacity-80" />
+          </a>
+        )}
+      </div>
       {(filters.city || filters.type) && (
         <p className="mb-4 text-xs text-[var(--text-3)]">
           {td('showingLabel')} {filters.city || td('allCities')}, {filters.type || td('allTypes')} — {kpis.totalScreens} {td('screensSuffix')}

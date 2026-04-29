@@ -83,7 +83,8 @@
     "tablePeriod": "Period",
     "tableScreens": "Screens",
     "statusEnabled": "Active",
-    "statusDisabled": "Disabled"
+    "statusDisabled": "Disabled",
+    "authEvents": "Auth events"
   },
   "forms": {
     "company": "Company",
@@ -109,7 +110,9 @@
     "yandexHelp": "Used to geocode pins when uploading an XLSX",
     "splitByPeriodsLabel": "Split by month",
     "splitByPeriodsHelp": "Each month uses its own XLSX and financials",
-    "draftRestored": "Restored an unfinished draft"
+    "draftRestored": "Restored an unfinished draft",
+    "reportsUrl": "Reports URL",
+    "reportsHelp": "Optional. Public link to a campaign reports folder (e.g. Google Drive)."
   },
   "profile": {
     "cardTitle": "Profile",
@@ -148,7 +151,8 @@
     "heatmapOpenNewTab": "Open in new tab ↗",
     "cityOne": "city",
     "cityFew": "cities",
-    "cityMany": "cities"
+    "cityMany": "cities",
+    "reports": "Reports"
   },
   "filters": {
     "allCities": "All cities",
@@ -283,7 +287,7 @@
     "tableResolution": "Resolution",
     "tableSize": "File size",
     "typeVideo": "Video",
-    "empty": "No creatives",
+    "empty": "No files yet",
     "dropHere": "Drop video files here",
     "or": "or",
     "pickFiles": "Pick files",
@@ -296,7 +300,10 @@
     "ofTotal": "of",
     "mb": "MB",
     "kb": "KB",
-    "confirmDelete": "Delete creative?"
+    "confirmDelete": "Delete creative?",
+    "openCreative": "Open creative {i} of {total}",
+    "lightboxLabel": "Creative preview",
+    "lightboxClose": "Close"
   },
   "months": {
     "full": [

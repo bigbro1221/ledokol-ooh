@@ -8,7 +8,7 @@ import { LogoutButton } from '@/components/ui/logout-button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LocaleToggle } from '@/components/ui/locale-toggle';
 import { UserNav } from '@/components/ui/user-nav';
-import { LayoutDashboard, Users, Building2, Megaphone, Menu, X, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Megaphone, Menu, X, BarChart3, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
 export default function AdminLayout({
@@ -58,6 +58,7 @@ function AdminSidebar({ locale, onClose }: { locale: string; onClose: () => void
     { href: `/${locale}/admin/clients`, label: t('clients'), icon: Building2 },
     { href: `/${locale}/admin/campaigns`, label: t('campaigns'), icon: Megaphone },
     { href: `/${locale}/admin/users`, label: t('users'), icon: Users },
+    { href: `/${locale}/admin/auth-events`, label: t('authEvents'), icon: ShieldCheck },
     { href: `/${locale}/dashboard`, label: tn('clientDashboard'), icon: BarChart3, divider: true },
   ];
 

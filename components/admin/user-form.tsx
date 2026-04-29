@@ -144,6 +144,23 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
     router.refresh();
   }
 
+  async function handleDelete() {
+    if (!initial?.id) return;
+    if (!confirm(`Удалить пользователя ${initial.email} безвозвратно? Все связанные данные (сессии, токены, привязки Google) будут удалены.`)) return;
+    setResendLoading(true);
+    setError('');
+    setToast('');
+    const res = await fetch(`/api/users/${initial.id}`, { method: 'DELETE' });
+    setResendLoading(false);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setError(err.error ?? 'Не удалось удалить пользователя');
+      return;
+    }
+    router.push(`/${locale}/admin/users`);
+    router.refresh();
+  }
+
   return (
     <form onSubmit={handleSubmit} className="max-w-lg space-y-4">
       <div>
@@ -195,6 +212,16 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
               className="text-xs text-[var(--text-3)] hover:text-[var(--danger)] hover:underline disabled:opacity-50"
             >
               {resendLoading ? 'Сброс...' : 'Сбросить и переотправить приглашение'}
+            </button>
+          )}
+          {(initial.status === 'DISABLED' || !initial.enabled) && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={resendLoading}
+              className="text-xs text-[var(--danger)] hover:underline disabled:opacity-50"
+            >
+              Удалить пользователя
             </button>
           )}
         </div>

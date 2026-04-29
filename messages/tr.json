@@ -26,12 +26,14 @@
     "title": "",
     "clients": "",
     "campaigns": "",
-    "dashboard": ""
+    "dashboard": "",
+    "authEvents": "Kimlik doğrulama logları"
   },
   "dashboard": {
     "title": "",
     "myCampaigns": "",
-    "selectCampaign": ""
+    "selectCampaign": "",
+    "reports": "Raporlar"
   },
   "nav": {
     "clientDashboard": "Müşteri paneli",
@@ -66,5 +68,15 @@
   "meta": {
     "title": "OOH Dashboard — Ledokol Group",
     "description": "Ledokol Group açık hava reklamcılığı paneli: kampanyalar, ekranlar, medya planları ve analitik."
+  },
+  "creatives": {
+    "openCreative": "Kreatif {i}/{total} aç",
+    "lightboxLabel": "Kreatif önizleme",
+    "lightboxClose": "Kapat",
+    "empty": "Henüz dosya yok"
+  },
+  "forms": {
+    "reportsUrl": "Raporlar bağlantısı",
+    "reportsHelp": "İsteğe bağlı. Kampanya raporları için harici bir bağlantı (Google Drive vb.)."
   }
 }
