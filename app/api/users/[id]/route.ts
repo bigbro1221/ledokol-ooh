@@ -12,7 +12,7 @@ const UpdateUserSchema = z.object({
   status: z.enum(['INVITED', 'ACTIVE', 'DISABLED']).optional(),
   enabled: z.boolean().optional(),
   clientId: z.string().uuid().nullable().optional(),
-  language: z.enum(['RU', 'EN', 'UZ', 'TR']).optional(),
+  language: z.enum(['RU', 'EN', 'UZ']).optional(),
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {

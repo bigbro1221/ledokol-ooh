@@ -120,6 +120,12 @@
   }
 
   /* ─── BASE STYLES ─── */
+  /* Reserve the vertical scrollbar's gutter so navigating from a scrollable
+     page to a non-scrollable one doesn't shift content horizontally. */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     background-color: var(--bg);
     color: var(--text);

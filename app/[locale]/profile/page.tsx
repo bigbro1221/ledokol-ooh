@@ -64,25 +64,8 @@ export default async function ProfilePage({
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      {/* Simple nav */}
-      <header className="sticky top-0 z-10 h-16 border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="mx-auto flex h-full max-w-[800px] items-center gap-4 px-4 sm:px-8">
-          <Link
-            href={isAdmin ? `/${locale}/admin` : `/${locale}/dashboard`}
-            className="text-sm text-[var(--text-2)] transition-colors hover:text-[var(--text)]"
-          >
-            &larr; {isAdmin ? tp('adminLink') : tp('dashboardLink')}
-          </Link>
-          <div className="ml-auto flex items-center gap-2">
-            <LocaleSwitcher currentLocale={locale} />
-            <ThemeToggle />
-            <LogoutButton label={tCommon('logout')} callbackUrl={`/${locale}/login`} />
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[800px] px-4 py-12 sm:px-8">
+    <div>
+      <div className="mx-auto max-w-[800px]">
         {resolvedSearchParams?.mustLinkGoogle === "1" && (
           <div className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800/50 dark:bg-red-950/40">
             <span className="font-medium text-red-800 dark:text-red-300">{ta("mustLinkGoogleBanner")}</span>
@@ -95,13 +78,14 @@ export default async function ProfilePage({
           </div>
         )}
         {/* Profile header */}
-        <div className="mb-10 flex items-center gap-5">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary-subtle)]">
-            <User size={28} strokeWidth={1.5} className="text-[var(--brand-primary)]" />
+        <div className="mb-10 flex items-center gap-4 sm:gap-5">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-subtle)] sm:h-16 sm:w-16">
+            <User size={24} strokeWidth={1.5} className="text-[var(--brand-primary)] sm:hidden" />
+            <User size={28} strokeWidth={1.5} className="hidden text-[var(--brand-primary)] sm:block" />
           </div>
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">{user.email}</h1>
-            <p className="mt-0.5 text-sm text-[var(--text-3)]">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-[18px] font-semibold tracking-tight sm:text-[22px]">{user.email}</h1>
+            <p className="mt-0.5 truncate text-sm text-[var(--text-3)]">
               {tRoles(user.role)}
               {user.client && <> &middot; {user.client.name}</>}
             </p>
@@ -115,10 +99,10 @@ export default async function ProfilePage({
           </div>
           <div className="divide-y divide-[var(--border)]">
             {fields.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-center gap-4 px-6 py-4">
-                <Icon size={16} strokeWidth={1.5} className="text-[var(--text-3)]" />
-                <span className="w-40 shrink-0 text-[13px] text-[var(--text-3)]">{label}</span>
-                <span className="text-[14px] text-[var(--text)]">{value}</span>
+              <div key={label} className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-6">
+                <Icon size={16} strokeWidth={1.5} className="shrink-0 text-[var(--text-3)]" />
+                <span className="w-24 shrink-0 text-[13px] text-[var(--text-3)] sm:w-40">{label}</span>
+                <span className="min-w-0 flex-1 truncate text-[14px] text-[var(--text)]">{value}</span>
               </div>
             ))}
           </div>
@@ -181,7 +165,7 @@ export default async function ProfilePage({
             {tp('dashboardLink')}
           </Link>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -33,12 +33,17 @@ export function FilterBar({
   }, [router, searchParams, locale]);
 
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+    <div className="flex flex-col gap-3 sm:flex-1 sm:flex-row sm:flex-wrap sm:items-center">
       {/* City filter — full width on mobile */}
       <select
         value={activeCity}
         onChange={(e) => updateParam('city', e.target.value)}
-        className="w-full min-h-[44px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] transition-colors hover:border-[var(--border-hi)] focus:border-[var(--border-em)] focus:outline-none sm:w-auto sm:min-h-0 sm:py-1.5 sm:text-xs"
+        className="filter-select w-full min-h-[44px] appearance-none rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] py-2 pl-3 pr-9 text-[13px] transition-colors hover:border-[var(--border-hi)] focus:border-[var(--border-em)] focus:outline-none sm:w-auto sm:min-h-0 sm:py-1.5 sm:text-xs"
+        style={{
+          backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237E8AA1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right 10px center',
+        }}
       >
         <option value="">{tf('allCities')}</option>
         {cities.map(c => (

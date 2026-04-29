@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
+import Link from 'next/link';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { UploadDropzone } from '@/components/admin/upload-dropzone';
-import { Download } from 'lucide-react';
+import { Download, ArrowLeft } from 'lucide-react';
 
 export default async function UploadPage({
   params,
@@ -47,7 +48,14 @@ export default async function UploadPage({
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs text-[var(--text-3)]">{campaign.client.name} · {campaign.name}</p>
+          <Link
+            href={`/${locale}/admin/campaigns/${id}`}
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--text-3)] transition-colors hover:text-[var(--text)]"
+          >
+            <ArrowLeft size={14} strokeWidth={1.5} />
+            {campaign.name}
+          </Link>
+          <p className="mt-2 text-xs text-[var(--text-3)]">{campaign.client.name} · {campaign.name}</p>
           <h1 className="text-xl font-semibold">
             Загрузка медиаплана{periodName ? `: ${periodName}` : ''}
           </h1>

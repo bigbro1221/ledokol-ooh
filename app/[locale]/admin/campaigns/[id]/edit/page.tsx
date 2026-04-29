@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { CampaignForm } from '@/components/admin/campaign-form';
 import { auth, isGoogleLinked } from '@/lib/auth';
 
@@ -38,7 +40,14 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
   return (
     <div>
       <div className="mb-6">
-        <p className="text-xs text-[var(--text-3)]">Редактирование</p>
+        <Link
+          href={`/${locale}/admin/campaigns/${id}`}
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--text-3)] transition-colors hover:text-[var(--text)]"
+        >
+          <ArrowLeft size={14} strokeWidth={1.5} />
+          {campaign.name}
+        </Link>
+        <p className="mt-2 text-xs text-[var(--text-3)]">Редактирование</p>
         <h1 className="text-xl font-semibold">{campaign.name}</h1>
       </div>
       <CampaignForm

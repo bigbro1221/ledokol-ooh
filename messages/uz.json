@@ -84,7 +84,9 @@
     "tableScreens": "Ekranlar",
     "statusEnabled": "Faol",
     "statusDisabled": "O'chirilgan",
-    "authEvents": "Kirish loglari"
+    "authEvents": "Kirish loglari",
+    "sectionLabel": "Boshqaruv",
+    "viewAsClient": "Mijoz sifatida koʻrish"
   },
   "forms": {
     "company": "Kompaniya",
@@ -129,7 +131,8 @@
     "linkedAccountsSubtitle": "Parol o'rniga bog'langan hisob bilan kiring",
     "linked": "Bog'langan",
     "notLinked": "Bog'lanmagan",
-    "linkBtn": "Bog'lash"
+    "linkBtn": "Bog'lash",
+    "title": "Profil"
   },
   "dashboard": {
     "title": "Boshqaruv paneli",
@@ -368,5 +371,23 @@
   "meta": {
     "title": "OOH Dashboard — Ledokol Group",
     "description": "Ledokol Group tashqi reklama paneli: kampaniyalar, ekranlar, media-rejalar va tahlil."
+  },
+  "campaignsPage": {
+    "title": "Kampaniyalar",
+    "subtitle": "Ma'lumot va tahlilni ko'rish uchun kampaniyani oching",
+    "emptyTitle": "Kampaniyalar yoq",
+    "emptyHint": "Ledokol jamoasi sizning birinchi media-rejangizni yuklaydi.",
+    "kpiTotalBudget": "Umumiy byudjet",
+    "kpiTotalScreens": "Jami ekranlar",
+    "kpiTotalOts": "Umumiy OTS",
+    "kpiActiveCampaigns": "Faol",
+    "kpiScreensUnit": "ekr.",
+    "kpiOtsUnit": "ko'rsatish",
+    "kpiActiveUnit": "kampaniya",
+    "colPeriod": "Davr",
+    "colStatus": "Holat",
+    "colBudget": "Byudjet",
+    "colScreens": "Yuzalar",
+    "colOts": "OTS reja"
   }
 }

@@ -84,7 +84,9 @@
     "tableScreens": "Screens",
     "statusEnabled": "Active",
     "statusDisabled": "Disabled",
-    "authEvents": "Auth events"
+    "authEvents": "Auth events",
+    "sectionLabel": "Administration",
+    "viewAsClient": "View as client"
   },
   "forms": {
     "company": "Company",
@@ -129,7 +131,8 @@
     "linkedAccountsSubtitle": "Sign in with a linked account instead of a password",
     "linked": "Linked",
     "notLinked": "Not linked",
-    "linkBtn": "Link"
+    "linkBtn": "Link",
+    "title": "Profile"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -368,5 +371,23 @@
   "meta": {
     "title": "OOH Dashboard — Ledokol Group",
     "description": "Ledokol Group outdoor advertising dashboard: campaigns, screens, media plans and analytics."
+  },
+  "campaignsPage": {
+    "title": "Campaigns",
+    "subtitle": "Open a campaign to see details and analytics",
+    "emptyTitle": "No campaigns",
+    "emptyHint": "The Ledokol team will upload your first media plan.",
+    "kpiTotalBudget": "Total budget",
+    "kpiTotalScreens": "Total screens",
+    "kpiTotalOts": "Total OTS",
+    "kpiActiveCampaigns": "Active",
+    "kpiScreensUnit": "scr.",
+    "kpiOtsUnit": "impressions",
+    "kpiActiveUnit": "campaigns",
+    "colPeriod": "Period",
+    "colStatus": "Status",
+    "colBudget": "Budget",
+    "colScreens": "Screens",
+    "colOts": "OTS plan"
   }
 }

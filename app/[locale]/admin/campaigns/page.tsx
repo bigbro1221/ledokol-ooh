@@ -42,8 +42,8 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
-        <table className="w-full border-collapse">
+      <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
+        <table className="w-full min-w-[640px] border-collapse">
           <thead>
             <tr className="bg-[var(--surface-2)]">
               <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableClientName')}</th>

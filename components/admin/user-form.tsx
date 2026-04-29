@@ -266,7 +266,6 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
           <option value="RU">{tLang('RU')}</option>
           <option value="EN">{tLang('EN')}</option>
           <option value="UZ">{tLang('UZ')}</option>
-          <option value="TR">{tLang('TR')}</option>
         </select>
       </div>
 

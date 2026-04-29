@@ -41,11 +41,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
-# Keep Prisma CLI available for migrations (db push / migrate deploy).
-# @prisma/engines ships the migration engine binary so the CLI doesn't have
-# to download it at runtime — lets us do `docker exec app npx prisma db push`
-# without scp'ing the schema or installing prisma globally.
-COPY --from=deps /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Keep Prisma CLI available for migrations. Skip the .bin/prisma shim — Docker
+# COPY dereferences the npm-installed symlink into the actual JS file, which
+# then can't find its sibling WASM blobs. Call the package entry directly:
+#   docker exec app node node_modules/prisma/build/index.js db push
 COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
 COPY --from=deps /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=deps /app/node_modules/@prisma/engines ./node_modules/@prisma/engines

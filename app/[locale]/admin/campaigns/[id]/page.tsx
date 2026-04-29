@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import Link from 'next/link';
-import { Upload, FileSpreadsheet, Layers, Pencil, Table2, Film } from 'lucide-react';
+import { Upload, FileSpreadsheet, Layers, Pencil, Table2, Film, Eye, ArrowLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { StatusToggle } from '@/components/admin/status-toggle';
 import { PeriodManager } from '@/components/admin/period-manager';
@@ -27,6 +27,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
   const tCreatives = await getTranslations({ locale, namespace: 'creatives' });
+  const tAdmin = await getTranslations({ locale, namespace: 'admin' });
   const campaign = await prisma.campaign.findUnique({
     where: { id },
     include: {
@@ -66,12 +67,27 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
+          <Link
+            href={`/${locale}/admin/campaigns`}
+            className="mb-4 inline-flex items-center gap-1.5 text-xs text-[var(--text-3)] transition-colors hover:text-[var(--text)]"
+          >
+            <ArrowLeft size={14} strokeWidth={1.5} />
+            {tAdmin('campaigns')}
+          </Link>
           <p className="text-xs text-[var(--text-3)]">{campaign.client.name}</p>
           <h1 className="text-xl font-semibold">{campaign.name}</h1>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+          <Link
+            href={`/${locale}/dashboard?campaign=${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] hover:text-[var(--brand-primary)]"
+          >
+            <Eye size={13} strokeWidth={1.5} /> {tAdmin('viewAsClient')}
+          </Link>
           <Link
             href={`/${locale}/admin/campaigns/${id}/edit`}
             className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"

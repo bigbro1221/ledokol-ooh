@@ -125,7 +125,7 @@ export function DashboardClient({
       )}
 
       {/* Campaign Hero */}
-      <div className="mb-6 flex flex-col gap-2 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
         <div className="flex flex-col gap-2">
           <h1
             className="text-[28px] font-medium leading-[1.1] tracking-tight sm:text-[40px]"
@@ -143,14 +143,14 @@ export function DashboardClient({
       </div>
 
       {/* Filters + reports link */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <FilterBar cities={allCities} availableTypes={availableTypes} locale={locale} />
         {reportsUrl && (
           <a
             href={reportsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3.5 py-1.5 text-[12px] font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-primary-hover)] active:bg-[var(--brand-primary-active)] sm:text-[11px]"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3.5 py-2 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-primary-hover)] active:bg-[var(--brand-primary-active)] sm:w-auto sm:py-1.5 sm:text-[11px]"
           >
             <FileText size={14} strokeWidth={1.75} />
             {td('reports')}
@@ -168,7 +168,7 @@ export function DashboardClient({
       <CreativesCard creatives={creatives} />
 
       {/* KPI Cards — 3 visible cards (Performance disabled) */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
         {/* Geography */}
         <KPICard
           label={td('geography')}

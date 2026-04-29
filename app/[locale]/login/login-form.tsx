@@ -9,7 +9,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LocaleToggle } from '@/components/ui/locale-toggle';
 
 function validateCallbackUrl(callbackUrl: string | null): string {
-  const DEFAULT_REDIRECT = '/dashboard';
+  const DEFAULT_REDIRECT = '/';
   if (!callbackUrl) return DEFAULT_REDIRECT;
   try {
     if (callbackUrl.startsWith('http://') || callbackUrl.startsWith('https://')) return DEFAULT_REDIRECT;

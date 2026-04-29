@@ -2,12 +2,22 @@ import { prisma } from '@/lib/db';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { DashboardClient } from './dashboard-client';
+import { CampaignsListView } from './campaigns-list';
 import { getUserPreferences } from '@/lib/user-preferences';
 import type { DateFormat } from '@/lib/format-period';
 import type { ScreenType } from '@prisma/client';
 import type { ScreenRow } from '@/components/screens/screens-table';
 import { getTranslations } from 'next-intl/server';
 import { getFileUrl } from '@/lib/minio';
+
+function screenPriceTotal(s: { pricing: { priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[] }): number {
+  return s.pricing.reduce((sum, p) => {
+    if (p.priceDiscounted) return sum + Number(p.priceDiscounted);
+    if (p.priceTotal) return sum + Number(p.priceTotal);
+    if (p.priceUnit) return sum + Number(p.priceUnit);
+    return sum;
+  }, 0);
+}
 
 export default async function DashboardPage({
   params,
@@ -43,16 +53,64 @@ export default async function DashboardPage({
     orderBy: { createdAt: 'desc' },
   });
 
-  const selectedId = campaignIdParam && allCampaigns.some(c => c.id === campaignIdParam)
-    ? campaignIdParam : allCampaigns[0]?.id;
+  // List view: when no campaign is selected via ?campaign=…, render the
+  // landing cards. We aggregate per-campaign stats (screens, OTS plan, budget)
+  // for both the KPI strip and per-card stats.
+  if (!campaignIdParam) {
+    const aggCampaigns = await prisma.campaign.findMany({
+      where: { ...clientFilter, status: { not: 'DRAFT' } },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        periodStart: true,
+        periodEnd: true,
+        totalFinal: true,
+        totalBudgetUzs: true,
+        splitByPeriods: true,
+        periods: { select: { totalFinal: true, totalBudgetUzs: true } },
+        _count: { select: { screens: true } },
+        screens: {
+          select: {
+            metrics: { select: { otsPlan: true } },
+            pricing: { select: { priceUnit: true, priceDiscounted: true, priceTotal: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    const listPrefs = await getUserPreferences(session.user.id);
+    const listDateFormat = listPrefs.dateFormat.toLowerCase() as DateFormat;
+    const rows = aggCampaigns.map(c => {
+      const otsPlan = c.screens.reduce(
+        (sum, s) => sum + s.metrics.reduce((m, x) => m + (x.otsPlan ?? 0), 0),
+        0,
+      );
+      let budget = 0;
+      if (c.totalFinal) budget = Number(c.totalFinal);
+      else if (c.splitByPeriods && c.periods.length > 0) {
+        budget = c.periods.reduce((s, p) => s + Number(p.totalFinal ?? p.totalBudgetUzs ?? 0), 0);
+      } else if (c.totalBudgetUzs) budget = Number(c.totalBudgetUzs);
+      else budget = c.screens.reduce((s, sc) => s + screenPriceTotal(sc), 0);
+      return {
+        id: c.id,
+        name: c.name,
+        status: c.status,
+        periodStart: c.periodStart,
+        periodEnd: c.periodEnd,
+        budget,
+        screensCount: c._count.screens,
+        otsPlan,
+      };
+    });
+    return <CampaignsListView rows={rows} locale={locale} dateFormat={listDateFormat} />;
+  }
+
+  const selectedId = allCampaigns.some(c => c.id === campaignIdParam) ? campaignIdParam : null;
 
   if (!selectedId) {
-    return (
-      <div className="flex flex-col items-center justify-center py-32">
-        <h2 className="text-[28px] font-medium" style={{ fontFamily: 'var(--font-display)' }}>{td('noCampaignsTitle')}</h2>
-        <p className="mt-3 text-sm text-[var(--text-3)]">{td('noCampaignsSubtitle')}</p>
-      </div>
-    );
+    // Invalid campaign id — redirect to the list view
+    redirect(`/${locale}/dashboard`);
   }
 
   const screenWhere: { type?: ScreenType; city?: string } = {};

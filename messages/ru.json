@@ -84,7 +84,9 @@
     "tableScreens": "Поверхности",
     "statusEnabled": "Активен",
     "statusDisabled": "Отключён",
-    "authEvents": "Логи входов"
+    "authEvents": "Логи входов",
+    "sectionLabel": "Администрирование",
+    "viewAsClient": "Просмотр как клиент"
   },
   "forms": {
     "company": "Компания",
@@ -129,7 +131,8 @@
     "linkedAccountsSubtitle": "Войдите через привязанный аккаунт вместо пароля",
     "linked": "Привязан",
     "notLinked": "Не привязан",
-    "linkBtn": "Привязать"
+    "linkBtn": "Привязать",
+    "title": "Профиль"
   },
   "dashboard": {
     "title": "Панель управления",
@@ -368,5 +371,23 @@
   "meta": {
     "title": "OOH Dashboard — Ledokol Group",
     "description": "Панель наружной рекламы Ledokol Group: кампании, экраны, медиапланы и аналитика."
+  },
+  "campaignsPage": {
+    "title": "Кампании",
+    "subtitle": "Откройте кампанию, чтобы увидеть детали и аналитику",
+    "emptyTitle": "Нет кампаний",
+    "emptyHint": "Команда Ledokol загрузит ваш первый медиаплан.",
+    "kpiTotalBudget": "Общий бюджет",
+    "kpiTotalScreens": "Всего поверхностей",
+    "kpiTotalOts": "Общий OTS",
+    "kpiActiveCampaigns": "Активные",
+    "kpiScreensUnit": "экр.",
+    "kpiOtsUnit": "показов",
+    "kpiActiveUnit": "кампании",
+    "colPeriod": "Период",
+    "colStatus": "Статус",
+    "colBudget": "Бюджет",
+    "colScreens": "Поверхности",
+    "colOts": "OTS план"
   }
 }

@@ -72,14 +72,14 @@ export function AuthEventsClient({ locale, types, currentType, currentLevel, cur
 
         <form
           onSubmit={(e) => { e.preventDefault(); setParam('email', emailDraft.trim()); }}
-          className="flex items-center gap-2"
+          className="flex w-full items-center gap-2 sm:w-auto"
         >
           <input
             type="text"
             placeholder="email contains…"
             value={emailDraft}
             onChange={(e) => setEmailDraft(e.target.value)}
-            className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs w-[200px]"
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs sm:w-[200px]"
           />
           <button type="submit" className="rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-3 py-1.5 text-xs text-white">
             Filter
@@ -93,8 +93,8 @@ export function AuthEventsClient({ locale, types, currentType, currentLevel, cur
         )}
       </div>
 
-      <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-        <table className="w-full">
+      <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
+        <table className="w-full min-w-[720px]">
           <thead>
             <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
               <th className="px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">When</th>

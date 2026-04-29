@@ -1,7 +1,10 @@
 import { prisma } from '@/lib/db';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { CampaignForm } from '@/components/admin/campaign-form';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 export default async function NewCampaignPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -14,10 +17,20 @@ export default async function NewCampaignPage({ params }: { params: Promise<{ lo
     select: { id: true, name: true },
     orderBy: { name: 'asc' },
   });
+  const t = await getTranslations({ locale, namespace: 'admin' });
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-semibold">Новая кампания</h1>
+      <div className="mb-6">
+        <Link
+          href={`/${locale}/admin/campaigns`}
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--text-3)] transition-colors hover:text-[var(--text)]"
+        >
+          <ArrowLeft size={14} strokeWidth={1.5} />
+          {t('campaigns')}
+        </Link>
+        <h1 className="mt-2 text-xl font-semibold">Новая кампания</h1>
+      </div>
       <CampaignForm locale={locale} clients={clients} />
     </div>
   );

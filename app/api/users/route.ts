@@ -12,7 +12,7 @@ const CreateUserSchema = z.object({
   email: z.string().email('Invalid email'),
   role: z.enum(['ADMIN', 'CLIENT']),
   clientId: z.string().uuid().nullable().optional(),
-  language: z.enum(['RU', 'EN', 'UZ', 'TR']).optional(),
+  language: z.enum(['RU', 'EN', 'UZ']).optional(),
 });
 
 function langToLocale(lang: string): 'ru' | 'en' | 'uz' {

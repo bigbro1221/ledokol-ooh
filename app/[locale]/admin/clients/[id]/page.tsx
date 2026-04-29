@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import { ClientForm } from '@/components/admin/client-form';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 
 export default async function EditClientPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
@@ -17,10 +19,20 @@ export default async function EditClientPage({ params }: { params: Promise<{ loc
   });
 
   if (!client) notFound();
+  const t = await getTranslations({ locale, namespace: 'admin' });
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-semibold">Редактировать: {client.name}</h1>
+      <div className="mb-6">
+        <Link
+          href={`/${locale}/admin/clients`}
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--text-3)] transition-colors hover:text-[var(--text)]"
+        >
+          <ArrowLeft size={14} strokeWidth={1.5} />
+          {t('clients')}
+        </Link>
+        <h1 className="mt-2 text-xl font-semibold">Редактировать: {client.name}</h1>
+      </div>
       <ClientForm
         locale={locale}
         initial={{ id: client.id, name: client.name, contactPerson: client.contactPerson }}
@@ -29,8 +41,8 @@ export default async function EditClientPage({ params }: { params: Promise<{ loc
       {client.campaigns.length > 0 && (
         <div className="mt-10">
           <h2 className="mb-4 text-lg font-semibold">Кампании клиента</h2>
-          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
-            <table className="w-full border-collapse">
+          <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
+            <table className="w-full min-w-[560px] border-collapse">
               <thead>
                 <tr className="bg-[var(--surface-2)]">
                   <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Название</th>
