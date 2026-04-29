@@ -17,12 +17,23 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
   const roleLabel = (role: string) => role === 'ADMIN' ? tRoles('adminShort') : tRoles('CLIENT');
   const users = await prisma.user.findMany({
     select: {
-      id: true, email: true, role: true, enabled: true,
+      id: true, email: true, role: true, status: true, enabled: true,
       client: { select: { name: true } },
       createdAt: true,
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  const STATUS_LABELS: Record<string, string> = {
+    INVITED: 'Приглашён',
+    ACTIVE: 'Активен',
+    DISABLED: 'Отключён',
+  };
+  const STATUS_COLORS: Record<string, string> = {
+    INVITED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    DISABLED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  };
 
   return (
     <div>
@@ -68,12 +79,8 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
                   {u.client?.name || '—'}
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3">
-                  <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] ${
-                    u.enabled
-                      ? 'bg-[rgba(16,185,129,0.12)] text-[var(--success)]'
-                      : 'bg-[rgba(239,68,68,0.12)] text-[var(--danger)]'
-                  }`}>
-                    {u.enabled ? t('statusEnabled') : t('statusDisabled')}
+                  <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium ${STATUS_COLORS[u.status] ?? ''}`}>
+                    {STATUS_LABELS[u.status] ?? u.status}
                   </span>
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
