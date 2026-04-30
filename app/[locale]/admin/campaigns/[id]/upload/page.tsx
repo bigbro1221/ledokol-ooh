@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { UploadDropzone } from '@/components/admin/upload-dropzone';
 import { Download, ArrowLeft } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 
 export default async function UploadPage({
   params,
@@ -18,6 +19,7 @@ export default async function UploadPage({
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const t = await getTranslations({ locale, namespace: 'admin' });
   const { periodId } = await searchParams;
 
   const campaign = await prisma.campaign.findUnique({
@@ -57,7 +59,7 @@ export default async function UploadPage({
           </Link>
           <p className="mt-2 text-xs text-[var(--text-3)]">{campaign.client.name} · {campaign.name}</p>
           <h1 className="text-xl font-semibold">
-            Загрузка медиаплана{periodName ? `: ${periodName}` : ''}
+            {periodName ? t('uploadTitleWithPeriod', { name: periodName }) : t('uploadTitle')}
           </h1>
         </div>
         <a
@@ -66,7 +68,7 @@ export default async function UploadPage({
           className="flex shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
         >
           <Download size={13} strokeWidth={1.5} />
-          Шаблон XLSX
+          {t('templateXlsx')}
         </a>
       </div>
       <UploadDropzone campaignId={id} locale={locale} periodId={periodId ?? null} />

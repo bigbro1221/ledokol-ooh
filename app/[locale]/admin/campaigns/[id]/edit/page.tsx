@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { CampaignForm } from '@/components/admin/campaign-form';
 import { auth, isGoogleLinked } from '@/lib/auth';
+import { getTranslations } from 'next-intl/server';
 
 export default async function EditCampaignPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
@@ -12,6 +13,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const t = await getTranslations({ locale, namespace: 'admin' });
 
   const [campaign, clients] = await Promise.all([
     prisma.campaign.findUnique({
@@ -47,7 +49,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
           <ArrowLeft size={14} strokeWidth={1.5} />
           {campaign.name}
         </Link>
-        <p className="mt-2 text-xs text-[var(--text-3)]">Редактирование</p>
+        <p className="mt-2 text-xs text-[var(--text-3)]">{t('editCampaign')}</p>
         <h1 className="text-xl font-semibold">{campaign.name}</h1>
       </div>
       <CampaignForm

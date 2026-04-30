@@ -19,12 +19,6 @@ interface UserFormProps {
   };
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  INVITED: 'Приглашён',
-  ACTIVE: 'Активен',
-  DISABLED: 'Отключён',
-};
-
 const STATUS_COLORS: Record<string, string> = {
   INVITED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
   ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
@@ -38,6 +32,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
   const tf = useTranslations('forms');
   const tRoles = useTranslations('roles');
   const tLang = useTranslations('languages');
+  const tStatus = useTranslations('userStatus');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -91,7 +86,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
       setError(
         err.errors?.fieldErrors?.email?.[0] ||
           err.errors?.fieldErrors?.password?.[0] ||
-          'Ошибка сохранения',
+          tf('saveError'),
       );
       return;
     }
@@ -99,7 +94,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
     if (!isEdit) {
       const result = await res.json();
       if (result.inviteSent) {
-        setToast(`Приглашение отправлено на ${emailValue}`);
+        setToast(tf('inviteSentTo', { email: emailValue }));
       }
       setTimeout(() => {
         router.push(`/${locale}/admin/users`);
@@ -121,15 +116,15 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
     setResendLoading(false);
     if (!res.ok) {
       const err = await res.json();
-      setError(err.error ?? 'Не удалось отправить повторное приглашение');
+      setError(err.error ?? tf('resendError'));
       return;
     }
-    setToast('Приглашение отправлено повторно');
+    setToast(tf('resendSuccess'));
   }
 
   async function handleResetToInvited() {
     if (!initial?.id) return;
-    if (!confirm('Сбросить пользователя в статус «Приглашён»? Все связанные Google-аккаунты будут отвязаны, и будет отправлено новое приглашение.')) return;
+    if (!confirm(tf('resetToInvitedConfirm'))) return;
     setResendLoading(true);
     setError('');
     setToast('');
@@ -137,16 +132,16 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
     setResendLoading(false);
     if (!res.ok) {
       const err = await res.json();
-      setError(err.error ?? 'Не удалось сбросить статус');
+      setError(err.error ?? tf('resetError'));
       return;
     }
-    setToast('Статус сброшен. Новое приглашение отправлено.');
+    setToast(tf('resetSuccess'));
     router.refresh();
   }
 
   async function handleDelete() {
     if (!initial?.id) return;
-    if (!confirm(`Удалить пользователя ${initial.email} безвозвратно? Все связанные данные (сессии, токены, привязки Google) будут удалены.`)) return;
+    if (!confirm(tf('deleteUserConfirm', { email: initial.email }))) return;
     setResendLoading(true);
     setError('');
     setToast('');
@@ -154,7 +149,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
     setResendLoading(false);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      setError(err.error ?? 'Не удалось удалить пользователя');
+      setError(err.error ?? tf('deleteUserError'));
       return;
     }
     router.push(`/${locale}/admin/users`);
@@ -176,7 +171,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
         />
         {emailSuggestion && !isEdit && (
           <p className="mt-1 text-xs text-[var(--text-3)]">
-            Вы имели в виду{' '}
+            {tf('youMeant')}{' '}
             <button
               type="button"
               onClick={applySuggestion}
@@ -192,7 +187,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
       {isEdit && initial.status && (
         <div className="flex items-center gap-3">
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[initial.status] ?? ''}`}>
-            {STATUS_LABELS[initial.status] ?? initial.status}
+            {tStatus.has(initial.status) ? tStatus(initial.status) : initial.status}
           </span>
           {initial.status === 'INVITED' && (
             <button
@@ -201,7 +196,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
               disabled={resendLoading}
               className="text-xs text-[var(--brand-primary)] hover:underline disabled:opacity-50"
             >
-              {resendLoading ? 'Отправка...' : 'Повторить приглашение'}
+              {resendLoading ? tf('resending') : tf('resendInvite')}
             </button>
           )}
           {initial.status !== 'INVITED' && (
@@ -211,7 +206,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
               disabled={resendLoading}
               className="text-xs text-[var(--text-3)] hover:text-[var(--danger)] hover:underline disabled:opacity-50"
             >
-              {resendLoading ? 'Сброс...' : 'Сбросить и переотправить приглашение'}
+              {resendLoading ? tf('resetting') : tf('resetToInvited')}
             </button>
           )}
           {(initial.status === 'DISABLED' || !initial.enabled) && (
@@ -221,7 +216,7 @@ export function UserForm({ locale, clients, initial }: UserFormProps) {
               disabled={resendLoading}
               className="text-xs text-[var(--danger)] hover:underline disabled:opacity-50"
             >
-              Удалить пользователя
+              {tf('deleteUser')}
             </button>
           )}
         </div>

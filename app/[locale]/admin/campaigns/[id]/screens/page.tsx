@@ -4,6 +4,7 @@ import { auth, isGoogleLinked } from '@/lib/auth';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ScreensTable, type ScreenRow } from '@/components/screens/screens-table';
+import { getTranslations } from 'next-intl/server';
 
 export default async function CampaignScreensPage({
   params,
@@ -16,6 +17,7 @@ export default async function CampaignScreensPage({
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
+  const t = await getTranslations({ locale, namespace: 'admin' });
 
   const campaign = await prisma.campaign.findUnique({
     where: { id },
@@ -97,10 +99,10 @@ export default async function CampaignScreensPage({
           </Link>
           <div>
             <p className="text-xs text-[var(--text-3)]">{campaign.client.name} / {campaign.name}</p>
-            <h1 className="text-xl font-semibold">Поверхности</h1>
+            <h1 className="text-xl font-semibold">{t('tableScreens')}</h1>
           </div>
         </div>
-        <div className="text-sm text-[var(--text-3)]">{screens.length} записей</div>
+        <div className="text-sm text-[var(--text-3)]">{t('recordsCount', { count: screens.length })}</div>
       </div>
 
       <ScreensTable

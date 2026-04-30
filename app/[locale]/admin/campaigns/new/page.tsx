@@ -29,7 +29,7 @@ export default async function NewCampaignPage({ params }: { params: Promise<{ lo
           <ArrowLeft size={14} strokeWidth={1.5} />
           {t('campaigns')}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Новая кампания</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t('newCampaignTitle')}</h1>
       </div>
       <CampaignForm locale={locale} clients={clients} />
     </div>

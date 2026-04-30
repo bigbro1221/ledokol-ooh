@@ -11,14 +11,6 @@ import { ClearScreensButton } from '@/components/admin/clear-screens-button';
 import { CampaignFinancials } from '@/components/admin/campaign-financials';
 import { RegeocodeButton } from '@/components/admin/regeocodebutton';
 
-const TYPE_LABELS: Record<string, string> = {
-  LED: 'LED экраны',
-  STATIC: 'Статика',
-  STOP: 'Остановки',
-  AIRPORT: 'Аэропорт',
-  BUS: 'Транспорт',
-};
-
 export default async function CampaignDetailPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
   const session = await auth();
@@ -28,6 +20,8 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   }
   const tCreatives = await getTranslations({ locale, namespace: 'creatives' });
   const tAdmin = await getTranslations({ locale, namespace: 'admin' });
+  const tCommon = await getTranslations({ locale, namespace: 'common' });
+  const tTypes = await getTranslations({ locale, namespace: 'screenTypes' });
   const campaign = await prisma.campaign.findUnique({
     where: { id },
     include: {
@@ -92,14 +86,14 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
             href={`/${locale}/admin/campaigns/${id}/edit`}
             className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
           >
-            <Pencil size={13} strokeWidth={1.5} /> Редактировать
+            <Pencil size={13} strokeWidth={1.5} /> {tCommon('edit')}
           </Link>
           {!campaign.splitByPeriods && (
             <Link
               href={`/${locale}/admin/campaigns/${id}/upload`}
               className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
             >
-              <Upload size={16} strokeWidth={1.5} /> Загрузить XLSX
+              <Upload size={16} strokeWidth={1.5} /> {tAdmin('uploadXlsx')}
             </Link>
           )}
           {totalScreens > 0 && (
@@ -107,7 +101,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               href={`/${locale}/admin/campaigns/${id}/screens`}
               className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
             >
-              <Table2 size={13} strokeWidth={1.5} /> Поверхности
+              <Table2 size={13} strokeWidth={1.5} /> {tAdmin('tableScreens')}
             </Link>
           )}
           <Link
@@ -129,23 +123,23 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
       {/* Info cards */}
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="col-span-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="mb-2 text-xs text-[var(--text-3)]">Статус</div>
+          <div className="mb-2 text-xs text-[var(--text-3)]">{tAdmin('tableStatus')}</div>
           <StatusToggle campaignId={campaign.id} currentStatus={campaign.status} />
         </div>
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="text-xs text-[var(--text-3)]">Период</div>
+          <div className="text-xs text-[var(--text-3)]">{tAdmin('tablePeriod')}</div>
           <div className="mt-1 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
-            {campaign.periodStart.toLocaleDateString('ru-RU')} — {campaign.periodEnd.toLocaleDateString('ru-RU')}
+            {campaign.periodStart.toLocaleDateString(locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU')} — {campaign.periodEnd.toLocaleDateString(locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU')}
           </div>
         </div>
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="text-xs text-[var(--text-3)]">Поверхности</div>
+          <div className="text-xs text-[var(--text-3)]">{tAdmin('tableScreens')}</div>
           <div className="mt-1 text-2xl font-semibold">{totalScreens}</div>
         </div>
 
         {campaign.splitByPeriods ? (
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-            <div className="text-xs text-[var(--text-3)]">Месяцев</div>
+            <div className="text-xs text-[var(--text-3)]">{tAdmin('monthsCount')}</div>
             <div className="mt-1 flex items-center gap-2">
               <Layers size={18} className="text-[var(--brand-primary)]" strokeWidth={1.5} />
               <span className="text-2xl font-semibold">{campaign.periods.length}</span>
@@ -153,11 +147,11 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           </div>
         ) : (
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-            <div className="text-xs text-[var(--text-3)]">Бюджет (итого)</div>
+            <div className="text-xs text-[var(--text-3)]">{tAdmin('budgetTotal')}</div>
             <div className="mt-1 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
               {(() => {
                 const v = campaign.totalFinal ?? campaign.totalBudgetUzs;
-                return v ? `${Number(v).toLocaleString('ru-RU')} UZS` : '—';
+                return v ? `${Number(v).toLocaleString(locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU')} UZS` : '—';
               })()}
             </div>
           </div>
@@ -167,7 +161,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
       {/* Periods section */}
       {campaign.splitByPeriods ? (
         <div className="mb-8">
-          <h2 className="mb-3 text-[15px] font-semibold">Месяцы</h2>
+          <h2 className="mb-3 text-[15px] font-semibold">{tAdmin('monthsTitle')}</h2>
           <PeriodManager
             campaignId={id}
             locale={locale}
@@ -181,12 +175,12 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         <div className="space-y-6">
           {totalScreens > 0 && (
             <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
-              <h2 className="mb-4 text-[15px] font-semibold">Поверхности по типам</h2>
+              <h2 className="mb-4 text-[15px] font-semibold">{tAdmin('screensByType')}</h2>
               <div className="flex flex-wrap gap-3">
                 {Object.entries(byType).map(([type, count]) => (
                   <div key={type} className="rounded-[var(--radius-md)] bg-[var(--surface-2)] px-4 py-3">
                     <div className="text-lg font-semibold">{count}</div>
-                    <div className="text-xs text-[var(--text-3)]">{TYPE_LABELS[type] || type}</div>
+                    <div className="text-xs text-[var(--text-3)]">{tTypes.has(type) ? tTypes(type) : type}</div>
                   </div>
                 ))}
               </div>
@@ -206,13 +200,13 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           {totalScreens === 0 && (
             <div className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] p-12 text-center">
               <FileSpreadsheet size={40} className="text-[var(--text-4)]" strokeWidth={1.5} />
-              <h3 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)' }}>Нет данных</h3>
-              <p className="text-sm text-[var(--text-3)]">Загрузите XLSX медиаплан для этой кампании</p>
+              <h3 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)' }}>{tAdmin('noDataTitle')}</h3>
+              <p className="text-sm text-[var(--text-3)]">{tAdmin('noDataHint')}</p>
               <Link
                 href={`/${locale}/admin/campaigns/${id}/upload`}
                 className="mt-2 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
               >
-                Загрузить XLSX
+                {tAdmin('uploadXlsx')}
               </Link>
             </div>
           )}

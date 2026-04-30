@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Upload, FileSpreadsheet, Check, AlertTriangle, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface PinSuggestion {
   lat: number;
@@ -51,14 +52,6 @@ interface ParsePreview {
   summary: { totalScreens: number; byType: Record<string, number> };
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  LED: 'LED',
-  STATIC: 'Статика',
-  STOP: 'Остановка',
-  AIRPORT: 'Аэропорт',
-  BUS: 'Транспорт',
-};
-
 const TYPE_COLORS: Record<string, string> = {
   LED: 'bg-blue-500/20 text-blue-400',
   STATIC: 'bg-purple-500/20 text-purple-400',
@@ -66,9 +59,6 @@ const TYPE_COLORS: Record<string, string> = {
   AIRPORT: 'bg-sky-500/20 text-sky-400',
   BUS: 'bg-orange-500/20 text-orange-400',
 };
-
-const num = (v: number | null | undefined) =>
-  v == null ? '—' : v.toLocaleString('ru-RU');
 
 const pct = (v: number | null | undefined) =>
   v == null ? '—' : (v * 100).toFixed(1) + '%';
@@ -83,10 +73,11 @@ function SuggestionPicker({
   suggestions: PinSuggestion[];
   onPick: (s: PinSuggestion) => void;
 }) {
+  const tu = useTranslations('uploadAdmin');
   const [open, setOpen] = useState(false);
 
   if (suggestions.length === 0) {
-    return <span className="text-[10px] text-[var(--text-4)]">нет пинов</span>;
+    return <span className="text-[10px] text-[var(--text-4)]">{tu('noPins')}</span>;
   }
 
   return (
@@ -95,7 +86,7 @@ function SuggestionPicker({
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-amber-600 hover:bg-amber-50"
       >
-        <span>Выбрать пин</span>
+        <span>{tu('pickPin')}</span>
         {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
       </button>
       {open && (
@@ -126,6 +117,12 @@ function SuggestionPicker({
 }
 
 export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: string; locale: string; periodId?: string | null }) {
+  const tu = useTranslations('uploadAdmin');
+  const tTypes = useTranslations('screenTypes');
+  const i18nLocale = useLocale();
+  const fmtLocale = i18nLocale === 'en' ? 'en-US' : i18nLocale === 'uz' ? 'uz-UZ' : 'ru-RU';
+  const num = (v: number | null | undefined) => v == null ? '—' : v.toLocaleString(fmtLocale);
+  const typeLabel = (type: string) => tTypes.has(type) ? tTypes(type) : type;
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -137,7 +134,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      setError('Только .xlsx файлы');
+      setError(tu('errorOnlyXlsx'));
       return;
     }
     setUploading(true);
@@ -153,14 +150,14 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
     setUploading(false);
 
     if (!res.ok) {
-      setError('Ошибка загрузки файла');
+      setError(tu('errorUpload'));
       return;
     }
 
     const data: ParsePreview = await res.json();
     setPreview(data);
     setScreenGeo(data.screenGeo || data.screens.map(() => ({ matched: false, suggestions: [] })));
-  }, [campaignId, periodId]);
+  }, [campaignId, periodId, tu]);
 
   // Allow user to manually assign coordinates from a suggestion
   function pickCoords(screenIdx: number, suggestion: PinSuggestion) {
@@ -194,7 +191,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
     if (res.ok) {
       setDone(true);
     } else {
-      setError('Ошибка сохранения данных');
+      setError(tu('errorSave'));
     }
   };
 
@@ -202,15 +199,15 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
     return (
       <div className="flex flex-col items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--success)] bg-[rgba(16,185,129,0.06)] p-12 text-center">
         <Check size={48} className="text-[var(--success)]" strokeWidth={1.5} />
-        <h3 className="text-lg font-semibold">Данные загружены</h3>
+        <h3 className="text-lg font-semibold">{tu('dataUploaded')}</h3>
         <p className="text-sm text-[var(--text-3)]">
-          {preview?.summary.totalScreens} поверхностей добавлено в кампанию
+          {preview?.summary.totalScreens} {tu('uploadedSuffix')}
         </p>
         <a
           href={`/${locale}/admin/campaigns/${campaignId}`}
           className="mt-2 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white"
         >
-          К кампании
+          {tu('goToCampaign')}
         </a>
       </div>
     );
@@ -237,17 +234,17 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
         {uploading ? (
           <>
             <FileSpreadsheet size={40} className="animate-pulse text-[var(--brand-primary)]" strokeWidth={1.5} />
-            <p className="text-sm text-[var(--text-2)]">Парсинг файла...</p>
+            <p className="text-sm text-[var(--text-2)]">{tu('parsing')}</p>
           </>
         ) : (
           <>
             <Upload size={40} className="text-[var(--text-4)]" strokeWidth={1.5} />
             <div>
-              <p className="text-sm font-medium">Перетащите XLSX файл сюда</p>
-              <p className="mt-1 text-xs text-[var(--text-3)]">или</p>
+              <p className="text-sm font-medium">{tu('dropHere')}</p>
+              <p className="mt-1 text-xs text-[var(--text-3)]">{tu('or')}</p>
             </div>
             <label className="cursor-pointer rounded-[var(--radius-md)] border border-[var(--border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--surface-2)]">
-              Выбрать файл
+              {tu('pickFile')}
               <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) handleFile(file);
@@ -266,25 +263,25 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="text-2xl font-semibold">{preview.summary.totalScreens}</div>
-              <div className="text-xs text-[var(--text-3)]">Поверхностей</div>
+              <div className="text-xs text-[var(--text-3)]">{tu('statScreens')}</div>
             </div>
             <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className={`text-2xl font-semibold ${preview.errors.length > 0 ? 'text-[var(--warning)]' : ''}`}>
                 {preview.errors.length}
               </div>
-              <div className="text-xs text-[var(--text-3)]">Ошибок</div>
+              <div className="text-xs text-[var(--text-3)]">{tu('statErrors')}</div>
             </div>
             <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className={`text-2xl font-semibold ${unmatchedCount > 0 ? 'text-amber-500' : 'text-[var(--success)]'}`}>
                 {preview.geocoding.matchedCount}/{preview.geocoding.totalPins}
               </div>
-              <div className="text-xs text-[var(--text-3)]">Пинов совпало</div>
+              <div className="text-xs text-[var(--text-3)]">{tu('statPinsMatched')}</div>
             </div>
             <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className={`text-2xl font-semibold ${unmatchedCount > 0 ? 'text-amber-500' : 'text-[var(--success)]'}`}>
                 {unmatchedCount}
               </div>
-              <div className="text-xs text-[var(--text-3)]">Без координат</div>
+              <div className="text-xs text-[var(--text-3)]">{tu('statNoCoords')}</div>
             </div>
           </div>
 
@@ -292,7 +289,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
           <div className="flex flex-wrap gap-2">
             {Object.entries(preview.summary.byType).map(([type, count]) => (
               <span key={type} className={`rounded-full px-3 py-1 text-xs font-medium ${TYPE_COLORS[type] || 'bg-gray-100 text-gray-600'}`}>
-                {TYPE_LABELS[type] || type}: {count}
+                {typeLabel(type)}: {count}
               </span>
             ))}
           </div>
@@ -301,13 +298,13 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
           {preview.errors.length > 0 && (
             <div className="rounded-[var(--radius-md)] border border-amber-500/30 bg-amber-500/10 p-4">
               <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-400">
-                <AlertTriangle size={13} /> Ошибки валидации ({preview.errors.length})
+                <AlertTriangle size={13} /> {tu('validationErrors')} ({preview.errors.length})
               </h4>
               <div className="max-h-32 overflow-y-auto text-xs text-amber-300/80">
                 {preview.errors.slice(0, 15).map((err, i) => (
-                  <div key={i}>{err.sheet} строка {err.row}: {err.field} — {err.message}</div>
+                  <div key={i}>{tu('errorRow', { sheet: err.sheet, row: err.row, field: err.field, message: err.message })}</div>
                 ))}
-                {preview.errors.length > 15 && <div className="mt-1 opacity-60">…ещё {preview.errors.length - 15}</div>}
+                {preview.errors.length > 15 && <div className="mt-1 opacity-60">{tu('errorMore', { count: preview.errors.length - 15 })}</div>}
               </div>
             </div>
           )}
@@ -316,10 +313,10 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)]">
             <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
               <h3 className="text-sm font-semibold">
-                Таблица поверхностей
+                {tu('tableTitle')}
                 {unmatchedCount > 0 && (
                   <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-                    {unmatchedCount} без координат
+                    {tu('noCoordsBadge', { count: unmatchedCount })}
                   </span>
                 )}
               </h3>
@@ -327,7 +324,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
                 onClick={() => setShowTable(v => !v)}
                 className="flex items-center gap-1 text-xs text-[var(--text-3)] hover:text-[var(--text)]"
               >
-                {showTable ? <><ChevronUp size={14} /> Свернуть</> : <><ChevronDown size={14} /> Развернуть</>}
+                {showTable ? <><ChevronUp size={14} /> {tu('collapse')}</> : <><ChevronDown size={14} /> {tu('expand')}</>}
               </button>
             </div>
 
@@ -337,22 +334,22 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
                   <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-2)]">
                     <tr>
                       {[
-                        { label: '#', align: 'left' },
-                        { label: 'Тип', align: 'left' },
-                        { label: 'Город', align: 'left' },
-                        { label: 'Адрес', align: 'left' },
-                        { label: 'Размер', align: 'left' },
-                        { label: 'Произв.', align: 'right' },
-                        { label: 'Без АК/НДС', align: 'right' },
-                        { label: 'АК%', align: 'right' },
-                        { label: 'АК', align: 'right' },
-                        { label: 'С АК/НДС', align: 'right' },
-                        { label: 'OTS пл.', align: 'right' },
-                        { label: 'Рейт. пл.', align: 'right' },
-                        { label: 'Universe', align: 'right' },
-                        { label: 'OTS ф.', align: 'right' },
-                        { label: 'Рейт. ф.', align: 'right' },
-                        { label: 'Гео', align: 'center' },
+                        { label: tu('colNumber'), align: 'left' },
+                        { label: tu('colType'), align: 'left' },
+                        { label: tu('colCity'), align: 'left' },
+                        { label: tu('colAddress'), align: 'left' },
+                        { label: tu('colSize'), align: 'left' },
+                        { label: tu('colProduction'), align: 'right' },
+                        { label: tu('colNoVat'), align: 'right' },
+                        { label: tu('colCommissionPct'), align: 'right' },
+                        { label: tu('colCommission'), align: 'right' },
+                        { label: tu('colWithVat'), align: 'right' },
+                        { label: tu('colOtsPlan'), align: 'right' },
+                        { label: tu('colRatingPlan'), align: 'right' },
+                        { label: tu('colUniverse'), align: 'right' },
+                        { label: tu('colOtsFact'), align: 'right' },
+                        { label: tu('colRatingFact'), align: 'right' },
+                        { label: tu('colGeo'), align: 'center' },
                       ].map(col => (
                         <th
                           key={col.label}
@@ -377,7 +374,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
                           <td className="px-3 py-1.5 text-[var(--text-3)]">{i + 1}</td>
                           <td className="px-3 py-1.5">
                             <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.type] || 'bg-gray-500/20 text-gray-400'}`}>
-                              {TYPE_LABELS[screen.type] || screen.type}
+                              {typeLabel(screen.type)}
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.city}</td>
@@ -416,7 +413,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
 
           {unmatchedCount > 0 && (
             <p className="text-[11px] text-amber-600">
-              ⚠ Жёлтые строки — адрес не найден среди Яндекс пинов. Используйте &quot;Выбрать пин&quot; чтобы назначить координаты вручную перед подтверждением.
+              {tu('unmatchedHint')}
             </p>
           )}
 
@@ -427,13 +424,13 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
               disabled={confirming}
               className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
             >
-              {confirming ? 'Сохранение...' : `Подтвердить загрузку (${preview.summary.totalScreens} поверхностей)`}
+              {confirming ? tu('confirming') : tu('confirmBtn', { count: preview.summary.totalScreens })}
             </button>
             <button
               onClick={() => { setPreview(null); setScreenGeo([]); }}
               className="rounded-[var(--radius-md)] border border-[var(--border)] px-4 py-2.5 text-sm transition-colors hover:bg-[var(--surface-2)]"
             >
-              Отменить
+              {tu('cancelBtn')}
             </button>
           </div>
         </div>

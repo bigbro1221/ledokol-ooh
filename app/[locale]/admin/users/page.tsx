@@ -14,6 +14,7 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
   }
   const t = await getTranslations({ locale, namespace: 'admin' });
   const tRoles = await getTranslations({ locale, namespace: 'roles' });
+  const tStatus = await getTranslations({ locale, namespace: 'userStatus' });
   const roleLabel = (role: string) => role === 'ADMIN' ? tRoles('adminShort') : tRoles('CLIENT');
   const users = await prisma.user.findMany({
     select: {
@@ -24,11 +25,6 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
     orderBy: { createdAt: 'desc' },
   });
 
-  const STATUS_LABELS: Record<string, string> = {
-    INVITED: 'Приглашён',
-    ACTIVE: 'Активен',
-    DISABLED: 'Отключён',
-  };
   const STATUS_COLORS: Record<string, string> = {
     INVITED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
     ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
@@ -80,7 +76,7 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3">
                   <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium ${STATUS_COLORS[u.status] ?? ''}`}>
-                    {STATUS_LABELS[u.status] ?? u.status}
+                    {tStatus.has(u.status) ? tStatus(u.status) : u.status}
                   </span>
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>

@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Upload, Trash2, ChevronDown, ChevronUp, Eraser, Check } from 'lucide-react';
+import { useTranslations, useLocale } from 'next-intl';
 
+// IMPORTANT: MONTHS_RU is the source of truth for new period names that get
+// stored in the DB. Keep it in Russian for DB consistency — old period names
+// (already in DB) are RU. Visual chips use the i18n months arrays below.
 const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-const MONTHS_RU_SHORT = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
 
 function getMonthsInRange(startIso: string, endIso: string): { year: number; month: number }[] {
   const result: { year: number; month: number }[] = [];
@@ -56,11 +59,6 @@ interface PeriodManagerProps {
   campaignEnd: string;
 }
 
-function fmt(n: number | null) {
-  if (!n) return '—';
-  return n.toLocaleString('ru-RU');
-}
-
 function PeriodCard({
   period,
   campaignId,
@@ -75,6 +73,11 @@ function PeriodCard({
   onSaved: (p: Period) => void;
 }) {
   const router = useRouter();
+  const tp = useTranslations('period');
+  const tc = useTranslations('common');
+  const tu = useTranslations('upload');
+  const fmtLocale = locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU';
+  const fmt = (n: number | null) => n == null ? '—' : n.toLocaleString(fmtLocale);
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -107,7 +110,7 @@ function PeriodCard({
   }
 
   async function handleClearXlsx() {
-    if (!confirm(`Удалить все поверхности месяца "${period.name}"? Сам месяц останется.`)) return;
+    if (!confirm(tp('confirmDeleteScreens', { name: period.name }))) return;
     setClearingXlsx(true);
     const res = await fetch(`/api/campaigns/${campaignId}/periods/${period.id}/screens`, { method: 'DELETE' });
     setClearingXlsx(false);
@@ -118,7 +121,7 @@ function PeriodCard({
   }
 
   async function handleDelete() {
-    if (!confirm(`Удалить месяц "${period.name}"? Все поверхности будут удалены.`)) return;
+    if (!confirm(tp('confirmDeleteMonth', { name: period.name }))) return;
     setDeleting(true);
     await fetch(`/api/campaigns/${campaignId}/periods/${period.id}`, { method: 'DELETE' });
     onDelete();
@@ -135,10 +138,10 @@ function PeriodCard({
           <div className="flex-1">
             <div className="text-sm font-medium">{period.name}</div>
             <div className="mt-0.5 text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
-              {new Date(period.periodStart).toLocaleDateString('ru-RU')} — {new Date(period.periodEnd).toLocaleDateString('ru-RU')}
+              {new Date(period.periodStart).toLocaleDateString(fmtLocale)} — {new Date(period.periodEnd).toLocaleDateString(fmtLocale)}
               {' · '}
-              {screenCount} экр.
-              {period.sourceFileUrl && <span className="ml-2 text-[var(--brand-primary)]">✓ XLSX</span>}
+              {screenCount} {tu('screensShort')}
+              {period.sourceFileUrl && <span className="ml-2 text-[var(--brand-primary)]">{tu('xlsxMark')}</span>}
             </div>
           </div>
           {expanded ? <ChevronUp size={16} className="shrink-0 text-[var(--text-3)]" /> : <ChevronDown size={16} className="shrink-0 text-[var(--text-3)]" />}
@@ -156,7 +159,7 @@ function PeriodCard({
           <button
             onClick={handleClearXlsx}
             disabled={clearingXlsx}
-            title="Очистить поверхности (месяц остаётся)"
+            title={tp('clearScreens')}
             className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-4)] hover:bg-amber-500/10 hover:text-amber-500 disabled:opacity-50"
           >
             <Eraser size={14} strokeWidth={1.5} />
@@ -175,13 +178,13 @@ function PeriodCard({
       {/* Financials form */}
       {expanded && (
         <div className="border-t border-[var(--border)] px-4 py-4">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">Финансовые данные</p>
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">{tp('financialsTitle')}</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { key: 'totalBudgetUzs', label: 'Без АК и НДС' },
-              { key: 'productionCost', label: 'Производство' },
-              { key: 'agencyFeePct', label: 'АК %' },
-              { key: 'totalFinal', label: 'Итоговая сумма' },
+              { key: 'totalBudgetUzs', label: tp('noVat') },
+              { key: 'productionCost', label: tp('production') },
+              { key: 'agencyFeePct', label: tp('commissionPct') },
+              { key: 'totalFinal', label: tp('finalTotal') },
             ].map(({ key, label }) => (
               <div key={key}>
                 <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">{label}</label>
@@ -199,10 +202,10 @@ function PeriodCard({
 
           {(period.totalBudgetUzs || period.productionCost || period.totalFinal) && (
             <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--text-2)]" style={{ fontFamily: 'var(--font-mono)' }}>
-              {period.totalBudgetUzs && <span>Без АК: {fmt(period.totalBudgetUzs)} UZS</span>}
-              {period.productionCost && <span>Произ.: {fmt(period.productionCost)} UZS</span>}
-              {period.agencyFeePct && <span>АК: {period.agencyFeePct}%</span>}
-              {period.totalFinal && <span className="font-medium text-[var(--text)]">Итого: {fmt(period.totalFinal)} UZS</span>}
+              {period.totalBudgetUzs && <span>{tp('noVatShort')} {fmt(period.totalBudgetUzs)} UZS</span>}
+              {period.productionCost && <span>{tp('productionShort')} {fmt(period.productionCost)} UZS</span>}
+              {period.agencyFeePct && <span>{tp('commissionShort')} {period.agencyFeePct}%</span>}
+              {period.totalFinal && <span className="font-medium text-[var(--text)]">{tp('finalTotalShort')} {fmt(period.totalFinal)} UZS</span>}
             </div>
           )}
 
@@ -211,7 +214,7 @@ function PeriodCard({
             disabled={saving}
             className="mt-3 rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
           >
-            {saving ? 'Сохранение...' : 'Сохранить'}
+            {saving ? tc('saving') : tc('save')}
           </button>
         </div>
       )}
@@ -221,6 +224,13 @@ function PeriodCard({
 
 export function PeriodManager({ campaignId, locale, initialPeriods, campaignStart, campaignEnd }: PeriodManagerProps) {
   const router = useRouter();
+  const tp = useTranslations('period');
+  const tc = useTranslations('common');
+  const tMonths = useTranslations('months');
+  const i18nLocale = useLocale();
+  const fmtLocale = i18nLocale === 'en' ? 'en-US' : i18nLocale === 'uz' ? 'uz-UZ' : 'ru-RU';
+  // months.short is an array — read it via t.raw to support array indexing
+  const monthsShort = (tMonths.raw('short') as string[]) || [];
   const [periods, setPeriods] = useState<Period[]>(initialPeriods);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -300,7 +310,7 @@ export function PeriodManager({ campaignId, locale, initialPeriods, campaignStar
 
       {adding ? (
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="mb-3 text-sm font-medium">Новый месяц</p>
+          <p className="mb-3 text-sm font-medium">{tp('newMonth')}</p>
 
           {/* Month chips */}
           {campaignMonths.length > 0 && (
@@ -309,9 +319,10 @@ export function PeriodManager({ campaignId, locale, initialPeriods, campaignStar
                 const key = monthKey(year, month);
                 const isAdded = addedMonthKeys.has(key);
                 const isSelected = selectedMonthValue === `${year}-${pad(month + 1)}`;
+                const monthLabel = monthsShort[month] ?? '';
                 const label = multiYear
-                  ? `${MONTHS_RU_SHORT[month]} '${String(year).slice(2)}`
-                  : MONTHS_RU_SHORT[month];
+                  ? `${monthLabel} '${String(year).slice(2)}`
+                  : monthLabel;
 
                 if (isAdded) {
                   return (
@@ -346,7 +357,7 @@ export function PeriodManager({ campaignId, locale, initialPeriods, campaignStar
           <div className="space-y-3">
             {/* Month picker */}
             <div>
-              <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">Месяц</label>
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">{tp('month')}</label>
               <input
                 type="month"
                 value={selectedMonthValue}
@@ -359,9 +370,9 @@ export function PeriodManager({ campaignId, locale, initialPeriods, campaignStar
 
             {/* Name — auto-filled but editable */}
             <div>
-              <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">Название</label>
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-3)]">{tp('name')}</label>
               <input
-                placeholder="Январь 2026"
+                placeholder={tp('namePlaceholder')}
                 value={newPeriod.name}
                 onChange={e => setNewPeriod(p => ({ ...p, name: e.target.value }))}
                 className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary-subtle)]"
@@ -371,7 +382,7 @@ export function PeriodManager({ campaignId, locale, initialPeriods, campaignStar
             {/* Date range — derived, read-only display */}
             {newPeriod.periodStart && newPeriod.periodEnd && (
               <p className="text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
-                {new Date(newPeriod.periodStart).toLocaleDateString('ru-RU')} — {new Date(newPeriod.periodEnd).toLocaleDateString('ru-RU')}
+                {new Date(newPeriod.periodStart).toLocaleDateString(fmtLocale)} — {new Date(newPeriod.periodEnd).toLocaleDateString(fmtLocale)}
               </p>
             )}
           </div>
@@ -382,13 +393,13 @@ export function PeriodManager({ campaignId, locale, initialPeriods, campaignStar
               disabled={saving || !newPeriod.name || !newPeriod.periodStart}
               className="rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
             >
-              {saving ? '...' : 'Добавить'}
+              {saving ? '...' : tp('add')}
             </button>
             <button
               onClick={cancelAdding}
               className="rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-2)]"
             >
-              Отмена
+              {tc('cancel')}
             </button>
           </div>
         </div>
@@ -398,7 +409,7 @@ export function PeriodManager({ campaignId, locale, initialPeriods, campaignStar
           className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] py-3 text-sm text-[var(--text-3)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
         >
           <Plus size={16} strokeWidth={1.5} />
-          Добавить месяц
+          {tp('addMonth')}
         </button>
       )}
     </div>

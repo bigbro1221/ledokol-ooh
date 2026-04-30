@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface CampaignFinancialsProps {
   campaignId: string;
@@ -12,12 +13,13 @@ interface CampaignFinancialsProps {
   };
 }
 
-function fmt(n: number | null) {
-  if (!n) return '—';
-  return n.toLocaleString('ru-RU');
-}
-
 export function CampaignFinancials({ campaignId, initialValues }: CampaignFinancialsProps) {
+  const tp = useTranslations('period');
+  const tc = useTranslations('common');
+  const locale = useLocale();
+  const fmtLocale = locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU';
+  const fmt = (n: number | null) => n == null ? '—' : n.toLocaleString(fmtLocale);
+
   const [values, setValues] = useState({
     totalBudgetUzs: initialValues.totalBudgetUzs ?? '',
     productionCost: initialValues.productionCost ?? '',
@@ -46,16 +48,16 @@ export function CampaignFinancials({ campaignId, initialValues }: CampaignFinanc
   }
 
   const fields: { key: keyof typeof values; label: string }[] = [
-    { key: 'totalBudgetUzs', label: 'Без АК и НДС' },
-    { key: 'productionCost', label: 'Производство' },
-    { key: 'agencyFeePct', label: 'АК %' },
-    { key: 'totalFinal', label: 'Итоговая сумма' },
+    { key: 'totalBudgetUzs', label: tp('noVat') },
+    { key: 'productionCost', label: tp('production') },
+    { key: 'agencyFeePct', label: tp('commissionPct') },
+    { key: 'totalFinal', label: tp('finalTotal') },
   ];
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">
-        Финансовые данные
+        {tp('financialsTitle')}
       </p>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -79,11 +81,11 @@ export function CampaignFinancials({ campaignId, initialValues }: CampaignFinanc
       {/* Summary row */}
       {(initialValues.totalBudgetUzs || initialValues.productionCost || initialValues.totalFinal) && (
         <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--text-2)]" style={{ fontFamily: 'var(--font-mono)' }}>
-          {initialValues.totalBudgetUzs && <span>Без АК: {fmt(initialValues.totalBudgetUzs)} UZS</span>}
-          {initialValues.productionCost && <span>Произ.: {fmt(initialValues.productionCost)} UZS</span>}
-          {initialValues.agencyFeePct && <span>АК: {initialValues.agencyFeePct}%</span>}
+          {initialValues.totalBudgetUzs && <span>{tp('noVatShort')} {fmt(initialValues.totalBudgetUzs)} UZS</span>}
+          {initialValues.productionCost && <span>{tp('productionShort')} {fmt(initialValues.productionCost)} UZS</span>}
+          {initialValues.agencyFeePct && <span>{tp('commissionShort')} {initialValues.agencyFeePct}%</span>}
           {initialValues.totalFinal && (
-            <span className="font-medium text-[var(--text)]">Итого: {fmt(initialValues.totalFinal)} UZS</span>
+            <span className="font-medium text-[var(--text)]">{tp('finalTotalShort')} {fmt(initialValues.totalFinal)} UZS</span>
           )}
         </div>
       )}
@@ -93,7 +95,7 @@ export function CampaignFinancials({ campaignId, initialValues }: CampaignFinanc
         disabled={saving}
         className="mt-4 rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
       >
-        {saving ? 'Сохранение...' : saved ? '✓ Сохранено' : 'Сохранить'}
+        {saving ? tc('saving') : saved ? tp('savedCheck') : tc('save')}
       </button>
     </div>
   );

@@ -24,7 +24,7 @@ export default async function NewClientPage({ params }: { params: Promise<{ loca
           <ArrowLeft size={14} strokeWidth={1.5} />
           {t('clients')}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Новый клиент</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t('newClientTitle')}</h1>
       </div>
       <ClientForm locale={locale} />
     </div>

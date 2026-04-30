@@ -26,7 +26,7 @@ export default async function NewUserPage({ params }: { params: Promise<{ locale
           <ArrowLeft size={14} strokeWidth={1.5} />
           {t('users')}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Новый пользователь</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t('newUserTitle')}</h1>
       </div>
       <UserForm locale={locale} clients={clients} />
     </div>

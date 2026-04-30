@@ -20,6 +20,7 @@ export default async function EditClientPage({ params }: { params: Promise<{ loc
 
   if (!client) notFound();
   const t = await getTranslations({ locale, namespace: 'admin' });
+  const tStatus = await getTranslations({ locale, namespace: 'campaignStatus' });
 
   return (
     <div>
@@ -31,7 +32,7 @@ export default async function EditClientPage({ params }: { params: Promise<{ loc
           <ArrowLeft size={14} strokeWidth={1.5} />
           {t('clients')}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Редактировать: {client.name}</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t('editClient', { name: client.name })}</h1>
       </div>
       <ClientForm
         locale={locale}
@@ -40,14 +41,14 @@ export default async function EditClientPage({ params }: { params: Promise<{ loc
 
       {client.campaigns.length > 0 && (
         <div className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold">Кампании клиента</h2>
+          <h2 className="mb-4 text-lg font-semibold">{t('clientCampaigns')}</h2>
           <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
             <table className="w-full min-w-[560px] border-collapse">
               <thead>
                 <tr className="bg-[var(--surface-2)]">
-                  <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Название</th>
-                  <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Статус</th>
-                  <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">Период</th>
+                  <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableClientName')}</th>
+                  <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableStatus')}</th>
+                  <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tablePeriod')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -58,7 +59,7 @@ export default async function EditClientPage({ params }: { params: Promise<{ loc
                         {c.name}
                       </Link>
                     </td>
-                    <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-2)]">{c.status}</td>
+                    <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-2)]">{tStatus(c.status)}</td>
                     <td className="border-b border-[var(--border)] px-4 py-3 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
                       {c.periodStart.toLocaleDateString('ru-RU')} — {c.periodEnd.toLocaleDateString('ru-RU')}
                     </td>

@@ -33,7 +33,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ local
           <ArrowLeft size={14} strokeWidth={1.5} />
           {t('users')}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Редактировать: {user.email}</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t('editUser', { email: user.email })}</h1>
       </div>
       <UserForm locale={locale} clients={clients} initial={user} />
     </div>
