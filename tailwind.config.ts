@@ -6,7 +6,11 @@ const config: Config = {
     './components/**/*.{ts,tsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      screens: {
+        xs: '500px',
+      },
+    },
   },
   plugins: [],
 };

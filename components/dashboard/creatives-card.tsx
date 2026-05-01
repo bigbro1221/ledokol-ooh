@@ -23,7 +23,7 @@ function formatDuration(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export function CreativesCard({ creatives }: { creatives: CreativeView[] }) {
+export function CreativesCard({ creatives, embedded = false }: { creatives: CreativeView[]; embedded?: boolean }) {
   const t = useTranslations('creatives');
   const [collapsed, setCollapsed] = useState(false);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
@@ -50,28 +50,34 @@ export function CreativesCard({ creatives }: { creatives: CreativeView[] }) {
     setActiveDot(Math.max(0, Math.min(idx, creatives.length - 1)));
   }
 
+  const containerClass = embedded
+    ? 'overflow-hidden'
+    : 'mb-6 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]';
+
   return (
-    <div className="mb-6 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
-        <div>
-          <h3 className="text-[15px] font-semibold tracking-tight">{t('title')}</h3>
-          <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('subtitle')}</p>
+    <div className={containerClass}>
+      {!embedded && (
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
+          <div>
+            <h3 className="text-[15px] font-semibold tracking-tight">{t('title')}</h3>
+            <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('subtitle')}</p>
+          </div>
+          <span className="text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
+            {creatives.length}
+          </span>
         </div>
-        <span className="text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
-          {creatives.length}
-        </span>
-      </div>
+      )}
 
       {!collapsed && (
         creatives.length === 0
           ? (
-            <div className="px-5 py-10 text-center">
+            <div className={embedded ? 'py-6 text-center' : 'px-5 py-10 text-center'}>
               <p className="text-sm italic text-[var(--text-3)]">{t('empty')}</p>
             </div>
           )
           : (
             <>
-              <div ref={stripRef} onScroll={onStripScroll} className="cc-filmstrip">
+              <div ref={stripRef} onScroll={onStripScroll} className={embedded ? 'cc-filmstrip cc-filmstrip-embedded' : 'cc-filmstrip'}>
                 {creatives.map((c, i) => (
                   <button
                     key={c.id}
@@ -130,15 +136,17 @@ export function CreativesCard({ creatives }: { creatives: CreativeView[] }) {
           )
       )}
 
-      <button
-        type="button"
-        onClick={() => setCollapsed(v => !v)}
-        className="flex w-full items-center justify-center gap-2 border-t border-dashed border-[var(--border)] py-3 text-[13px] text-[var(--text-3)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
-      >
-        {collapsed
-          ? <><ChevronDown size={15} strokeWidth={1.5} /> {t('showAll')}</>
-          : <><ChevronUp size={15} strokeWidth={1.5} /> {t('hideAll')}</>}
-      </button>
+      {!embedded && (
+        <button
+          type="button"
+          onClick={() => setCollapsed(v => !v)}
+          className="flex w-full items-center justify-center gap-2 border-t border-dashed border-[var(--border)] py-3 text-[13px] text-[var(--text-3)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+        >
+          {collapsed
+            ? <><ChevronDown size={15} strokeWidth={1.5} /> {t('showAll')}</>
+            : <><ChevronUp size={15} strokeWidth={1.5} /> {t('hideAll')}</>}
+        </button>
+      )}
 
       {playingIdx != null && (
         <Lightbox
@@ -155,8 +163,16 @@ export function CreativesCard({ creatives }: { creatives: CreativeView[] }) {
           gap: 8px;
           overflow-x: auto;
           padding: 14px;
-          scrollbar-width: none;
+          scrollbar-width: thin;
           -webkit-overflow-scrolling: touch;
+        }
+        .cc-filmstrip-embedded {
+          padding: 0;
+          gap: 8px;
+          scrollbar-width: none;
+        }
+        .cc-filmstrip-embedded::-webkit-scrollbar {
+          display: none;
         }
         .cc-filmstrip::-webkit-scrollbar {
           display: none;
@@ -176,6 +192,16 @@ export function CreativesCard({ creatives }: { creatives: CreativeView[] }) {
           position: relative;
           box-sizing: border-box;
           display: block;
+        }
+        .cc-filmstrip-embedded .cc-tile {
+          width: 168px;
+          padding-top: calc(168px * 9 / 16);
+        }
+        @media (max-width: 640px) {
+          .cc-filmstrip-embedded .cc-tile {
+            width: 260px;
+            padding-top: calc(260px * 9 / 16);
+          }
         }
         .cc-tile:focus-visible {
           outline: none;

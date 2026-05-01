@@ -2,6 +2,7 @@
   "common": {
     "appName": "OOH Dashboard",
     "loading": "Yuklanmoqda...",
+    "close": "Yopish",
     "error": "Xatolik yuz berdi",
     "save": "Saqlash",
     "saving": "Saqlanmoqda...",
@@ -193,7 +194,10 @@
     "cityOne": "shahar",
     "cityFew": "shahar",
     "cityMany": "shahar",
-    "reports": "Hisobotlar"
+    "reports": "Hisobotlar",
+    "campaignEyebrow": "Reklama kampaniyasi",
+    "filterLabel": "Filtr",
+    "showAllSummary": "barchasi"
   },
   "filters": {
     "allCities": "Barcha shaharlar",
@@ -201,7 +205,13 @@
     "reset": "Filtrlarni tozalash",
     "allPeriods": "Butun davr",
     "from": "dan",
-    "to": "gacha"
+    "to": "gacha",
+    "periodLabel": "Davr",
+    "typeLabel": "Konstruksiya turlari",
+    "cityLabel": "Shahar",
+    "allPeriodsShort": "Butun davr",
+    "allTypesShort": "Barchasi",
+    "allCitiesShort": "Barchasi"
   },
   "charts": {
     "planTitle": "Tur bo'yicha reja va fakt",

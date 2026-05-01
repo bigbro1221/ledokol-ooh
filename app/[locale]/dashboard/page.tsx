@@ -24,10 +24,14 @@ export default async function DashboardPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ campaign?: string; city?: string; type?: string; periodFrom?: string; periodTo?: string }>;
+  searchParams: Promise<{ campaign?: string; city?: string; type?: string; periodFrom?: string; periodTo?: string; periods?: string }>;
 }) {
   const { locale } = await params;
-  const { campaign: campaignIdParam, city: cityFilter, type: typeFilter, periodFrom: periodFromParam, periodTo: periodToParam } = await searchParams;
+  const { campaign: campaignIdParam, city: cityFilter, type: typeFilter, periodFrom: periodFromParam, periodTo: periodToParam, periods: periodsParam } = await searchParams;
+
+  function splitCsv(v: string | undefined): string[] {
+    return (v ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  }
   const session = await auth();
   if (!session?.user) redirect(`/${locale}/login`);
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
@@ -113,11 +117,12 @@ export default async function DashboardPage({
     redirect(`/${locale}/dashboard`);
   }
 
-  const screenWhere: { type?: ScreenType; city?: string } = {};
-  if (typeFilter && ['LED','STATIC','STOP','AIRPORT','BUS'].includes(typeFilter)) {
-    screenWhere.type = typeFilter as ScreenType;
-  }
-  if (cityFilter) screenWhere.city = cityFilter;
+  const cityValues = splitCsv(cityFilter);
+  const typeValues = splitCsv(typeFilter).filter(t => ['LED','STATIC','STOP','AIRPORT','BUS'].includes(t)) as ScreenType[];
+
+  const screenWhere: { type?: { in: ScreenType[] }; city?: { in: string[] } } = {};
+  if (typeValues.length > 0) screenWhere.type = { in: typeValues };
+  if (cityValues.length > 0) screenWhere.city = { in: cityValues };
 
   const [campaign, prefs] = await Promise.all([
     prisma.campaign.findUnique({
@@ -176,25 +181,28 @@ export default async function DashboardPage({
 
   const allPeriodIds = periodsWithData.map(p => p.id);
 
-  // Validate from/to against periods with data
-  const selectedFrom = periodFromParam && allPeriodIds.includes(periodFromParam) ? periodFromParam : null;
-  const selectedTo = periodToParam && allPeriodIds.includes(periodToParam) ? periodToParam : null;
+  // Multi-select periods: ?periods=id1,id2,id3. Falls back to legacy ?periodFrom/?periodTo.
+  let selectedPeriodIds: string[] = splitCsv(periodsParam).filter(id => allPeriodIds.includes(id));
+  if (selectedPeriodIds.length === 0 && (periodFromParam || periodToParam)) {
+    const legacyFrom = periodFromParam && allPeriodIds.includes(periodFromParam) ? periodFromParam : null;
+    const legacyTo = periodToParam && allPeriodIds.includes(periodToParam) ? periodToParam : null;
+    const fIdx = legacyFrom ? allPeriodIds.indexOf(legacyFrom) : -1;
+    const tIdx = legacyTo ? allPeriodIds.indexOf(legacyTo) : -1;
+    if (fIdx >= 0 && tIdx >= 0) {
+      selectedPeriodIds = allPeriodIds.slice(Math.min(fIdx, tIdx), Math.max(fIdx, tIdx) + 1);
+    }
+  }
 
-  // Build the set of period IDs included in the selected range
-  const fromIdx = selectedFrom ? allPeriodIds.indexOf(selectedFrom) : -1;
-  const toIdx = selectedTo ? allPeriodIds.indexOf(selectedTo) : -1;
-  const rangeIds: Set<string> = (fromIdx >= 0 && toIdx >= 0)
-    ? new Set(allPeriodIds.slice(Math.min(fromIdx, toIdx), Math.max(fromIdx, toIdx) + 1))
-    : new Set();
-
+  const rangeIds: Set<string> = new Set(selectedPeriodIds);
   const isFiltered = rangeIds.size > 0;
 
-  // For the campaign title: show from-period start → to-period end when filtered
+  // For the campaign title: show min-start → max-end of selected periods
+  const selectedPeriods = isFiltered ? periodsWithData.filter(p => rangeIds.has(p.id)) : [];
   const displayPeriodStart = isFiltered
-    ? periodsWithData[Math.min(fromIdx, toIdx)].periodStart
+    ? selectedPeriods.reduce<Date>((min, p) => p.periodStart < min ? p.periodStart : min, selectedPeriods[0].periodStart)
     : null;
   const displayPeriodEnd = isFiltered
-    ? periodsWithData[Math.max(fromIdx, toIdx)].periodEnd
+    ? selectedPeriods.reduce<Date>((max, p) => p.periodEnd > max ? p.periodEnd : max, selectedPeriods[0].periodEnd)
     : null;
 
   // Filter helpers — only restrict when a range is active
@@ -404,12 +412,11 @@ export default async function DashboardPage({
       cityBreakdown={cityBreakdown}
       allCities={allCities.map(c => c.city.trim())}
       availableTypes={Array.from(new Set(campaign.screens.map(s => s.type)))}
-      filters={{ city: cityFilter || '', type: typeFilter || '' }}
+      filters={{ cities: cityValues, types: typeValues }}
       heatmapEmbedUrl={heatmapEmbedUrl}
       reportsUrl={campaign.reportsUrl}
       periodsWithData={periodsWithData.map(p => ({ id: p.id, name: p.name }))}
-      selectedFrom={selectedFrom}
-      selectedTo={selectedTo}
+      selectedPeriods={selectedPeriodIds}
       creatives={creatives}
     />
   );

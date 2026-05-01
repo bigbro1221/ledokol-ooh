@@ -3,110 +3,107 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { MultiSelectDropdown } from '@/components/ui/multi-select-dropdown';
 
 const TYPE_VALUES = ['LED', 'STATIC', 'STOP', 'AIRPORT', 'BUS'] as const;
+
+interface Period {
+  id: string;
+  name: string;
+}
 
 export function FilterBar({
   cities,
   availableTypes,
+  periods,
+  selectedPeriods,
   locale,
 }: {
   cities: string[];
   availableTypes: string[];
+  periods: Period[];
+  selectedPeriods: string[];
   locale: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tf = useTranslations('filters');
   const tTypes = useTranslations('screenTypes');
-  const activeCity = searchParams.get('city') || '';
-  const activeType = searchParams.get('type') || '';
 
-  const updateParam = useCallback((key: string, value: string) => {
+  const activeCities = (searchParams.get('city') || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  const activeTypes = (searchParams.get('type') || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const updateMulti = useCallback((key: string, values: string[]) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value) {
-      params.set(key, value);
-    } else {
-      params.delete(key);
-    }
+    if (values.length > 0) params.set(key, values.join(','));
+    else params.delete(key);
     router.push(`/${locale}/dashboard?${params.toString()}`);
   }, [router, searchParams, locale]);
 
+  const hasAny = activeCities.length > 0 || activeTypes.length > 0 || selectedPeriods.length > 0;
+
+  const periodOptions = periods.map(p => ({ value: p.id, label: p.name }));
+  const typeOptions = TYPE_VALUES
+    .filter(t => availableTypes.includes(t))
+    .map(t => ({ value: t, label: tTypes(t) }));
+  const cityOptions = cities.map(c => ({ value: c, label: c }));
+
+  function reset() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('city');
+    params.delete('type');
+    params.delete('periods');
+    params.delete('periodFrom');
+    params.delete('periodTo');
+    router.push(`/${locale}/dashboard?${params.toString()}`);
+  }
+
   return (
-    <div className="flex flex-col gap-3 sm:flex-1 sm:flex-row sm:flex-wrap sm:items-center">
-      {/* City filter — full width on mobile */}
-      <select
-        value={activeCity}
-        onChange={(e) => updateParam('city', e.target.value)}
-        className="filter-select w-full min-h-[44px] appearance-none rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] py-2 pl-3 pr-9 text-[13px] transition-colors hover:border-[var(--border-hi)] focus:border-[var(--border-em)] focus:outline-none sm:w-auto sm:min-h-0 sm:py-1.5 sm:text-xs"
-        style={{
-          backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237E8AA1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'right 10px center',
-        }}
-      >
-        <option value="">{tf('allCities')}</option>
-        {cities.map(c => (
-          <option key={c} value={c}>{c}</option>
-        ))}
-      </select>
+    <div className="flex flex-wrap items-center gap-2">
+      {periods.length >= 2 && (
+        <MultiSelectDropdown
+          label={tf('periodLabel')}
+          allLabel={tf('allPeriodsShort')}
+          options={periodOptions}
+          selected={selectedPeriods}
+          onChange={(v) => updateMulti('periods', v)}
+          width={240}
+        />
+      )}
 
-      {/* Type filter pills — horizontal scroll on mobile */}
-      <div className="filter-pills-scroll relative -mx-3 overflow-x-auto px-3 sm:mx-0 sm:overflow-visible sm:px-0">
-        <div className="flex gap-1 min-w-max sm:min-w-0">
-          <button
-            onClick={() => updateParam('type', '')}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors sm:py-1 sm:text-[11px] ${
-              !activeType ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]' : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]'
-            }`}
-          >
-            {tf('allTypes')}
-          </button>
-          {TYPE_VALUES.filter(t => availableTypes.includes(t)).map(t => (
-            <button
-              key={t}
-              onClick={() => updateParam('type', activeType === t ? '' : t)}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors sm:py-1 sm:text-[11px] ${
-                activeType === t ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]' : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]'
-              }`}
-            >
-              {tTypes(t)}
-            </button>
-          ))}
-        </div>
-      </div>
+      <MultiSelectDropdown
+        label={tf('typeLabel')}
+        allLabel={tf('allTypesShort')}
+        options={typeOptions}
+        selected={activeTypes}
+        onChange={(v) => updateMulti('type', v)}
+        width={240}
+      />
 
-      {/* Clear all */}
-      {(activeCity || activeType) && (
+      <MultiSelectDropdown
+        label={tf('cityLabel')}
+        allLabel={tf('allCitiesShort')}
+        options={cityOptions}
+        selected={activeCities}
+        onChange={(v) => updateMulti('city', v)}
+        width={240}
+      />
+
+      {hasAny && (
         <button
-          onClick={() => {
-            const params = new URLSearchParams(searchParams.toString());
-            params.delete('city');
-            params.delete('type');
-            router.push(`/${locale}/dashboard?${params.toString()}`);
-          }}
-          className="text-left text-xs text-[var(--text-3)] hover:text-[var(--danger)] sm:text-center"
+          type="button"
+          onClick={reset}
+          className="text-[12px] text-[var(--text-3)] transition-colors hover:text-[var(--danger)]"
         >
           {tf('reset')}
         </button>
       )}
-
-      {/* mobile: <640px — hide scrollbar, momentum scroll, fade on right edge */}
-      <style jsx>{`
-        .filter-pills-scroll {
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-        }
-        .filter-pills-scroll::-webkit-scrollbar {
-          display: none;
-        }
-        @media (max-width: 639px) {
-          .filter-pills-scroll {
-            mask-image: linear-gradient(to right, black 80%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
-          }
-        }
-      `}</style>
     </div>
   );
 }

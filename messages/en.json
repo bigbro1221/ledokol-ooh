@@ -2,6 +2,7 @@
   "common": {
     "appName": "OOH Dashboard",
     "loading": "Loading...",
+    "close": "Close",
     "error": "An error occurred",
     "save": "Save",
     "saving": "Saving...",
@@ -193,7 +194,10 @@
     "cityOne": "city",
     "cityFew": "cities",
     "cityMany": "cities",
-    "reports": "Reports"
+    "reports": "Reports",
+    "campaignEyebrow": "Advertising campaign",
+    "filterLabel": "Filter",
+    "showAllSummary": "all"
   },
   "filters": {
     "allCities": "All cities",
@@ -201,7 +205,13 @@
     "reset": "Reset filters",
     "allPeriods": "All periods",
     "from": "From",
-    "to": "to"
+    "to": "to",
+    "periodLabel": "Period",
+    "typeLabel": "Construction types",
+    "cityLabel": "City",
+    "allPeriodsShort": "All time",
+    "allTypesShort": "All",
+    "allCitiesShort": "All"
   },
   "charts": {
     "planTitle": "Plan vs. fact by type",

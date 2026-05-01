@@ -2,8 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
-import { LayoutGrid, Banknote, MapPin, ChevronDown, ChevronUp, FileText, ExternalLink } from 'lucide-react';
-import { KPICard } from '@/components/charts/kpi-card';
+import { ChevronDown, ChevronUp, FileText, ExternalLink } from 'lucide-react';
 // TODO: disabled per product decision 2026-04-20; restore if re-enabled
 // import { ImpressionsDonut } from '@/components/charts/impressions-donut';
 import { TopScreensBar } from '@/components/charts/top-screens-bar';
@@ -18,23 +17,16 @@ import { BudgetByType } from '@/components/charts/budget-by-type';
 import { EfficiencyStrip } from '@/components/charts/efficiency-strip';
 import { CampaignSelector } from '@/components/ui/campaign-selector';
 import { FilterBar } from '@/components/ui/filter-bar';
-import { PeriodFilter } from '@/components/ui/period-filter';
-import { PeriodRangeSelector } from '@/components/ui/period-range-selector';
 import { type DateFormat, formatCampaignPeriod } from '@/lib/format-period';
 import { useTranslations } from 'next-intl';
-import { CreativesCard, type CreativeView } from '@/components/dashboard/creatives-card';
+import { type CreativeView } from '@/components/dashboard/creatives-card';
+import { CampaignHero } from '@/components/dashboard/campaign-hero';
 
 const ScreenMap = dynamic(() => import('@/components/map/screen-map').then(m => ({ default: m.ScreenMap })), {
   ssr: false,
   loading: () => <div className="h-[400px] rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] animate-pulse" />,
 });
 
-const STATUS_STYLES: Record<string, string> = {
-  ACTIVE: 'bg-[rgba(16,185,129,0.12)] text-[var(--success)]',
-  PAUSED: 'bg-[rgba(234,179,8,0.12)] text-[var(--warning)]',
-  COMPLETED: 'bg-[var(--surface-3)] text-[var(--text-3)]',
-  DRAFT: 'bg-[var(--surface-3)] text-[var(--text-3)]',
-};
 function citiesNoun(n: number, locale: string, t: (key: string) => string): string {
   if (locale === 'ru') {
     const mod10 = n % 10;
@@ -69,12 +61,11 @@ interface Props {
   cityBreakdown: { city: string; screens: number; ots: number }[];
   allCities: string[];
   availableTypes: string[];
-  filters: { city: string; type: string };
+  filters: { cities: string[]; types: string[] };
   heatmapEmbedUrl: string | null;
   reportsUrl: string | null;
   periodsWithData: { id: string; name: string }[];
-  selectedFrom: string | null;
-  selectedTo: string | null;
+  selectedPeriods: string[];
   creatives: CreativeView[];
 }
 
@@ -83,12 +74,13 @@ export function DashboardClient({
   budgetByType, totalBudgetFromScreens,
   planVsFactByCity, monthlyByCity, planVsFactByType,
   topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, availableTypes, filters,
-  heatmapEmbedUrl, reportsUrl, periodsWithData, selectedFrom, selectedTo, creatives,
+  heatmapEmbedUrl, reportsUrl, periodsWithData, selectedPeriods, creatives,
 }: Props) {
   const [monthlyExpanded, setMonthlyExpanded] = useState(false);
   const td = useTranslations('dashboard');
   const tStatus = useTranslations('campaignStatus');
   const tc = useTranslations('charts');
+  const tCreatives = useTranslations('creatives');
 
   const formattedPeriod = formatCampaignPeriod(
     new Date(campaign.periodStart),
@@ -107,104 +99,87 @@ export function DashboardClient({
     <>
       <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-      {/* Campaign Selector + Period Range Selector */}
-      {(campaigns.length > 1 || periodsWithData.length >= 2) && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {campaigns.length > 1 && (
-            <CampaignSelector campaigns={campaigns} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
-          )}
-          {periodsWithData.length >= 2 && (
-            <PeriodRangeSelector periods={periodsWithData} locale={locale} selectedFrom={selectedFrom} selectedTo={selectedTo} />
-          )}
-        </div>
-      )}
-
-      {/* Period chips */}
-      {periodsWithData.length >= 2 && (
-        <PeriodFilter periods={periodsWithData} locale={locale} selectedFrom={selectedFrom} selectedTo={selectedTo} />
-      )}
-
-      {/* Campaign Hero */}
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
-        <div className="flex flex-col gap-2">
-          <h1
-            className="text-[28px] font-medium leading-[1.1] tracking-tight sm:text-[40px]"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            {campaign.clientName}. {formattedPeriod}
-          </h1>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.04em] ${STATUS_STYLES[campaign.status]}`}>
-              {campaign.status === 'ACTIVE' && <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />}
-              {tStatus(campaign.status)}
-            </span>
+      {/* Top row: campaign selector + reports button */}
+      {(campaigns.length > 1 || reportsUrl) && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            {campaigns.length > 1 && (
+              <CampaignSelector campaigns={campaigns} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
+            )}
           </div>
+          {reportsUrl && (
+            <a
+              href={reportsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-primary-hover)] active:bg-[var(--brand-primary-active)]"
+            >
+              <FileText size={14} strokeWidth={1.75} />
+              {td('reports')}
+              <ExternalLink size={11} strokeWidth={1.75} className="opacity-80" />
+            </a>
+          )}
         </div>
-      </div>
-
-      {/* Filters + reports link */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <FilterBar cities={allCities} availableTypes={availableTypes} locale={locale} />
-        {reportsUrl && (
-          <a
-            href={reportsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3.5 py-2 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-primary-hover)] active:bg-[var(--brand-primary-active)] sm:w-auto sm:py-1.5 sm:text-[11px]"
-          >
-            <FileText size={14} strokeWidth={1.75} />
-            {td('reports')}
-            <ExternalLink size={11} strokeWidth={1.75} className="opacity-80" />
-          </a>
-        )}
-      </div>
-      {(filters.city || filters.type) && (
-        <p className="mb-4 text-xs text-[var(--text-3)]">
-          {td('showingLabel')} {filters.city || td('allCities')}, {filters.type || td('allTypes')} — {kpis.totalScreens} {td('screensSuffix')}
-        </p>
       )}
 
-      {/* Creatives — campaign media, sits between filters and KPIs */}
-      <CreativesCard creatives={creatives} />
+      {/* Campaign Hero — title, status, inline stats, creatives */}
+      <CampaignHero
+        eyebrow={td('campaignEyebrow')}
+        title={`${campaign.clientName}. ${formattedPeriod}`}
+        status={campaign.status}
+        statusLabel={tStatus(campaign.status)}
+        stats={[
+          {
+            value: String(kpis.cities),
+            label: citiesNoun(kpis.cities, locale, td),
+          },
+          {
+            value: String(kpis.totalScreens),
+            label: td('screens'),
+          },
+          {
+            value: kpis.formatBudget,
+            unit: 'UZS',
+            label: td('budgetWithFees'),
+          },
+        ]}
+        creatives={creatives}
+        creativesTitle={tCreatives('title')}
+        creativesSubtitle={tCreatives('subtitle')}
+      />
 
-      {/* KPI Cards — 3 visible cards (Performance disabled) */}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        {/* Geography */}
-        <KPICard
-          label={td('geography')}
-          value={String(kpis.cities)}
-          unit={citiesNoun(kpis.cities, locale, td)}
-          icon={<MapPin size={14} strokeWidth={1.5} />}
-          delay={0}
-        />
-        {/* Surfaces */}
-        <KPICard
-          label={td('screens')}
-          value={String(kpis.totalScreens)}
-          icon={<LayoutGrid size={14} strokeWidth={1.5} />}
-          delay={80}
-        />
-        {/* TODO: disabled per product decision 2026-04-20; restore if re-enabled
-        <KPICard
-          label="Выполнение"
-          value={completionPct !== null ? String(completionPct) : '—'}
-          unit={completionPct !== null ? '%' : undefined}
-          trend={{ label: completionTrend, direction: completionDir }}
-          icon={<Target size={14} strokeWidth={1.5} />}
-          delay={160}
-        />
-        */}
-        {/* Budget */}
-        <KPICard
-          label={td('budgetWithFees')}
-          value={kpis.formatBudget}
-          unit="UZS"
-          icon={<Banknote size={14} strokeWidth={1.5} />}
-          delay={160}
+      {/* Filter row — sits under the hero and contains period, type, city dropdowns */}
+      <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="text-[13px] font-medium text-[var(--text-3)]">
+          {td('filterLabel')}
+        </span>
+        <FilterBar
+          cities={allCities}
+          availableTypes={availableTypes}
+          periods={periodsWithData}
+          selectedPeriods={selectedPeriods}
+          locale={locale}
         />
       </div>
+      {(() => {
+        const periodNames = selectedPeriods
+          .map(id => periodsWithData.find(p => p.id === id)?.name)
+          .filter((n): n is string => !!n);
+        const parts: string[] = [];
+        if (periodNames.length > 0) parts.push(periodNames.join(', '));
+        if (filters.types.length > 0) parts.push(filters.types.join(', '));
+        if (filters.cities.length > 0) parts.push(filters.cities.join(', '));
+        const hasAny = parts.length > 0;
+        return (
+          <p className="mb-4 text-xs text-[var(--text-3)]">
+            {td('showingLabel')}{' '}
+            <span className="text-[var(--text-2)]">{hasAny ? parts.join(' · ') : td('showAllSummary')}</span>
+            {hasAny && <> — {kpis.totalScreens} {td('screensSuffix')}</>}
+          </p>
+        );
+      })()}
 
-      {/* Efficiency strip — CPM, avg OTS/screen, avg budget/screen, avg impressions/day */}
+      {/* Efficiency strip — accented metrics row (CPM, avg OTS, avg budget, avg impressions/day) */}
       <div className="mb-6">
         <EfficiencyStrip
           totalBudget={budgetForWidgets}

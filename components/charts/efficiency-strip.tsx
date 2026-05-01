@@ -89,25 +89,42 @@ export function EfficiencyStrip({
     : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5';
 
   return (
-    <div className={`grid gap-px overflow-hidden rounded-[var(--radius-lg)] bg-[var(--border)] outline outline-1 outline-[var(--border)] ${colClass}`}>
-      {cells.map((c, i) => (
-          <div key={i} className="bg-[var(--surface)] p-4 sm:p-5">
+    <div className="es-shell rounded-[var(--radius-xl)] bg-[var(--surface-2)] p-2 shadow-[var(--shadow-md)] sm:p-2.5">
+      <div className={`grid gap-px overflow-hidden rounded-[var(--radius-lg)] bg-[var(--border)] outline outline-1 outline-[var(--border)] ${colClass}`}>
+        {cells.map((c, i) => (
+          <div key={i} className="es-cell relative bg-[var(--surface)] p-4 sm:p-5">
+            <span className="es-accent" aria-hidden="true" />
             <div className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
               {c.label}
             </div>
             <div
-              className="mt-1 text-[20px] font-semibold leading-tight tracking-tight sm:text-[22px]"
+              className="mt-1.5 text-[24px] font-semibold leading-tight tracking-tight sm:text-[28px]"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               {c.value}
             </div>
             {c.sub && (
-              <div className="mt-0.5 text-[10px] text-[var(--text-4)]" style={{ fontFamily: 'var(--font-mono)' }}>
+              <div className="mt-1 text-[10px] text-[var(--text-4)]" style={{ fontFamily: 'var(--font-mono)' }}>
                 {c.sub}
               </div>
             )}
           </div>
         ))}
+      </div>
+      <style jsx>{`
+        .es-shell {
+          background-image: linear-gradient(180deg, var(--brand-primary-subtle), transparent 60%);
+        }
+        .es-accent {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, var(--brand-primary) 0%, transparent 70%);
+          opacity: 0.55;
+        }
+      `}</style>
     </div>
   );
 }

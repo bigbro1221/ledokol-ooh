@@ -2,6 +2,7 @@
   "common": {
     "appName": "OOH Dashboard",
     "loading": "Загрузка...",
+    "close": "Закрыть",
     "error": "Произошла ошибка",
     "save": "Сохранить",
     "saving": "Сохранение...",
@@ -193,7 +194,10 @@
     "cityOne": "город",
     "cityFew": "города",
     "cityMany": "городов",
-    "reports": "Отчёты"
+    "reports": "Отчёты",
+    "campaignEyebrow": "Рекламная кампания",
+    "filterLabel": "Фильтр",
+    "showAllSummary": "все"
   },
   "filters": {
     "allCities": "Все города",
@@ -201,7 +205,13 @@
     "reset": "Сбросить фильтры",
     "allPeriods": "Весь период",
     "from": "С",
-    "to": "по"
+    "to": "по",
+    "periodLabel": "Период",
+    "typeLabel": "Типы конструкций",
+    "cityLabel": "Город",
+    "allPeriodsShort": "За всё время",
+    "allTypesShort": "Все",
+    "allCitiesShort": "Все"
   },
   "charts": {
     "planTitle": "План и факт по типам",
