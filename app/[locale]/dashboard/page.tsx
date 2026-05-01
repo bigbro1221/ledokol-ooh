@@ -382,6 +382,7 @@ export default async function DashboardPage({
   return (
     <DashboardClient
       locale={locale}
+      userRole={session.user.role}
       campaigns={allCampaigns.map(c => ({
         id: c.id,
         name: c.name,

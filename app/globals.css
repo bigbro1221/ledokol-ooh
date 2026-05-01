@@ -48,6 +48,21 @@
     --tooltip-bg:     #091630;
     --tooltip-text:   #F5F7FC;
     --tooltip-border: #1C2845;
+
+    /* Efficiency strip — fixed dark palette, identical in both themes for now */
+    --es-card-bg:        #11141C;
+    --es-card-border:    rgba(255, 255, 255, 0.06);
+    --es-label:          #FFFFFF;
+    --es-sub:            #FFFFFF;
+    /* Value gradients: each goes left → right, fading from accent to muted.
+       background-clip: text + color: transparent renders the digits with the
+       gradient. */
+    --es-grad-default:   linear-gradient(90deg, #FFFFFF 0%, #9BF5FF 49%, #0C5DC5 100%);
+    --es-grad-warm:      linear-gradient(90deg, #FFFFFF 0%, #FFD08D 49%, #FF4747 100%);
+    --es-grad-cyan:      linear-gradient(90deg, #FFFFFF 0%, #5DD4F8 100%);
+    --es-grad-blue:      linear-gradient(90deg, #7DA8FF 0%, #4F5566 100%);
+    --es-grad-orange:    linear-gradient(90deg, #FFA56B 0%, #4F5566 100%);
+    --es-grad-green:     linear-gradient(90deg, #74D69E 0%, #4F5566 100%);
   }
 
   /* ─── DARK MODE ─── */
@@ -93,6 +108,18 @@
     --tooltip-bg: #FAFAF8;
     --tooltip-text: #1A1A1F;
     --tooltip-border: #E5E5E0;
+
+    /* Efficiency strip — identical to light for now (will diverge later) */
+    --es-card-bg:        #11141C;
+    --es-card-border:    rgba(255, 255, 255, 0.06);
+    --es-label:          #FFFFFF;
+    --es-sub:            #FFFFFF;
+    --es-grad-default:   linear-gradient(90deg, #FFFFFF 0%, #9BF5FF 49%, #0C5DC5 100%);
+    --es-grad-warm:      linear-gradient(90deg, #FFFFFF 0%, #FFD08D 49%, #FF4747 100%);
+    --es-grad-cyan:      linear-gradient(90deg, #FFFFFF 0%, #5DD4F8 100%);
+    --es-grad-blue:      linear-gradient(90deg, #7DA8FF 0%, #4F5566 100%);
+    --es-grad-orange:    linear-gradient(90deg, #FFA56B 0%, #4F5566 100%);
+    --es-grad-green:     linear-gradient(90deg, #74D69E 0%, #4F5566 100%);
   }
 
   /* ─── SHARED TOKENS ─── */

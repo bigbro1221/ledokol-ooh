@@ -1,13 +1,16 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 
-function fmt(n: number): string {
+type Gradient = 'default' | 'warm' | 'cyan' | 'blue' | 'orange' | 'green';
+
+function shortNumber(n: number): string {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
   if (!Number.isInteger(n)) return n.toFixed(0);
-  return n.toLocaleString('ru-RU');
+  return n.toString();
 }
 
 function computeAvgImpressionsPerDay(
@@ -47,6 +50,22 @@ interface Props {
   currency?: string;
 }
 
+function GradientText({ children, gradient }: { children: ReactNode; gradient: Gradient }) {
+  return (
+    <span
+      style={{
+        backgroundImage: `var(--es-grad-${gradient})`,
+        WebkitBackgroundClip: 'text',
+        backgroundClip: 'text',
+        color: 'transparent',
+        WebkitTextFillColor: 'transparent',
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function EfficiencyStrip({
   totalBudget, totalOtsPlan, totalOtsFact, totalScreens,
   periodStart, periodEnd, status,
@@ -69,14 +88,36 @@ export function EfficiencyStrip({
     totalOtsFact, totalOtsPlan, periodStart, periodEnd, status,
   );
 
-  const cells: { label: string; value: string; sub?: string }[] = [];
-  if (cpmPlan !== null) cells.push({ label: t('cpmPlan'), value: fmt(cpmPlan), sub: `${currency} ${t('cpmPlanUnit')}` });
-  if (cpmFact !== null) cells.push({ label: t('cpmFact'), value: fmt(cpmFact), sub: `${currency} ${t('cpmFactUnit')}` });
-  if (avgOtsPerScreen !== null) cells.push({ label: t('avgOts'), value: fmt(avgOtsPerScreen), sub: t('avgOtsUnit') });
-  if (avgBudgetPerScreen !== null) cells.push({ label: t('avgBudget'), value: fmt(avgBudgetPerScreen), sub: `${currency} ${t('avgBudgetUnit')}` });
+  type Cell = { label: string; value: string; gradient: Gradient; sub?: string };
+  const cells: Cell[] = [];
+  if (cpmPlan !== null) cells.push({
+    label: t('cpmPlan'),
+    value: shortNumber(cpmPlan),
+    gradient: 'default',
+    sub: `${currency} ${t('cpmPlanUnit')}`,
+  });
+  if (cpmFact !== null) cells.push({
+    label: t('cpmFact'),
+    value: shortNumber(cpmFact),
+    gradient: 'default',
+    sub: `${currency} ${t('cpmFactUnit')}`,
+  });
+  if (avgOtsPerScreen !== null) cells.push({
+    label: t('avgOts'),
+    value: shortNumber(avgOtsPerScreen),
+    gradient: 'warm',
+    sub: t('avgOtsUnit'),
+  });
+  if (avgBudgetPerScreen !== null) cells.push({
+    label: t('avgBudget'),
+    value: shortNumber(avgBudgetPerScreen),
+    gradient: 'default',
+    sub: `${currency} ${t('avgBudgetUnit')}`,
+  });
   if (avgImpressions !== null) cells.push({
     label: t('avgImpressionsShort'),
     value: avgImpressions.toLocaleString('ru-RU'),
+    gradient: 'default',
     sub: t('impressionsPerDayUnit'),
   });
 
@@ -89,42 +130,34 @@ export function EfficiencyStrip({
     : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5';
 
   return (
-    <div className="es-shell rounded-[var(--radius-xl)] bg-[var(--surface-2)] p-2 shadow-[var(--shadow-md)] sm:p-2.5">
-      <div className={`grid gap-px overflow-hidden rounded-[var(--radius-lg)] bg-[var(--border)] outline outline-1 outline-[var(--border)] ${colClass}`}>
-        {cells.map((c, i) => (
-          <div key={i} className="es-cell relative bg-[var(--surface)] p-4 sm:p-5">
-            <span className="es-accent" aria-hidden="true" />
-            <div className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
-              {c.label}
-            </div>
-            <div
-              className="mt-1.5 text-[24px] font-semibold leading-tight tracking-tight sm:text-[28px]"
-              style={{ fontVariantNumeric: 'tabular-nums' }}
-            >
-              {c.value}
-            </div>
-            {c.sub && (
-              <div className="mt-1 text-[10px] text-[var(--text-4)]" style={{ fontFamily: 'var(--font-mono)' }}>
-                {c.sub}
-              </div>
-            )}
+    <div className={`grid gap-2 ${colClass}`}>
+      {cells.map((c, i) => (
+        // Label and sub render plain white; only the numeric value gets the
+        // metric's gradient (warm on the middle Avg OTS card, blue elsewhere).
+        <div
+          key={i}
+          className="rounded-[14px] p-5 sm:p-6"
+          style={{
+            background: 'var(--es-card-bg)',
+            border: '1px solid var(--es-card-border)',
+          }}
+        >
+          <div className="text-[13px] font-normal" style={{ color: 'var(--es-label)' }}>
+            {c.label}
           </div>
-        ))}
-      </div>
-      <style jsx>{`
-        .es-shell {
-          background-image: linear-gradient(180deg, var(--brand-primary-subtle), transparent 60%);
-        }
-        .es-accent {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 2px;
-          background: linear-gradient(90deg, var(--brand-primary) 0%, transparent 70%);
-          opacity: 0.55;
-        }
-      `}</style>
+          <div
+            className="mt-3 text-[36px] font-semibold leading-none tracking-tight sm:text-[40px]"
+            style={{ fontVariantNumeric: 'tabular-nums' }}
+          >
+            <GradientText gradient={c.gradient}>{c.value}</GradientText>
+          </div>
+          {c.sub && (
+            <div className="mt-2 text-[12px]" style={{ color: 'var(--es-sub)' }}>
+              {c.sub}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

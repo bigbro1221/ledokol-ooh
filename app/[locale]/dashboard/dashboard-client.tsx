@@ -1,8 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronUp, FileText, ExternalLink } from 'lucide-react';
 // TODO: disabled per product decision 2026-04-20; restore if re-enabled
 // import { ImpressionsDonut } from '@/components/charts/impressions-donut';
 import { TopScreensBar } from '@/components/charts/top-screens-bar';
@@ -41,6 +42,7 @@ function citiesNoun(n: number, locale: string, t: (key: string) => string): stri
 
 interface Props {
   locale: string;
+  userRole: string;
   initialDateFormat: DateFormat;
   campaigns: { id: string; name: string; status: string; clientName: string; periodStart: string; periodEnd: string }[];
   selectedCampaignId: string;
@@ -70,12 +72,13 @@ interface Props {
 }
 
 export function DashboardClient({
-  locale, initialDateFormat, campaigns, selectedCampaignId, campaign, kpis,
+  locale, userRole, initialDateFormat, campaigns, selectedCampaignId, campaign, kpis,
   budgetByType, totalBudgetFromScreens,
   planVsFactByCity, monthlyByCity, planVsFactByType,
   topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, availableTypes, filters,
   heatmapEmbedUrl, reportsUrl, periodsWithData, selectedPeriods, creatives,
 }: Props) {
+  const isClient = userRole === 'CLIENT';
   const [monthlyExpanded, setMonthlyExpanded] = useState(false);
   const td = useTranslations('dashboard');
   const tStatus = useTranslations('campaignStatus');
@@ -99,12 +102,22 @@ export function DashboardClient({
     <>
       <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-      {/* Top row: campaign selector + reports button */}
-      {(campaigns.length > 1 || reportsUrl) && (
+      {/* Top row: back-to-list link (CLIENT) or campaign selector (ADMIN) + reports button */}
+      {(isClient || campaigns.length > 1 || reportsUrl) && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            {campaigns.length > 1 && (
-              <CampaignSelector campaigns={campaigns} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
+            {isClient ? (
+              <Link
+                href={`/${locale}/dashboard`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-hi)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+              >
+                <ChevronLeft size={14} strokeWidth={1.75} />
+                {td('allCampaigns')}
+              </Link>
+            ) : (
+              campaigns.length > 1 && (
+                <CampaignSelector campaigns={campaigns} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
+              )
             )}
           </div>
           {reportsUrl && (
