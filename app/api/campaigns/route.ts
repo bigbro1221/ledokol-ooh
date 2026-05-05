@@ -13,6 +13,9 @@ const CreateCampaignSchema = z.object({
   yandexMapUrl: z.string().url().optional().nullable(),
   reportsUrl: z.string().url().optional().nullable(),
   acRate: z.number().min(0).max(1).optional().default(0),
+  mediaType: z.enum(['SCREENS', 'OTHER_CARRIERS']).optional().default('SCREENS'),
+  additionalCurrency: z.string().trim().min(1).optional().nullable(),
+  additionalAmount: z.number().nullable().optional(),
 });
 
 export async function GET() {
@@ -40,7 +43,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
     }
 
-    const campaign = await prisma.campaign.create({ data: parsed.data });
+    const { additionalAmount, ...rest } = parsed.data;
+    const campaign = await prisma.campaign.create({
+      data: {
+        ...rest,
+        ...(additionalAmount != null && { additionalAmount: BigInt(Math.round(additionalAmount)) }),
+      },
+    });
     return NextResponse.json(campaign, { status: 201 });
   } catch (err) {
     console.error('POST /api/campaigns failed:', err);

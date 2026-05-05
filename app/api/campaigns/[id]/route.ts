@@ -16,6 +16,9 @@ const UpdateCampaignSchema = z.object({
   productionCost: z.number().nullable().optional(),
   acRate: z.number().min(0).max(1).optional(),
   totalFinal: z.number().nullable().optional(),
+  mediaType: z.enum(['SCREENS', 'OTHER_CARRIERS']).optional(),
+  additionalCurrency: z.string().trim().min(1).nullable().optional(),
+  additionalAmount: z.number().nullable().optional(),
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -31,7 +34,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     },
   });
   if (!campaign) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json(campaign);
+  return NextResponse.json({
+    ...campaign,
+    totalBudgetUzs: campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : null,
+    totalBudgetRub: campaign.totalBudgetRub ? Number(campaign.totalBudgetRub) : null,
+    productionCost: campaign.productionCost ? Number(campaign.productionCost) : null,
+    totalFinal: campaign.totalFinal ? Number(campaign.totalFinal) : null,
+    additionalAmount: campaign.additionalAmount ? Number(campaign.additionalAmount) : null,
+  });
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -45,7 +55,39 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { totalBudgetUzs, productionCost, totalFinal, acRate, ...rest } = parsed.data;
+  if (parsed.data.mediaType) {
+    const existing = await prisma.campaign.findUnique({
+      where: { id },
+      select: {
+        mediaType: true,
+        totalBudgetUzs: true,
+        productionCost: true,
+        totalFinal: true,
+        additionalAmount: true,
+        _count: { select: { periods: true } },
+      },
+    });
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    if (parsed.data.mediaType !== existing.mediaType) {
+      const hasFinancials =
+        existing.totalBudgetUzs != null ||
+        existing.productionCost != null ||
+        existing.totalFinal != null ||
+        existing.additionalAmount != null;
+      if (existing._count.periods > 0 || hasFinancials) {
+        return NextResponse.json(
+          {
+            error: 'mediaType_locked',
+            message: 'Очистите периоды и финансовые данные перед сменой типа кампании',
+          },
+          { status: 409 },
+        );
+      }
+    }
+  }
+
+  const { totalBudgetUzs, productionCost, totalFinal, acRate, additionalAmount, ...rest } = parsed.data;
 
   const campaign = await prisma.campaign.update({
     where: { id },
@@ -55,6 +97,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       ...(totalBudgetUzs !== undefined && { totalBudgetUzs: totalBudgetUzs ? BigInt(Math.round(totalBudgetUzs)) : null }),
       ...(productionCost !== undefined && { productionCost: productionCost ? BigInt(Math.round(productionCost)) : null }),
       ...(totalFinal !== undefined && { totalFinal: totalFinal ? BigInt(Math.round(totalFinal)) : null }),
+      ...(additionalAmount !== undefined && { additionalAmount: additionalAmount != null ? BigInt(Math.round(additionalAmount)) : null }),
     },
   });
 
@@ -64,6 +107,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     totalBudgetRub: campaign.totalBudgetRub ? Number(campaign.totalBudgetRub) : null,
     productionCost: campaign.productionCost ? Number(campaign.productionCost) : null,
     totalFinal: campaign.totalFinal ? Number(campaign.totalFinal) : null,
+    additionalAmount: campaign.additionalAmount ? Number(campaign.additionalAmount) : null,
   });
 }
 
