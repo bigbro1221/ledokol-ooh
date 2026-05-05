@@ -7,11 +7,61 @@ import { matchPinsToRows, getTopSuggestions } from '@/lib/parser/matcher';
 import { requireAdmin } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 
+import type { MediaType } from '@prisma/client';
+
 type CampaignContext = {
   id: string;
-  mediaType: 'SCREENS' | 'OTHER_CARRIERS';
+  mediaType: MediaType;
   yandexMapUrl: string | null;
 };
+
+type Pin = { lat: number; lng: number; city: string; label: string };
+type PinSuggestion = { lat: number; lng: number; label: string; score: number };
+type Geocoded<T> = T & { lat?: number; lng?: number };
+
+/**
+ * Geocode a list of screens against a Yandex map URL. Mutates input array
+ * with lat/lng for matches; returns parallel screenGeo metadata. When the
+ * URL is empty/null, returns empty geocoding result.
+ */
+async function geocodeScreens<T extends { address: string }>(
+  screens: T[],
+  yandexMapUrl: string | null,
+): Promise<{
+  screens: Geocoded<T>[];
+  screenGeo: { matched: boolean; suggestions: PinSuggestion[] }[];
+  matchedCount: number;
+  unmatchedPins: Pin[];
+}> {
+  const screenGeo: { matched: boolean; suggestions: PinSuggestion[] }[] = screens.map(() => ({
+    matched: false,
+    suggestions: [],
+  }));
+  if (!yandexMapUrl) {
+    return { screens: screens as Geocoded<T>[], screenGeo, matchedCount: 0, unmatchedPins: [] };
+  }
+
+  const allPins = await fetchYandexPins(yandexMapUrl);
+  const { matched, unmatched } = matchPinsToRows(allPins, screens.map(s => s.address));
+  const out = screens as Geocoded<T>[];
+
+  for (let i = 0; i < out.length; i++) {
+    const coords = matched.get(out[i].address);
+    if (coords) {
+      out[i].lat = coords.lat;
+      out[i].lng = coords.lng;
+      screenGeo[i].matched = true;
+    } else {
+      screenGeo[i].suggestions = getTopSuggestions(out[i].address, allPins, 5).map(p => ({
+        lat: p.lat,
+        lng: p.lng,
+        label: p.label,
+        score: Math.round(p.score * 100),
+      }));
+    }
+  }
+  return { screens: out, screenGeo, matchedCount: matched.size, unmatchedPins: unmatched };
+}
 
 export async function POST(request: Request) {
   const auth = await requireAdmin();
@@ -77,9 +127,9 @@ export async function POST(request: Request) {
   }
 
   if (campaign.mediaType === 'OTHER_CARRIERS') {
-    return await handleMultiPeriod(buffer, campaign, key);
+    return handleMultiPeriod(buffer, campaign, key);
   }
-  return await handleScreensMode(buffer, campaign, key, periodId);
+  return handleScreensMode(buffer, campaign, key, periodId);
 }
 
 async function handleScreensMode(
@@ -96,43 +146,10 @@ async function handleScreensMode(
     result.campaign.yandexMapUrl = campaign.yandexMapUrl;
   }
 
-  // Fetch Yandex pins and match if URL present
-  let unmatchedPins: { lat: number; lng: number; city: string; label: string }[] = [];
-  let allPins: { lat: number; lng: number; city: string; label: string }[] = [];
-  let matchedCount = 0;
-
-  // Per-screen geocoding info: index → { matched: bool, suggestions: top-5 pins }
-  type PinSuggestion = { lat: number; lng: number; label: string; score: number };
-  const screenGeo: { matched: boolean; suggestions: PinSuggestion[] }[] = result.screens.map(() => ({
-    matched: false,
-    suggestions: [],
-  }));
-
-  if (result.campaign.yandexMapUrl) {
-    allPins = await fetchYandexPins(result.campaign.yandexMapUrl);
-    const addresses = result.screens.map(s => s.address);
-    const { matched, unmatched } = matchPinsToRows(allPins, addresses);
-    unmatchedPins = unmatched;
-    matchedCount = matched.size;
-
-    for (let i = 0; i < result.screens.length; i++) {
-      const screen = result.screens[i];
-      const coords = matched.get(screen.address);
-      if (coords) {
-        (screen as Record<string, unknown>).lat = coords.lat;
-        (screen as Record<string, unknown>).lng = coords.lng;
-        screenGeo[i].matched = true;
-      } else {
-        // Provide top suggestions from all available pins (not just unmatched)
-        screenGeo[i].suggestions = getTopSuggestions(screen.address, allPins, 5).map(p => ({
-          lat: p.lat,
-          lng: p.lng,
-          label: p.label,
-          score: Math.round(p.score * 100),
-        }));
-      }
-    }
-  }
+  const { screenGeo, matchedCount, unmatchedPins } = await geocodeScreens(
+    result.screens,
+    result.campaign.yandexMapUrl,
+  );
 
   return NextResponse.json({
     mode: 'screens' as const,
@@ -193,38 +210,7 @@ async function handleMultiPeriod(
 
   // Yandex map: this template doesn't surface a URL, so fall back to the campaign's saved value.
   const yandexMapUrl = campaign.yandexMapUrl;
-
-  type PinSuggestion = { lat: number; lng: number; label: string; score: number };
-  const screenGeo: { matched: boolean; suggestions: PinSuggestion[] }[] = screens.map(() => ({
-    matched: false,
-    suggestions: [],
-  }));
-  let unmatchedPins: { lat: number; lng: number; city: string; label: string }[] = [];
-  let matchedCount = 0;
-
-  if (yandexMapUrl) {
-    const allPins = await fetchYandexPins(yandexMapUrl);
-    const addresses = screens.map(s => s.address);
-    const { matched, unmatched } = matchPinsToRows(allPins, addresses);
-    unmatchedPins = unmatched;
-    matchedCount = matched.size;
-
-    for (let i = 0; i < screens.length; i++) {
-      const coords = matched.get(screens[i].address);
-      if (coords) {
-        (screens[i] as Record<string, unknown>).lat = coords.lat;
-        (screens[i] as Record<string, unknown>).lng = coords.lng;
-        screenGeo[i].matched = true;
-      } else {
-        screenGeo[i].suggestions = getTopSuggestions(screens[i].address, allPins, 5).map(p => ({
-          lat: p.lat,
-          lng: p.lng,
-          label: p.label,
-          score: Math.round(p.score * 100),
-        }));
-      }
-    }
-  }
+  const { screenGeo, matchedCount, unmatchedPins } = await geocodeScreens(screens, yandexMapUrl);
 
   // Serialize rows: Date → ISO string. Inner `screen` is included verbatim (already JSON-safe).
   const rowsSerialized = result.rows.map(r => ({
