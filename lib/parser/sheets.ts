@@ -48,40 +48,57 @@ export function isTotalSheet(name: string): boolean {
   return /^total$/i.test(name.trim());
 }
 
-/**
- * Detect ScreenType from a column value in the "Тип Внешней Рекламы" column.
- * Used for period-format sheets where the type comes from the data, not the sheet name.
- */
-export function typeFromColumnValue(val: string): ScreenType | null {
-  const v = val.trim().toLowerCase();
-  if (!v) return null;
-
-  if (v.includes('led') || v === 'экран' || v === 'screen' || v.includes('digital')) return 'LED';
-  if (v.includes('indoor') || v.includes('индор')) return 'LED'; // no INDOOR type, map to LED
-  if (v.includes('стат') || v.includes('static') || v.includes('billboard') || v.includes('билборд')) return 'STATIC';
-  if (v.includes('остановк') || v.includes('stop')) return 'STOP';
-  if (v.includes('аэропорт') || v.includes('airport')) return 'AIRPORT';
-  if (v.includes('автобус') || v.includes('bus') || v.includes('транспорт')) return 'BUS';
-  if (v.includes('метро') || v.includes('metro') || v.includes('монитор')) return 'STOP'; // metro → STOP
-  return null;
-}
+// Shared alias table for screen-type detection from the "Тип Внешней Рекламы" column.
+// Order matters: more-specific matches must come before broader ones (e.g. "брендмауэр"
+// must match before any "стат" rule, which is why STATIC sits below BRANDMAUER below).
+// Each entry: { code, patterns[] } where any matching pattern resolves to that code.
+const TYPE_CODE_ALIASES: { code: string; patterns: RegExp[] }[] = [
+  { code: 'BRANDMAUER', patterns: [/брендмауэр|брендмаур|brandmauer/] },
+  { code: 'ROOF',       patterns: [/крыш/] },
+  { code: 'CINEMA',     patterns: [/кинотеатр|cinema/] },
+  { code: 'METRO',      patterns: [/метро|metro/] },
+  { code: 'STOP',       patterns: [/остановк|^stop\b|\bstop\b/] },
+  { code: 'AIRPORT',    patterns: [/аэропорт|airport/] },
+  { code: 'BUS',        patterns: [/автобус|\bbus\b|транспорт/] },
+  { code: 'LED',        patterns: [/лед|led|^экран$|^screen$|digital|indoor|индор|монитор/] },
+  { code: 'STATIC',     patterns: [/стат|static|billboard|билборд/] },
+];
 
 /**
  * Detect a canonical type code (string) from a column value.
- * Includes the new types (ROOF, BRANDMAUER, CINEMA, METRO) which are not in the
- * legacy `ScreenType` enum. Used by the multi-period parser branch.
+ * Returns one of: LED, STATIC, STOP, AIRPORT, BUS, ROOF, BRANDMAUER, CINEMA, METRO.
+ * Used by the multi-period parser branch and (transitively) by typeFromColumnValue.
  */
 export function typeCodeFromColumnValue(s: string): string | null {
   const v = s.trim().toLowerCase();
   if (!v) return null;
-  if (/лед|led/.test(v)) return 'LED';
-  if (/остановк/.test(v)) return 'STOP';
-  if (/статик/.test(v)) return 'STATIC';
-  if (/аэропорт/.test(v)) return 'AIRPORT';
-  if (/автобус/.test(v)) return 'BUS';
-  if (/крыш/.test(v)) return 'ROOF';
-  if (/брендмауэр|брендмаур|brandmauer/.test(v)) return 'BRANDMAUER';
-  if (/кинотеатр|cinema/.test(v)) return 'CINEMA';
-  if (/метро|metro/.test(v)) return 'METRO';
+  for (const { code, patterns } of TYPE_CODE_ALIASES) {
+    if (patterns.some(p => p.test(v))) return code;
+  }
   return null;
+}
+
+// Map canonical codes to the legacy `ScreenType` enum. Codes that don't have a
+// direct enum value (ROOF, BRANDMAUER, CINEMA) fall back to STATIC; METRO maps
+// to STOP to preserve previous behavior. Removed in Task 13 alongside the enum.
+const LEGACY_ENUM_BY_CODE: Record<string, ScreenType> = {
+  LED: 'LED',
+  STATIC: 'STATIC',
+  STOP: 'STOP',
+  AIRPORT: 'AIRPORT',
+  BUS: 'BUS',
+  ROOF: 'STATIC',
+  BRANDMAUER: 'STATIC',
+  CINEMA: 'STATIC',
+  METRO: 'STOP',
+};
+
+/**
+ * Detect ScreenType from a column value. Used by the legacy single-period parser
+ * for sheets where the type comes from the data, not the sheet name. Delegates to
+ * typeCodeFromColumnValue so both resolvers share a single alias table.
+ */
+export function typeFromColumnValue(val: string): ScreenType | null {
+  const code = typeCodeFromColumnValue(val);
+  return code ? LEGACY_ENUM_BY_CODE[code] : null;
 }
