@@ -14,6 +14,12 @@
 
 ---
 
+## Post-Task-1 amendment
+
+Prisma rejects a model and an enum sharing a name within the same schema, so the reference model is named **`ScreenTypeRef`** (not `ScreenType`). The Prisma client property is **`prisma.screenTypeRef`** (camelCase from PascalCase). Any later task that says `ScreenType`/`prisma.screenType` in its snippets refers to this model. The Postgres relation is also `"ScreenTypeRef"` until Task 13 renames the model after the legacy enum is dropped.
+
+---
+
 ## Pre-flight context
 
 - Schema: [prisma/schema.prisma](../../../prisma/schema.prisma)
