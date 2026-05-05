@@ -91,7 +91,6 @@ function parseScreenSheet(
     if (resolution === 'х' || resolution === 'x') resolution = null;
 
     const rawRow = {
-      type: screenType,
       typeCode: screenType,
       city: city || 'Ташкент',
       address: address || `${sheetName} — строка ${r + 1}`,

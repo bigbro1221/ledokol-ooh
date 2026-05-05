@@ -66,16 +66,9 @@ export function parseMultiPeriod(buffer: Buffer): MultiPeriodParseResult {
     const size = colMap.size !== undefined ? String(row[colMap.size] || '').trim() || null : null;
     const resolution = colMap.resolution !== undefined ? String(row[colMap.resolution] || '').trim() || null : null;
 
-    // TRANSITIONAL — Task 6 will:
-    //   1) drop `type` from ScreenRowSchema entirely
-    //   2) make confirm/route.ts derive the legacy enum via LEGACY_ENUM_BY_CODE[typeCode]
-    // Until then, every multi-period row emits STATIC for the legacy `type` regardless
-    // of its real category (so a ROOF/BRANDMAUER/CINEMA/METRO row LOOKS like STATIC in
-    // the parsed payload). This is fine because the parsed payload never reaches the DB
-    // — the confirm route reads typeCode and writes the FK. typeCode is the canonical
-    // field; do NOT consume `type` from multi-period output.
+    // The parser does not write the legacy `Screen.type` enum — that's derived
+    // server-side in the confirm route from `typeCode` via LEGACY_ENUM_BY_CODE.
     const screen = {
-      type: 'STATIC' as const,
       typeCode,
       city: city || 'Ташкент',
       address: address || `${sheetName} — строка ${r + 1}`,

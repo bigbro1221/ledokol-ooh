@@ -81,7 +81,7 @@ export function typeCodeFromColumnValue(s: string): string | null {
 // Map canonical codes to the legacy `ScreenType` enum. Codes that don't have a
 // direct enum value (ROOF, BRANDMAUER, CINEMA) fall back to STATIC; METRO maps
 // to STOP to preserve previous behavior. Removed in Task 13 alongside the enum.
-const LEGACY_ENUM_BY_CODE: Record<string, ScreenType> = {
+export const LEGACY_ENUM_BY_CODE: Record<string, ScreenType> = {
   LED: 'LED',
   STATIC: 'STATIC',
   STOP: 'STOP',

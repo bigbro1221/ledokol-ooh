@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     summary: {
       totalScreens: result.screens.length,
       byType: result.screens.reduce((acc, s) => {
-        acc[s.type] = (acc[s.type] || 0) + 1;
+        acc[s.typeCode] = (acc[s.typeCode] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
     },

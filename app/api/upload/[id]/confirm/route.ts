@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import type { ScreenType } from '@prisma/client';
 import { requireAdmin } from '@/lib/api-auth';
+import { LEGACY_ENUM_BY_CODE } from '@/lib/parser/sheets';
 
 interface ScreenData {
-  type: ScreenType;
+  typeCode: string;
   city: string;
   address: string;
   size?: string | null;
@@ -52,6 +52,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   try {
     await prisma.$transaction(async (tx) => {
+      // Resolve typeCode → typeId once for all rows in this payload.
+      const codes = Array.from(new Set(body.screens.map(s => s.typeCode)));
+      const types = await tx.screenTypeRef.findMany({ where: { code: { in: codes } } });
+      const typeIdByCode = new Map(types.map(t => [t.code, t.id]));
+
       // Delete existing metrics + pricing for this period slot before re-inserting.
       // Screens (physical) are preserved and reused across uploads.
       if (body.periodId) {
@@ -77,7 +82,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           create: {
             campaignId,
             externalId: s.externalId || null,
-            type: s.type,
+            type: LEGACY_ENUM_BY_CODE[s.typeCode] ?? 'STATIC',
+            typeId: typeIdByCode.get(s.typeCode) ?? null,
             city: s.city,
             address: s.address,
             size: s.size || null,
@@ -89,7 +95,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           },
           update: {
             externalId: s.externalId || null,
-            type: s.type,
+            type: LEGACY_ENUM_BY_CODE[s.typeCode] ?? 'STATIC',
+            typeId: typeIdByCode.get(s.typeCode) ?? null,
             size: s.size || null,
             resolution: s.resolution || null,
             impressionsPerDay: s.impressionsPerDay ? Math.round(s.impressionsPerDay) : null,

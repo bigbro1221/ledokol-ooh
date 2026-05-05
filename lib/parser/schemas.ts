@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 export const ScreenRowSchema = z.object({
-  type: z.enum(['LED', 'STATIC', 'STOP', 'AIRPORT', 'BUS']),
-  // Transitional canonical string code; in Task 6 it replaces `type` entirely.
-  typeCode: z.string().min(1).nullable(),
+  // Canonical screen-type code (LED/STATIC/STOP/AIRPORT/BUS/ROOF/BRANDMAUER/CINEMA/METRO).
+  // The legacy `Screen.type` enum is derived in the confirm route via LEGACY_ENUM_BY_CODE.
+  typeCode: z.string().min(1),
   city: z.string().min(1, 'City is required'),
   address: z.string().min(1, 'Address is required'),
   size: z.string().nullable(),

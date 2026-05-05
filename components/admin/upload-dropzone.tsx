@@ -17,7 +17,7 @@ interface ScreenGeoInfo {
 }
 
 interface ScreenRow {
-  type: string;
+  typeCode: string;
   city: string;
   address: string;
   size?: string | null;
@@ -58,6 +58,10 @@ const TYPE_COLORS: Record<string, string> = {
   STOP: 'bg-emerald-500/20 text-emerald-400',
   AIRPORT: 'bg-sky-500/20 text-sky-400',
   BUS: 'bg-orange-500/20 text-orange-400',
+  ROOF: 'bg-amber-500/20 text-amber-400',
+  BRANDMAUER: 'bg-rose-500/20 text-rose-400',
+  CINEMA: 'bg-fuchsia-500/20 text-fuchsia-400',
+  METRO: 'bg-red-500/20 text-red-400',
 };
 
 const pct = (v: number | null | undefined) =>
@@ -373,8 +377,8 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
                         >
                           <td className="px-3 py-1.5 text-[var(--text-3)]">{i + 1}</td>
                           <td className="px-3 py-1.5">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.type] || 'bg-gray-500/20 text-gray-400'}`}>
-                              {typeLabel(screen.type)}
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.typeCode] || 'bg-gray-500/20 text-gray-400'}`}>
+                              {typeLabel(screen.typeCode)}
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.city}</td>
