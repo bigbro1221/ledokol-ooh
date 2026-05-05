@@ -39,8 +39,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   const byType: Record<string, number> = {};
   for (const s of campaign.screens) {
-    const code = s.screenType?.code ?? 'UNKNOWN';
-    byType[code] = (byType[code] || 0) + 1;
+    byType[s.screenType.code] = (byType[s.screenType.code] || 0) + 1;
   }
 
   const totalScreens = campaign.screens.length;

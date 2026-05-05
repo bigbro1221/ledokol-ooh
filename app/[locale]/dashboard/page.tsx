@@ -256,7 +256,7 @@ export default async function DashboardPage({
 
   const byTypeMap: Record<string, { plan: number; fact: number; budget: number; screens: number }> = {};
   for (const s of campaign.screens) {
-    const key = s.screenType?.code ?? 'UNKNOWN';
+    const key = s.screenType.code;
     if (!byTypeMap[key]) byTypeMap[key] = { plan: 0, fact: 0, budget: 0, screens: 0 };
     byTypeMap[key].plan   += filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0);
     byTypeMap[key].fact   += filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0);
@@ -332,7 +332,7 @@ export default async function DashboardPage({
       return {
         id: s.id,
         externalId: s.externalId,
-        type: s.screenType?.code ?? 'UNKNOWN',
+        type: s.screenType.code,
         city: s.city.trim(),
         address: s.address,
         size: s.size,
@@ -360,7 +360,7 @@ export default async function DashboardPage({
       id: s.id,
       lat: s.lat!,
       lng: s.lng!,
-      type: s.screenType?.code ?? 'UNKNOWN',
+      type: s.screenType.code,
       address: s.address,
       city: s.city.trim(),
       size: s.size,
@@ -412,7 +412,7 @@ export default async function DashboardPage({
       mapScreens={mapScreens}
       cityBreakdown={cityBreakdown}
       allCities={allCities.map(c => c.city.trim())}
-      availableTypes={Array.from(new Set(campaign.screens.map(s => s.screenType?.code).filter((c): c is string => !!c)))}
+      availableTypes={Array.from(new Set(campaign.screens.map(s => s.screenType.code)))}
       filters={{ cities: cityValues, types: typeValues }}
       heatmapEmbedUrl={heatmapEmbedUrl}
       reportsUrl={campaign.reportsUrl}

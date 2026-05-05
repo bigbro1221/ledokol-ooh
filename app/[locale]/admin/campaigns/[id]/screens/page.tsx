@@ -68,7 +68,7 @@ export default async function CampaignScreensPage({
     return {
       id: s.id,
       externalId: s.externalId,
-      type: s.screenType?.code ?? 'UNKNOWN',
+      type: s.screenType.code,
       city: s.city.trim(),
       address: s.address,
       size: s.size,
