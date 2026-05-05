@@ -84,6 +84,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
   if (!campaign) return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
 
+  // Pre-flight period existence check for screens mode (preserves the previous 404 contract).
+  if (mode !== 'multi-period') {
+    const screensBody = body as ScreensModeBody;
+    if (screensBody.periodId) {
+      const period = await prisma.campaignPeriod.findFirst({
+        where: { id: screensBody.periodId, campaignId },
+      });
+      if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 });
+    }
+  }
+
   try {
     if (mode === 'multi-period') {
       await handleMultiPeriodConfirm(campaignId, body as MultiPeriodBody);
@@ -116,15 +127,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 }
 
 async function handleScreensConfirm(campaignId: string, body: ScreensModeBody) {
-  if (body.periodId) {
-    const period = await prisma.campaignPeriod.findFirst({
-      where: { id: body.periodId, campaignId },
-    });
-    if (!period) {
-      throw new Error('Period not found');
-    }
-  }
-
+  // Period existence is pre-checked in the main handler so it can return 404 cleanly.
   await prisma.$transaction(async (tx) => {
     // Resolve typeCode → typeId once for all rows in this payload.
     const codes = Array.from(new Set(body.screens.map((s) => s.typeCode)));
