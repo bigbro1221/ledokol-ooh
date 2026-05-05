@@ -24,14 +24,6 @@ enum Language {
   UZ
 }
 
-enum ScreenType {
-  LED
-  STATIC
-  STOP
-  AIRPORT
-  BUS
-}
-
 enum CampaignStatus {
   ACTIVE
   PAUSED
@@ -134,7 +126,6 @@ model Campaign {
   heatmapUrl     String?
   reportsUrl     String?
   totalBudgetUzs BigInt?
-  totalBudgetRub BigInt?
   productionCost BigInt?
   acRate         Decimal  @default("0") @db.Decimal(5, 4)
   totalFinal     BigInt?
@@ -191,11 +182,9 @@ model CampaignPeriod {
   @@index([campaignId])
 }
 
-// Reference table for screen types. Named ScreenTypeRef (rather than ScreenType)
-// to avoid a name collision with the legacy `enum ScreenType`. The enum is
-// kept until Task 13 of the other-carriers-template plan, after which this
-// model may be renamed to ScreenType. The Postgres relation is "ScreenTypeRef"
-// until that rename — see prisma/migrations/manual/2026-05-05-screentype-table.sql.
+// Reference table for screen types. Originally named ScreenTypeRef to avoid a
+// collision with the now-removed `enum ScreenType`. The model name is kept as
+// ScreenTypeRef so existing FKs (Screen.typeId) continue to resolve.
 model ScreenTypeRef {
   id        String   @id @default(uuid())
   code      String   @unique // e.g. "LED", "ROOF", "BRANDMAUER"
@@ -215,9 +204,8 @@ model Screen {
   campaignId        String
   campaign          Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   externalId        String?
-  type              ScreenType
-  typeId            String?
-  screenType        ScreenTypeRef?  @relation(fields: [typeId], references: [id])
+  typeId            String
+  screenType        ScreenTypeRef   @relation(fields: [typeId], references: [id])
   city              String
   address           String
   lat               Float?
@@ -235,7 +223,6 @@ model Screen {
   @@unique([campaignId, city, address])
   @@index([campaignId])
   @@index([city])
-  @@index([type])
   @@index([typeId])
 }
 

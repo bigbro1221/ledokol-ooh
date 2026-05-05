@@ -51,7 +51,7 @@ interface ScreensModePreview {
   campaignId: string;
   periodId: string | null;
   minioKey: string;
-  campaign: { clientName: string; yandexMapUrl: string | null; totalBudgetUzs: number | null; totalBudgetRub: number | null };
+  campaign: { clientName: string; yandexMapUrl: string | null; totalBudgetUzs: number | null };
   screens: ScreenRow[];
   screenGeo: ScreenGeoInfo[];
   errors: { sheet: string; row: number; field: string; message: string }[];
@@ -272,7 +272,6 @@ export function UploadDropzone({
           minioKey: preview.minioKey,
           yandexMapUrl: preview.campaign.yandexMapUrl,
           totalBudgetUzs: preview.campaign.totalBudgetUzs,
-          totalBudgetRub: preview.campaign.totalBudgetRub,
         };
 
     const res = await fetch(`/api/upload/${campaignId}/confirm`, {

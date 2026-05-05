@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { detectSheetType, isPeriodSheet, isTotalSheet, typeFromColumnValue } from './sheets';
+import { detectSheetType, isPeriodSheet, isTotalSheet, typeCodeFromColumnValue } from './sheets';
 import { findHeaderRow, buildColumnMap, buildPlanFactMap } from './columns';
 import { ScreenRowSchema, type ParseResult, type ScreenRow, type ParseError, type ParseWarning, type CampaignData } from './schemas';
 
@@ -21,7 +21,6 @@ function parseTotalSheet(sheet: XLSX.WorkSheet): CampaignData {
   let project: string | null = null;
   let yandexMapUrl: string | null = null;
   let totalBudgetUzs: number | null = null;
-  let totalBudgetRub: number | null = null;
 
   if (data[1]) clientName = String((data[1] as unknown[])[3] || '').trim();
   if (data[2]) project = String((data[2] as unknown[])[3] || '').trim() || null;
@@ -39,16 +38,15 @@ function parseTotalSheet(sheet: XLSX.WorkSheet): CampaignData {
   if (data[10]) {
     const row = data[10] as unknown[];
     totalBudgetUzs = parseNum(row[11]);
-    totalBudgetRub = parseNum(row[12]);
   }
 
-  return { clientName, project, yandexMapUrl, totalBudgetUzs, totalBudgetRub };
+  return { clientName, project, yandexMapUrl, totalBudgetUzs };
 }
 
 function parseScreenSheet(
   sheetName: string,
   sheet: XLSX.WorkSheet,
-  fixedType: import('@prisma/client').ScreenType | null,
+  fixedType: string | null,
   errors: ParseError[],
   warnings: ParseWarning[],
 ): ScreenRow[] {
@@ -76,9 +74,9 @@ function parseScreenSheet(
     if (firstCol.includes('итого') || firstCol.includes('total') || firstCol.includes('ledokol')) continue;
 
     // For period sheets, derive type from the type column; otherwise use the fixed sheet type
-    let screenType: import('@prisma/client').ScreenType | null = fixedType;
+    let screenType: string | null = fixedType;
     if (!screenType && colMap.type !== undefined) {
-      screenType = typeFromColumnValue(String(row[colMap.type] || ''));
+      screenType = typeCodeFromColumnValue(String(row[colMap.type] || ''));
     }
     if (!screenType) {
       // Skip rows where we can't determine type
@@ -138,7 +136,6 @@ export function parseMediaPlan(buffer: Buffer): ParseResult {
     project: null,
     yandexMapUrl: null,
     totalBudgetUzs: null,
-    totalBudgetRub: null,
   };
 
   // Parse Total sheet

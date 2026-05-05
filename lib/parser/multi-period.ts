@@ -66,8 +66,7 @@ export function parseMultiPeriod(buffer: Buffer): MultiPeriodParseResult {
     const size = colMap.size !== undefined ? String(row[colMap.size] || '').trim() || null : null;
     const resolution = colMap.resolution !== undefined ? String(row[colMap.resolution] || '').trim() || null : null;
 
-    // The parser does not write the legacy `Screen.type` enum — that's derived
-    // server-side in the confirm route from `typeCode` via LEGACY_ENUM_BY_CODE.
+    // The legacy `Screen.type` enum has been removed; the parser only writes `typeCode`.
     const screen = {
       typeCode,
       city: city || 'Ташкент',
@@ -107,5 +106,5 @@ export function parseMultiPeriod(buffer: Buffer): MultiPeriodParseResult {
 }
 
 function blankCampaign(): CampaignData {
-  return { clientName: '', project: null, yandexMapUrl: null, totalBudgetUzs: null, totalBudgetRub: null };
+  return { clientName: '', project: null, yandexMapUrl: null, totalBudgetUzs: null };
 }

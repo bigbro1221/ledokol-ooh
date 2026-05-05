@@ -5,7 +5,6 @@ import { DashboardClient } from './dashboard-client';
 import { CampaignsListView } from './campaigns-list';
 import { getUserPreferences } from '@/lib/user-preferences';
 import type { DateFormat } from '@/lib/format-period';
-import type { ScreenType } from '@prisma/client';
 import type { ScreenRow } from '@/components/screens/screens-table';
 import { getTranslations } from 'next-intl/server';
 import { getFileUrl } from '@/lib/minio';
@@ -118,10 +117,10 @@ export default async function DashboardPage({
   }
 
   const cityValues = splitCsv(cityFilter);
-  const typeValues = splitCsv(typeFilter).filter(t => ['LED','STATIC','STOP','AIRPORT','BUS'].includes(t)) as ScreenType[];
+  const typeValues = splitCsv(typeFilter);
 
-  const screenWhere: { type?: { in: ScreenType[] }; city?: { in: string[] } } = {};
-  if (typeValues.length > 0) screenWhere.type = { in: typeValues };
+  const screenWhere: { screenType?: { code: { in: string[] } }; city?: { in: string[] } } = {};
+  if (typeValues.length > 0) screenWhere.screenType = { code: { in: typeValues } };
   if (cityValues.length > 0) screenWhere.city = { in: cityValues };
 
   const [campaign, prefs] = await Promise.all([
@@ -130,7 +129,7 @@ export default async function DashboardPage({
       select: {
         id: true, name: true, status: true, periodStart: true, periodEnd: true,
         splitByPeriods: true,
-        totalBudgetUzs: true, totalBudgetRub: true, heatmapUrl: true, reportsUrl: true,
+        totalBudgetUzs: true, heatmapUrl: true, reportsUrl: true,
         client: { select: { name: true } },
         totalFinal: true,
         periods: {
@@ -140,9 +139,10 @@ export default async function DashboardPage({
         screens: {
           where: Object.keys(screenWhere).length > 0 ? screenWhere : undefined,
           select: {
-            id: true, externalId: true, type: true, city: true, address: true,
+            id: true, externalId: true, city: true, address: true,
             size: true, resolution: true, photoUrl: true, lat: true, lng: true,
             impressionsPerDay: true,
+            screenType: { select: { code: true } },
             metrics: { select: { periodId: true, otsPlan: true, ratingPlan: true, otsFact: true, ratingFact: true } },
             pricing: { select: { periodId: true, priceUnit: true, priceDiscounted: true, priceTotal: true } },
           },
@@ -256,7 +256,7 @@ export default async function DashboardPage({
 
   const byTypeMap: Record<string, { plan: number; fact: number; budget: number; screens: number }> = {};
   for (const s of campaign.screens) {
-    const key = s.type;
+    const key = s.screenType?.code ?? 'UNKNOWN';
     if (!byTypeMap[key]) byTypeMap[key] = { plan: 0, fact: 0, budget: 0, screens: 0 };
     byTypeMap[key].plan   += filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0);
     byTypeMap[key].fact   += filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0);
@@ -332,7 +332,7 @@ export default async function DashboardPage({
       return {
         id: s.id,
         externalId: s.externalId,
-        type: s.type,
+        type: s.screenType?.code ?? 'UNKNOWN',
         city: s.city.trim(),
         address: s.address,
         size: s.size,
@@ -360,7 +360,7 @@ export default async function DashboardPage({
       id: s.id,
       lat: s.lat!,
       lng: s.lng!,
-      type: s.type,
+      type: s.screenType?.code ?? 'UNKNOWN',
       address: s.address,
       city: s.city.trim(),
       size: s.size,
@@ -412,7 +412,7 @@ export default async function DashboardPage({
       mapScreens={mapScreens}
       cityBreakdown={cityBreakdown}
       allCities={allCities.map(c => c.city.trim())}
-      availableTypes={Array.from(new Set(campaign.screens.map(s => s.type)))}
+      availableTypes={Array.from(new Set(campaign.screens.map(s => s.screenType?.code).filter((c): c is string => !!c)))}
       filters={{ cities: cityValues, types: typeValues }}
       heatmapEmbedUrl={heatmapEmbedUrl}
       reportsUrl={campaign.reportsUrl}

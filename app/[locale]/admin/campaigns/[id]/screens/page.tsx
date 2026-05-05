@@ -37,7 +37,6 @@ export default async function CampaignScreensPage({
     select: {
       id: true,
       externalId: true,
-      type: true,
       city: true,
       address: true,
       size: true,
@@ -46,6 +45,7 @@ export default async function CampaignScreensPage({
       photoUrl: true,
       lat: true,
       lng: true,
+      screenType: { select: { code: true } },
       pricing: {
         select: { periodId: true, priceUnit: true, priceDiscounted: true, priceTotal: true },
       },
@@ -68,7 +68,7 @@ export default async function CampaignScreensPage({
     return {
       id: s.id,
       externalId: s.externalId,
-      type: s.type,
+      type: s.screenType?.code ?? 'UNKNOWN',
       city: s.city.trim(),
       address: s.address,
       size: s.size,

@@ -26,7 +26,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
     where: { id },
     include: {
       client: true,
-      screens: { select: { type: true } },
+      screens: { select: { screenType: { select: { code: true } } } },
       periods: {
         include: { _count: { select: { metrics: true } } },
         orderBy: { periodStart: 'asc' },
@@ -39,7 +39,8 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   const byType: Record<string, number> = {};
   for (const s of campaign.screens) {
-    byType[s.type] = (byType[s.type] || 0) + 1;
+    const code = s.screenType?.code ?? 'UNKNOWN';
+    byType[code] = (byType[code] || 0) + 1;
   }
 
   const totalScreens = campaign.screens.length;

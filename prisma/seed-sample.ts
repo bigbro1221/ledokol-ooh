@@ -1,12 +1,12 @@
-import { PrismaClient, ScreenType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import * as XLSX from 'xlsx';
 import * as path from 'path';
 
 const prisma = new PrismaClient();
 
-// Sheet name → ScreenType mapping
-function detectSheetType(name: string): ScreenType | null {
+// Sheet name → screen type code mapping
+function detectSheetType(name: string): string | null {
   const n = name.toLowerCase().trim();
   if (/led.*ташкент/.test(n)) return 'LED';
   if (/led.*регион/.test(n)) return 'LED';
@@ -144,11 +144,9 @@ async function main() {
   // Extract budget from Total sheet row 10
   const totalData = XLSX.utils.sheet_to_json(totalSheet, { header: 1, defval: '' }) as unknown[][];
   let totalBudgetUzs: bigint | null = null;
-  let totalBudgetRub: bigint | null = null;
   if (totalData[10]) {
     const row10 = totalData[10] as unknown[];
     totalBudgetUzs = toBigIntOrNull(row10[11]); // "Итого в UZS" column
-    totalBudgetRub = toBigIntOrNull(row10[12]); // "Итого в RUB" column
   }
 
   // Create campaign
@@ -162,12 +160,15 @@ async function main() {
       status: 'ACTIVE',
       yandexMapUrl,
       totalBudgetUzs,
-      totalBudgetRub,
     },
   });
   console.log(`Created campaign: ${campaign.name}`);
-  console.log(`  Budget: ${totalBudgetUzs?.toLocaleString()} UZS / ${totalBudgetRub?.toLocaleString()} RUB`);
+  console.log(`  Budget: ${totalBudgetUzs?.toLocaleString()} UZS`);
   console.log(`  Yandex Map: ${yandexMapUrl ? 'found' : 'not found'}`);
+
+  // Resolve type codes → typeIds from the ScreenTypeRef table.
+  const typeRefs = await prisma.screenTypeRef.findMany({ select: { id: true, code: true } });
+  const typeIdByCode = new Map(typeRefs.map(t => [t.code, t.id]));
 
   // Parse each sheet
   let totalScreens = 0;
@@ -177,6 +178,11 @@ async function main() {
     const screenType = detectSheetType(sheetName);
     if (!screenType) {
       console.log(`Skipping sheet: "${sheetName}" (not a screen sheet)`);
+      continue;
+    }
+    const typeId = typeIdByCode.get(screenType);
+    if (!typeId) {
+      console.log(`Skipping sheet: "${sheetName}" — no ScreenTypeRef for code "${screenType}"`);
       continue;
     }
 
@@ -219,7 +225,7 @@ async function main() {
           data: {
             campaignId: campaign.id,
             externalId,
-            type: screenType,
+            typeId,
             city: city || 'Ташкент',
             address: address || `${sheetName} — строка ${r + 1}`,
             size,

@@ -18,9 +18,8 @@ const TYPES = [
 
 export async function seedScreenTypes() {
   for (const t of TYPES) {
-    // NOTE: The Prisma model is `ScreenTypeRef` (not `ScreenType`) to avoid a
-    // name collision with the legacy `enum ScreenType`. Once the enum is
-    // removed in a later task the model can be renamed to `ScreenType`.
+    // The Prisma model name `ScreenTypeRef` is retained after the legacy
+    // `enum ScreenType` was dropped — renaming would break Screen.typeId FKs.
     await prisma.screenTypeRef.upsert({
       where: { code: t.code },
       create: t,

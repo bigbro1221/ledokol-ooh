@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const ScreenRowSchema = z.object({
   // Canonical screen-type code (LED/STATIC/STOP/AIRPORT/BUS/ROOF/BRANDMAUER/CINEMA/METRO).
-  // The legacy `Screen.type` enum is derived in the confirm route via LEGACY_ENUM_BY_CODE.
   typeCode: z.string().min(1),
   city: z.string().min(1, 'City is required'),
   address: z.string().min(1, 'Address is required'),
@@ -48,7 +47,6 @@ export const CampaignDataSchema = z.object({
   project: z.string().nullable(),
   yandexMapUrl: z.string().url().nullable().or(z.literal(null)),
   totalBudgetUzs: z.number().nullable(),
-  totalBudgetRub: z.number().nullable(),
 });
 
 export type CampaignData = z.infer<typeof CampaignDataSchema>;

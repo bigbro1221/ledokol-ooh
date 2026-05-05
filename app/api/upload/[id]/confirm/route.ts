@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api-auth';
-import { LEGACY_ENUM_BY_CODE } from '@/lib/parser/sheets';
 import type { Prisma } from '@prisma/client';
 
 interface ScreenData {
@@ -61,7 +60,6 @@ type ScreensModeBody = {
   minioKey?: string;
   yandexMapUrl?: string | null;
   totalBudgetUzs?: number | null;
-  totalBudgetRub?: number | null;
 };
 
 type MultiPeriodBody = {
@@ -80,10 +78,13 @@ type UpsertableScreen = Pick<
 >;
 
 function buildScreenWriteData(s: UpsertableScreen, typeIdByCode: Map<string, string>) {
+  const typeId = typeIdByCode.get(s.typeCode);
+  if (!typeId) {
+    throw new Error(`Unknown screen type code "${s.typeCode}" — no matching ScreenTypeRef row`);
+  }
   return {
     externalId: s.externalId || null,
-    type: LEGACY_ENUM_BY_CODE[s.typeCode] ?? 'STATIC',
-    typeId: typeIdByCode.get(s.typeCode) ?? null,
+    typeId,
     size: s.size || null,
     resolution: s.resolution || null,
     impressionsPerDay: s.impressionsPerDay ? Math.round(s.impressionsPerDay) : null,
@@ -130,7 +131,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         ? {
             ...updated,
             totalBudgetUzs: updated.totalBudgetUzs ? Number(updated.totalBudgetUzs) : null,
-            totalBudgetRub: updated.totalBudgetRub ? Number(updated.totalBudgetRub) : null,
           }
         : null,
     });
@@ -226,7 +226,6 @@ async function handleScreensConfirm(campaignId: string, body: ScreensModeBody) {
           sourceFileUrl: body.minioKey || undefined,
           yandexMapUrl: body.yandexMapUrl || undefined,
           totalBudgetUzs: body.totalBudgetUzs ? BigInt(Math.round(body.totalBudgetUzs)) : undefined,
-          totalBudgetRub: body.totalBudgetRub ? BigInt(Math.round(body.totalBudgetRub)) : undefined,
         },
       });
     }

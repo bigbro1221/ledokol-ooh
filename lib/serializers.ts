@@ -7,7 +7,6 @@ const bigintToNumber = (v: bigint | null | undefined): number | null =>
 
 type CampaignBigIntFields = {
   totalBudgetUzs: bigint | null;
-  totalBudgetRub: bigint | null;
   productionCost: bigint | null;
   totalFinal: bigint | null;
   additionalAmount: bigint | null;
@@ -17,7 +16,6 @@ export function serializeCampaign<T extends Partial<CampaignBigIntFields>>(c: T)
   return {
     ...c,
     totalBudgetUzs: bigintToNumber(c.totalBudgetUzs),
-    totalBudgetRub: bigintToNumber(c.totalBudgetRub),
     productionCost: bigintToNumber(c.productionCost),
     totalFinal: bigintToNumber(c.totalFinal),
     additionalAmount: bigintToNumber(c.additionalAmount),
