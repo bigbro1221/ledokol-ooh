@@ -79,3 +79,14 @@ assert(labels.includes('Июнь 2025'));
   assert.equal(r.rows.length, 0);
   assert(r.errors.some(e => e.field === 'period' && /Could not parse period/.test(e.message)), 'expected malformed-period error');
 }
+
+// --- Generated template round-trip ---
+
+{
+  const tpl = readFileSync(join(process.cwd(), 'public/templates/other-carriers-template.xlsx'));
+  const r = parseMultiPeriod(tpl);
+  assert.equal(r.errors.length, 0, JSON.stringify(r.errors));
+  assert.equal(r.rows.length, 1, `expected 1 example row, got ${r.rows.length}`);
+  assert.equal(r.rows[0].screen.typeCode, 'ROOF');
+  assert.equal(r.rows[0].periodLabel, 'Июнь 2025');
+}
