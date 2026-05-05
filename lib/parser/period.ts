@@ -9,8 +9,13 @@ function parseSingleDate(s: string): Date | null {
   const m = s.trim().match(DATE_RE);
   if (!m) return null;
   const [, dd, mm, yyyy] = m;
-  const d = new Date(Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd)));
+  const day = Number(dd), month = Number(mm), year = Number(yyyy);
+  const d = new Date(Date.UTC(year, month - 1, day));
   if (isNaN(d.getTime())) return null;
+  // Reject impossible dates that Date.UTC silently rolls over (31.06 → 01.07).
+  if (d.getUTCDate() !== day || d.getUTCMonth() !== month - 1 || d.getUTCFullYear() !== year) {
+    return null;
+  }
   return d;
 }
 

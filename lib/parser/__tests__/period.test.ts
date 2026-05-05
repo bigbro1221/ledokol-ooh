@@ -28,7 +28,41 @@ import { parsePeriodString, periodName } from '../period';
 assert(parsePeriodString('05.05.2025–31.05.2025'));
 assert(parsePeriodString('  05.05.2025  -  31.05.2025  '));
 
+// Em-dash separator
+assert(parsePeriodString('05.05.2025 — 31.05.2025'));
+
+// Cross-year range → raw range, no Russian month label
+{
+  const r = parsePeriodString('20.12.2024 - 10.01.2025');
+  assert(r);
+  assert.equal(periodName(r.periodStart, r.periodEnd), '20.12.2024 – 10.01.2025');
+}
+
+// Leap-year February full coverage → "Февраль 2024"
+{
+  const r = parsePeriodString('01.02.2024 - 29.02.2024');
+  assert(r);
+  assert.equal(periodName(r.periodStart, r.periodEnd), 'Февраль 2024');
+}
+
+// Non-leap February full coverage → "Февраль 2025"
+{
+  const r = parsePeriodString('01.02.2025 - 28.02.2025');
+  assert(r);
+  assert.equal(periodName(r.periodStart, r.periodEnd), 'Февраль 2025');
+}
+
+// Day-6 start falls outside the "≤ 5" heuristic → raw range, not "Май 2025"
+{
+  const r = parsePeriodString('06.05.2025 - 31.05.2025');
+  assert(r);
+  assert.equal(periodName(r.periodStart, r.periodEnd), '06.05.2025 – 31.05.2025');
+}
+
 // Bad input
 assert.equal(parsePeriodString(''), null);
 assert.equal(parsePeriodString('not a date'), null);
 assert.equal(parsePeriodString('05.05.2025'), null); // single date — not a range
+assert.equal(parsePeriodString('31.06.2025 - 31.07.2025'), null); // 31 June doesn't exist
+assert.equal(parsePeriodString('30.02.2025 - 31.03.2025'), null); // 30 Feb doesn't exist
+assert.equal(parsePeriodString('31.05.2025 - 05.05.2025'), null); // reverse range
