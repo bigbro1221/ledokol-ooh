@@ -371,7 +371,12 @@
     "confirming": "Saqlanmoqda...",
     "cancelBtn": "Bekor qilish",
     "expand": "Ochish",
-    "collapse": "Yopish"
+    "collapse": "Yopish",
+    "periodsDetected": "Aniqlangan davrlar: {count}",
+    "colOts": "OTS",
+    "colRating": "Rating",
+    "colPeriods": "Davrlar",
+    "downloadOtherCarriersTemplate": "«Boshqa tashuvchilar» shablonini yuklab olish"
   },
   "delete": {
     "errorTitle": "O'chirishda xatolik",

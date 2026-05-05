@@ -29,13 +29,21 @@ export default async function UploadPage({
 
   if (!campaign) notFound();
 
+  // For OTHER_CARRIERS campaigns, periods come from the file — ignore any
+  // periodId from the URL so the heading and parser dispatch stay correct.
+  const effectivePeriodId = campaign.mediaType === 'OTHER_CARRIERS' ? null : (periodId ?? null);
+
   // If periodId provided, fetch period name for the heading
   let periodName: string | null = null;
-  if (periodId) {
-    const period = await prisma.campaignPeriod.findFirst({ where: { id: periodId, campaignId: id } });
+  if (effectivePeriodId) {
+    const period = await prisma.campaignPeriod.findFirst({ where: { id: effectivePeriodId, campaignId: id } });
     if (!period) notFound();
     periodName = period.name;
   }
+
+  const templateHref = campaign.mediaType === 'OTHER_CARRIERS'
+    ? '/templates/other-carriers-template.xlsx'
+    : '/templates/mediaplan-template.xlsx';
 
   // Build a clean filename: медиаплан_{client}_{campaign}_{?period}.xlsx
   const slugify = (s: string) => s.trim().replace(/[^\wа-яёА-ЯЁ0-9\s-]/gi, '').replace(/\s+/g, '_');
@@ -63,7 +71,7 @@ export default async function UploadPage({
           </h1>
         </div>
         <a
-          href="/templates/mediaplan-template.xlsx"
+          href={templateHref}
           download={templateFilename}
           className="flex shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
         >
@@ -71,7 +79,7 @@ export default async function UploadPage({
           {t('templateXlsx')}
         </a>
       </div>
-      <UploadDropzone campaignId={id} locale={locale} periodId={periodId ?? null} />
+      <UploadDropzone campaignId={id} locale={locale} periodId={effectivePeriodId} mediaType={campaign.mediaType} />
     </div>
   );
 }

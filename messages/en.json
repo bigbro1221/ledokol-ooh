@@ -371,7 +371,12 @@
     "confirming": "Saving...",
     "cancelBtn": "Cancel",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "periodsDetected": "Periods detected: {count}",
+    "colOts": "OTS",
+    "colRating": "Rating",
+    "colPeriods": "Periods",
+    "downloadOtherCarriersTemplate": "Download \"Other carriers\" template"
   },
   "delete": {
     "errorTitle": "Delete failed",

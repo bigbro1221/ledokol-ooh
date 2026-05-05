@@ -39,7 +39,15 @@ interface ScreenRow {
   [key: string]: unknown;
 }
 
-interface ParsePreview {
+interface MultiPeriodRow {
+  screen: ScreenRow;
+  periodStart: string; // ISO
+  periodEnd: string;
+  periodLabel: string;
+}
+
+interface ScreensModePreview {
+  mode: 'screens';
   campaignId: string;
   periodId: string | null;
   minioKey: string;
@@ -51,6 +59,23 @@ interface ParsePreview {
   geocoding: { matchedCount: number; unmatchedPins: unknown[]; totalPins: number };
   summary: { totalScreens: number; byType: Record<string, number> };
 }
+
+interface MultiPeriodPreview {
+  mode: 'multi-period';
+  campaignId: string;
+  minioKey: string;
+  campaign: { yandexMapUrl: string | null };
+  screens: ScreenRow[];
+  screenGeo: ScreenGeoInfo[];
+  rows: MultiPeriodRow[];
+  periods: { start: string; end: string; label: string }[];
+  errors: { sheet: string; row: number; field: string; message: string }[];
+  warnings: { sheet: string; message: string }[];
+  geocoding: { matchedCount: number; unmatchedPins: unknown[]; totalPins: number };
+  summary: { totalScreens: number; totalRows: number; totalPeriods: number; byType: Record<string, number> };
+}
+
+type ParsePreview = ScreensModePreview | MultiPeriodPreview;
 
 const TYPE_COLORS: Record<string, string> = {
   LED: 'bg-blue-500/20 text-blue-400',
@@ -120,7 +145,17 @@ function SuggestionPicker({
   );
 }
 
-export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: string; locale: string; periodId?: string | null }) {
+export function UploadDropzone({
+  campaignId,
+  locale,
+  periodId,
+  mediaType,
+}: {
+  campaignId: string;
+  locale: string;
+  periodId?: string | null;
+  mediaType: 'SCREENS' | 'OTHER_CARRIERS';
+}) {
   const tu = useTranslations('uploadAdmin');
   const tTypes = useTranslations('screenTypes');
   const i18nLocale = useLocale();
@@ -148,7 +183,9 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
     const fd = new FormData();
     fd.append('file', file);
     fd.append('campaignId', campaignId);
-    if (periodId) fd.append('periodId', periodId);
+    // For OTHER_CARRIERS the periodId is ignored on the server — we still skip
+    // sending it to keep the request body minimal and intent-clear.
+    if (periodId && mediaType !== 'OTHER_CARRIERS') fd.append('periodId', periodId);
 
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
     setUploading(false);
@@ -161,7 +198,7 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
     const data: ParsePreview = await res.json();
     setPreview(data);
     setScreenGeo(data.screenGeo || data.screens.map(() => ({ matched: false, suggestions: [] })));
-  }, [campaignId, periodId, tu]);
+  }, [campaignId, periodId, mediaType, tu]);
 
   // Allow user to manually assign coordinates from a suggestion
   function pickCoords(screenIdx: number, suggestion: PinSuggestion) {
@@ -170,7 +207,12 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
     updatedScreens[screenIdx] = { ...updatedScreens[screenIdx], lat: suggestion.lat, lng: suggestion.lng };
     const updatedGeo = [...screenGeo];
     updatedGeo[screenIdx] = { matched: true, suggestions: [] };
-    setPreview({ ...preview, screens: updatedScreens });
+    // Spread per branch so the discriminator stays narrow for the setter.
+    if (preview.mode === 'multi-period') {
+      setPreview({ ...preview, screens: updatedScreens });
+    } else {
+      setPreview({ ...preview, screens: updatedScreens });
+    }
     setScreenGeo(updatedGeo);
   }
 
@@ -178,17 +220,50 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
     if (!preview) return;
     setConfirming(true);
 
+    const body = preview.mode === 'multi-period'
+      ? {
+          mode: 'multi-period' as const,
+          minioKey: preview.minioKey,
+          yandexMapUrl: preview.campaign.yandexMapUrl,
+          screens: preview.screens.map(s => ({
+            typeCode: s.typeCode,
+            city: s.city,
+            address: s.address,
+            size: s.size ?? null,
+            resolution: s.resolution ?? null,
+            impressionsPerDay: s.impressionsPerDay ?? null,
+            externalId: (s.externalId as string | null | undefined) ?? null,
+            photoUrl: (s.photoUrl as string | null | undefined) ?? null,
+            lat: s.lat ?? null,
+            lng: s.lng ?? null,
+            metrics: preview.rows
+              .filter(r => r.screen.city === s.city && r.screen.address === s.address && r.screen.typeCode === s.typeCode)
+              .map(r => ({
+                periodStart: r.periodStart,
+                periodEnd: r.periodEnd,
+                periodLabel: r.periodLabel,
+                otsPlan: r.screen.otsPlan ?? null,
+                ratingPlan: r.screen.ratingPlan ?? null,
+                otsFact: r.screen.otsFact ?? null,
+                ratingFact: r.screen.ratingFact ?? null,
+                universe: r.screen.universe ?? null,
+              })),
+          })),
+        }
+      : {
+          mode: 'screens' as const,
+          screens: preview.screens,
+          periodId: preview.periodId || null,
+          minioKey: preview.minioKey,
+          yandexMapUrl: preview.campaign.yandexMapUrl,
+          totalBudgetUzs: preview.campaign.totalBudgetUzs,
+          totalBudgetRub: preview.campaign.totalBudgetRub,
+        };
+
     const res = await fetch(`/api/upload/${campaignId}/confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        screens: preview.screens,
-        periodId: preview.periodId || null,
-        minioKey: preview.minioKey,
-        yandexMapUrl: preview.campaign.yandexMapUrl,
-        totalBudgetUzs: preview.campaign.totalBudgetUzs,
-        totalBudgetRub: preview.campaign.totalBudgetRub,
-      }),
+      body: JSON.stringify(body),
     });
 
     setConfirming(false);
@@ -218,6 +293,24 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
   }
 
   const unmatchedCount = screenGeo.filter(g => !g.matched).length;
+
+  // Per-screen aggregates for the multi-period table: sum OTS and count periods.
+  const multiPeriodAggregates = preview?.mode === 'multi-period'
+    ? preview.screens.map(s => {
+        const matchingRows = preview.rows.filter(
+          r => r.screen.city === s.city && r.screen.address === s.address && r.screen.typeCode === s.typeCode,
+        );
+        const sumOrNull = (vals: (number | null | undefined)[]) => {
+          const nums = vals.filter((v): v is number => v != null);
+          return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) : null;
+        };
+        return {
+          totalOtsPlan: sumOrNull(matchingRows.map(r => r.screen.otsPlan)),
+          totalOtsFact: sumOrNull(matchingRows.map(r => r.screen.otsFact)),
+          periodCount: matchingRows.length,
+        };
+      })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -289,6 +382,25 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
             </div>
           </div>
 
+          {/* Periods detected — multi-period only */}
+          {preview.mode === 'multi-period' && (
+            <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-3)]">
+                {tu('periodsDetected', { count: preview.periods.length })}
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {preview.periods.map((p, i) => (
+                  <span
+                    key={`${p.start}_${p.end}_${i}`}
+                    className="rounded-full bg-[var(--brand-primary-subtle)] px-3 py-1 text-xs font-medium text-[var(--brand-primary)]"
+                  >
+                    {p.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Type breakdown */}
           <div className="flex flex-wrap gap-2">
             {Object.entries(preview.summary.byType).map(([type, count]) => (
@@ -334,83 +446,150 @@ export function UploadDropzone({ campaignId, locale, periodId }: { campaignId: s
 
             {showTable && (
               <div className="max-h-[560px] overflow-auto">
-                <table className="w-full text-xs" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-                  <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-2)]">
-                    <tr>
-                      {[
-                        { label: tu('colNumber'), align: 'left' },
-                        { label: tu('colType'), align: 'left' },
-                        { label: tu('colCity'), align: 'left' },
-                        { label: tu('colAddress'), align: 'left' },
-                        { label: tu('colSize'), align: 'left' },
-                        { label: tu('colProduction'), align: 'right' },
-                        { label: tu('colNoVat'), align: 'right' },
-                        { label: tu('colCommissionPct'), align: 'right' },
-                        { label: tu('colCommission'), align: 'right' },
-                        { label: tu('colWithVat'), align: 'right' },
-                        { label: tu('colOtsPlan'), align: 'right' },
-                        { label: tu('colRatingPlan'), align: 'right' },
-                        { label: tu('colUniverse'), align: 'right' },
-                        { label: tu('colOtsFact'), align: 'right' },
-                        { label: tu('colRatingFact'), align: 'right' },
-                        { label: tu('colGeo'), align: 'center' },
-                      ].map(col => (
-                        <th
-                          key={col.label}
-                          className={`whitespace-nowrap px-3 py-2 text-${col.align} text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-3)]`}
-                        >
-                          {col.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.screens.map((screen, i) => {
-                      const geo = screenGeo[i] ?? { matched: false, suggestions: [] };
-                      const isUnmatched = !geo.matched;
-                      return (
-                        <tr
-                          key={i}
-                          className={`border-b border-[var(--border)] last:border-0 ${
-                            isUnmatched ? 'bg-amber-500/10' : 'hover:bg-[var(--surface-2)]'
-                          }`}
-                        >
-                          <td className="px-3 py-1.5 text-[var(--text-3)]">{i + 1}</td>
-                          <td className="px-3 py-1.5">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.typeCode] || 'bg-gray-500/20 text-gray-400'}`}>
-                              {typeLabel(screen.typeCode)}
-                            </span>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.city}</td>
-                          <td className="max-w-[200px] px-3 py-1.5">
-                            <span className="line-clamp-1" style={{ fontFamily: 'var(--font-sans)' }}>{screen.address}</span>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.size ?? '—'}</td>
-                          <td className="px-3 py-1.5 text-right">{num(screen.productionCost)}</td>
-                          <td className="px-3 py-1.5 text-right">{num(screen.priceTotal)}</td>
-                          <td className="px-3 py-1.5 text-right">{pct(screen.commissionPct)}</td>
-                          <td className="px-3 py-1.5 text-right">{num(screen.agencyFeeAmt)}</td>
-                          <td className="px-3 py-1.5 text-right font-medium">{num(screen.priceDiscounted ?? screen.priceUnit)}</td>
-                          <td className="px-3 py-1.5 text-right">{num(screen.otsPlan)}</td>
-                          <td className="px-3 py-1.5 text-right">{dec(screen.ratingPlan)}</td>
-                          <td className="px-3 py-1.5 text-right">{num(screen.universe)}</td>
-                          <td className="px-3 py-1.5 text-right">{num(screen.otsFact)}</td>
-                          <td className="px-3 py-1.5 text-right">{dec(screen.ratingFact)}</td>
-                          <td className="px-3 py-1.5 text-center">
-                            {geo.matched ? (
-                              <MapPin size={12} className="mx-auto text-[var(--brand-primary)]" strokeWidth={1.5} />
-                            ) : (
-                              <SuggestionPicker
-                                suggestions={geo.suggestions}
-                                onPick={(s) => pickCoords(i, s)}
-                              />
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                {preview.mode === 'multi-period' ? (
+                  <table className="w-full text-xs" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+                    <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-2)]">
+                      <tr>
+                        {[
+                          { label: tu('colNumber'), align: 'left' },
+                          { label: tu('colType'), align: 'left' },
+                          { label: tu('colCity'), align: 'left' },
+                          { label: tu('colAddress'), align: 'left' },
+                          { label: tu('colSize'), align: 'left' },
+                          { label: tu('colOtsPlan'), align: 'right' },
+                          { label: tu('colOtsFact'), align: 'right' },
+                          { label: tu('colPeriods'), align: 'right' },
+                          { label: tu('colGeo'), align: 'center' },
+                        ].map(col => (
+                          <th
+                            key={col.label}
+                            className={`whitespace-nowrap px-3 py-2 text-${col.align} text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-3)]`}
+                          >
+                            {col.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.screens.map((screen, i) => {
+                        const geo = screenGeo[i] ?? { matched: false, suggestions: [] };
+                        const isUnmatched = !geo.matched;
+                        const agg = multiPeriodAggregates?.[i] ?? { totalOtsPlan: null, totalOtsFact: null, periodCount: 0 };
+                        return (
+                          <tr
+                            key={i}
+                            className={`border-b border-[var(--border)] last:border-0 ${
+                              isUnmatched ? 'bg-amber-500/10' : 'hover:bg-[var(--surface-2)]'
+                            }`}
+                          >
+                            <td className="px-3 py-1.5 text-[var(--text-3)]">{i + 1}</td>
+                            <td className="px-3 py-1.5">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.typeCode] || 'bg-gray-500/20 text-gray-400'}`}>
+                                {typeLabel(screen.typeCode)}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.city}</td>
+                            <td className="max-w-[260px] px-3 py-1.5">
+                              <span className="line-clamp-1" style={{ fontFamily: 'var(--font-sans)' }}>{screen.address}</span>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.size ?? '—'}</td>
+                            <td className="px-3 py-1.5 text-right">{num(agg.totalOtsPlan)}</td>
+                            <td className="px-3 py-1.5 text-right">{num(agg.totalOtsFact)}</td>
+                            <td className="px-3 py-1.5 text-right text-[var(--text-3)]">{agg.periodCount}</td>
+                            <td className="px-3 py-1.5 text-center">
+                              {geo.matched ? (
+                                <MapPin size={12} className="mx-auto text-[var(--brand-primary)]" strokeWidth={1.5} />
+                              ) : (
+                                <SuggestionPicker
+                                  suggestions={geo.suggestions}
+                                  onPick={(s) => pickCoords(i, s)}
+                                />
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="w-full text-xs" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+                    <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-2)]">
+                      <tr>
+                        {[
+                          { label: tu('colNumber'), align: 'left' },
+                          { label: tu('colType'), align: 'left' },
+                          { label: tu('colCity'), align: 'left' },
+                          { label: tu('colAddress'), align: 'left' },
+                          { label: tu('colSize'), align: 'left' },
+                          { label: tu('colProduction'), align: 'right' },
+                          { label: tu('colNoVat'), align: 'right' },
+                          { label: tu('colCommissionPct'), align: 'right' },
+                          { label: tu('colCommission'), align: 'right' },
+                          { label: tu('colWithVat'), align: 'right' },
+                          { label: tu('colOtsPlan'), align: 'right' },
+                          { label: tu('colRatingPlan'), align: 'right' },
+                          { label: tu('colUniverse'), align: 'right' },
+                          { label: tu('colOtsFact'), align: 'right' },
+                          { label: tu('colRatingFact'), align: 'right' },
+                          { label: tu('colGeo'), align: 'center' },
+                        ].map(col => (
+                          <th
+                            key={col.label}
+                            className={`whitespace-nowrap px-3 py-2 text-${col.align} text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-3)]`}
+                          >
+                            {col.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.screens.map((screen, i) => {
+                        const geo = screenGeo[i] ?? { matched: false, suggestions: [] };
+                        const isUnmatched = !geo.matched;
+                        return (
+                          <tr
+                            key={i}
+                            className={`border-b border-[var(--border)] last:border-0 ${
+                              isUnmatched ? 'bg-amber-500/10' : 'hover:bg-[var(--surface-2)]'
+                            }`}
+                          >
+                            <td className="px-3 py-1.5 text-[var(--text-3)]">{i + 1}</td>
+                            <td className="px-3 py-1.5">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_COLORS[screen.typeCode] || 'bg-gray-500/20 text-gray-400'}`}>
+                                {typeLabel(screen.typeCode)}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.city}</td>
+                            <td className="max-w-[200px] px-3 py-1.5">
+                              <span className="line-clamp-1" style={{ fontFamily: 'var(--font-sans)' }}>{screen.address}</span>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.size ?? '—'}</td>
+                            <td className="px-3 py-1.5 text-right">{num(screen.productionCost)}</td>
+                            <td className="px-3 py-1.5 text-right">{num(screen.priceTotal)}</td>
+                            <td className="px-3 py-1.5 text-right">{pct(screen.commissionPct)}</td>
+                            <td className="px-3 py-1.5 text-right">{num(screen.agencyFeeAmt)}</td>
+                            <td className="px-3 py-1.5 text-right font-medium">{num(screen.priceDiscounted ?? screen.priceUnit)}</td>
+                            <td className="px-3 py-1.5 text-right">{num(screen.otsPlan)}</td>
+                            <td className="px-3 py-1.5 text-right">{dec(screen.ratingPlan)}</td>
+                            <td className="px-3 py-1.5 text-right">{num(screen.universe)}</td>
+                            <td className="px-3 py-1.5 text-right">{num(screen.otsFact)}</td>
+                            <td className="px-3 py-1.5 text-right">{dec(screen.ratingFact)}</td>
+                            <td className="px-3 py-1.5 text-center">
+                              {geo.matched ? (
+                                <MapPin size={12} className="mx-auto text-[var(--brand-primary)]" strokeWidth={1.5} />
+                              ) : (
+                                <SuggestionPicker
+                                  suggestions={geo.suggestions}
+                                  onPick={(s) => pickCoords(i, s)}
+                                />
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
           </div>

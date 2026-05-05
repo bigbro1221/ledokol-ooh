@@ -371,7 +371,12 @@
     "confirming": "Сохранение...",
     "cancelBtn": "Отменить",
     "expand": "Развернуть",
-    "collapse": "Свернуть"
+    "collapse": "Свернуть",
+    "periodsDetected": "Обнаружено периодов: {count}",
+    "colOts": "OTS",
+    "colRating": "Rating",
+    "colPeriods": "Периоды",
+    "downloadOtherCarriersTemplate": "Скачать шаблон «Другие носители»"
   },
   "delete": {
     "errorTitle": "Ошибка удаления",
