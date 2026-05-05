@@ -73,6 +73,26 @@ type MultiPeriodBody = {
 
 type ConfirmBody = ScreensModeBody | MultiPeriodBody;
 
+// Common fields needed to upsert a Screen — shared between modes.
+type UpsertableScreen = Pick<
+  ScreenData,
+  'typeCode' | 'city' | 'address' | 'externalId' | 'size' | 'resolution' | 'impressionsPerDay' | 'photoUrl' | 'lat' | 'lng'
+>;
+
+function buildScreenWriteData(s: UpsertableScreen, typeIdByCode: Map<string, string>) {
+  return {
+    externalId: s.externalId || null,
+    type: LEGACY_ENUM_BY_CODE[s.typeCode] ?? 'STATIC',
+    typeId: typeIdByCode.get(s.typeCode) ?? null,
+    size: s.size || null,
+    resolution: s.resolution || null,
+    impressionsPerDay: s.impressionsPerDay ? Math.round(s.impressionsPerDay) : null,
+    photoUrl: s.photoUrl || null,
+    lat: s.lat || null,
+    lng: s.lng || null,
+  } as const;
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireAdmin();
   if (!authResult.ok) return authResult.response;
@@ -85,21 +105,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!campaign) return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
 
   // Pre-flight period existence check for screens mode (preserves the previous 404 contract).
-  if (mode !== 'multi-period') {
-    const screensBody = body as ScreensModeBody;
-    if (screensBody.periodId) {
-      const period = await prisma.campaignPeriod.findFirst({
-        where: { id: screensBody.periodId, campaignId },
-      });
-      if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 });
-    }
+  if (body.mode !== 'multi-period' && body.periodId) {
+    const period = await prisma.campaignPeriod.findFirst({
+      where: { id: body.periodId, campaignId },
+    });
+    if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 });
   }
 
   try {
-    if (mode === 'multi-period') {
-      await handleMultiPeriodConfirm(campaignId, body as MultiPeriodBody);
+    if (body.mode === 'multi-period') {
+      await handleMultiPeriodConfirm(campaignId, body);
     } else {
-      await handleScreensConfirm(campaignId, body as ScreensModeBody);
+      await handleScreensConfirm(campaignId, body);
     }
 
     const updated = await prisma.campaign.findUnique({
@@ -152,35 +169,11 @@ async function handleScreensConfirm(campaignId: string, body: ScreensModeBody) {
     }
 
     for (const s of body.screens) {
-      // Find or create physical screen by stable key (campaignId + city + address).
-      // On re-upload, refresh mutable display fields but keep the same ID.
+      const data = buildScreenWriteData(s, typeIdByCode);
       const screen = await tx.screen.upsert({
         where: { campaignId_city_address: { campaignId, city: s.city, address: s.address } },
-        create: {
-          campaignId,
-          externalId: s.externalId || null,
-          type: LEGACY_ENUM_BY_CODE[s.typeCode] ?? 'STATIC',
-          typeId: typeIdByCode.get(s.typeCode) ?? null,
-          city: s.city,
-          address: s.address,
-          size: s.size || null,
-          resolution: s.resolution || null,
-          impressionsPerDay: s.impressionsPerDay ? Math.round(s.impressionsPerDay) : null,
-          photoUrl: s.photoUrl || null,
-          lat: s.lat || null,
-          lng: s.lng || null,
-        },
-        update: {
-          externalId: s.externalId || null,
-          type: LEGACY_ENUM_BY_CODE[s.typeCode] ?? 'STATIC',
-          typeId: typeIdByCode.get(s.typeCode) ?? null,
-          size: s.size || null,
-          resolution: s.resolution || null,
-          impressionsPerDay: s.impressionsPerDay ? Math.round(s.impressionsPerDay) : null,
-          photoUrl: s.photoUrl || null,
-          lat: s.lat || null,
-          lng: s.lng || null,
-        },
+        create: { ...data, campaignId, city: s.city, address: s.address },
+        update: data,
       });
 
       await tx.screenMetrics.create({
@@ -297,38 +290,17 @@ async function handleMultiPeriodConfirm(campaignId: string, body: MultiPeriodBod
 
     // 5. Upsert screens, write metrics per period.
     for (const sc of body.screens) {
+      const data = buildScreenWriteData(sc, typeIdByCode);
       const screen = await tx.screen.upsert({
         where: { campaignId_city_address: { campaignId, city: sc.city, address: sc.address } },
-        create: {
-          campaignId,
-          externalId: sc.externalId || null,
-          type: LEGACY_ENUM_BY_CODE[sc.typeCode] ?? 'STATIC',
-          typeId: typeIdByCode.get(sc.typeCode) ?? null,
-          city: sc.city,
-          address: sc.address,
-          size: sc.size || null,
-          resolution: sc.resolution || null,
-          impressionsPerDay: sc.impressionsPerDay ? Math.round(sc.impressionsPerDay) : null,
-          photoUrl: sc.photoUrl || null,
-          lat: sc.lat || null,
-          lng: sc.lng || null,
-        },
-        update: {
-          externalId: sc.externalId || null,
-          type: LEGACY_ENUM_BY_CODE[sc.typeCode] ?? 'STATIC',
-          typeId: typeIdByCode.get(sc.typeCode) ?? null,
-          size: sc.size || null,
-          resolution: sc.resolution || null,
-          impressionsPerDay: sc.impressionsPerDay ? Math.round(sc.impressionsPerDay) : null,
-          photoUrl: sc.photoUrl || null,
-          lat: sc.lat || null,
-          lng: sc.lng || null,
-        },
+        create: { ...data, campaignId, city: sc.city, address: sc.address },
+        update: data,
       });
 
       for (const m of sc.metrics) {
-        const periodId = periodIdByKey.get(periodKey(m.periodStart, m.periodEnd));
-        if (!periodId) continue;
+        // periodIdByKey is fully populated from sc.metrics in step 3 — the lookup
+        // can't miss; the non-null assertion just narrows Map.get's T | undefined.
+        const periodId = periodIdByKey.get(periodKey(m.periodStart, m.periodEnd))!;
         await tx.screenMetrics.create({
           data: {
             screenId: screen.id,
