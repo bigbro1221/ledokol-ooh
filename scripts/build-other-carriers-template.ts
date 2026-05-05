@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const wb = XLSX.utils.book_new();
 
