@@ -373,10 +373,7 @@
     "expand": "Ochish",
     "collapse": "Yopish",
     "periodsDetected": "Aniqlangan davrlar: {count}",
-    "colOts": "OTS",
-    "colRating": "Rating",
-    "colPeriods": "Davrlar",
-    "downloadOtherCarriersTemplate": "«Boshqa tashuvchilar» shablonini yuklab olish"
+    "colPeriods": "Davrlar"
   },
   "delete": {
     "errorTitle": "O'chirishda xatolik",

@@ -373,10 +373,7 @@
     "expand": "Expand",
     "collapse": "Collapse",
     "periodsDetected": "Periods detected: {count}",
-    "colOts": "OTS",
-    "colRating": "Rating",
-    "colPeriods": "Periods",
-    "downloadOtherCarriersTemplate": "Download \"Other carriers\" template"
+    "colPeriods": "Periods"
   },
   "delete": {
     "errorTitle": "Delete failed",

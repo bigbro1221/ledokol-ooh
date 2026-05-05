@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Upload, FileSpreadsheet, Check, AlertTriangle, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -202,19 +202,36 @@ export function UploadDropzone({
 
   // Allow user to manually assign coordinates from a suggestion
   function pickCoords(screenIdx: number, suggestion: PinSuggestion) {
-    if (!preview) return;
-    const updatedScreens = [...preview.screens];
-    updatedScreens[screenIdx] = { ...updatedScreens[screenIdx], lat: suggestion.lat, lng: suggestion.lng };
-    const updatedGeo = [...screenGeo];
-    updatedGeo[screenIdx] = { matched: true, suggestions: [] };
-    // Spread per branch so the discriminator stays narrow for the setter.
-    if (preview.mode === 'multi-period') {
-      setPreview({ ...preview, screens: updatedScreens });
-    } else {
-      setPreview({ ...preview, screens: updatedScreens });
-    }
-    setScreenGeo(updatedGeo);
+    setPreview(prev => {
+      if (!prev) return prev;
+      const updatedScreens = [...prev.screens];
+      updatedScreens[screenIdx] = { ...updatedScreens[screenIdx], lat: suggestion.lat, lng: suggestion.lng };
+      return { ...prev, screens: updatedScreens };
+    });
+    setScreenGeo(prev => {
+      const next = [...prev];
+      next[screenIdx] = { matched: true, suggestions: [] };
+      return next;
+    });
   }
+
+  // Stable identity for a parsed screen — same as the upsert key the API uses.
+  const screenKey = (s: { city: string; address: string; typeCode: string }) =>
+    `${s.typeCode}|${s.city}|${s.address}`;
+
+  // Bucket multi-period rows by screen identity once. Used by both the
+  // aggregates-table render and the confirm payload builder.
+  const rowsByScreen = useMemo(() => {
+    const m = new Map<string, MultiPeriodRow[]>();
+    if (preview?.mode !== 'multi-period') return m;
+    for (const r of preview.rows) {
+      const k = screenKey(r.screen);
+      const bucket = m.get(k);
+      if (bucket) bucket.push(r);
+      else m.set(k, [r]);
+    }
+    return m;
+  }, [preview]);
 
   const handleConfirm = async () => {
     if (!preview) return;
@@ -236,18 +253,16 @@ export function UploadDropzone({
             photoUrl: (s.photoUrl as string | null | undefined) ?? null,
             lat: s.lat ?? null,
             lng: s.lng ?? null,
-            metrics: preview.rows
-              .filter(r => r.screen.city === s.city && r.screen.address === s.address && r.screen.typeCode === s.typeCode)
-              .map(r => ({
-                periodStart: r.periodStart,
-                periodEnd: r.periodEnd,
-                periodLabel: r.periodLabel,
-                otsPlan: r.screen.otsPlan ?? null,
-                ratingPlan: r.screen.ratingPlan ?? null,
-                otsFact: r.screen.otsFact ?? null,
-                ratingFact: r.screen.ratingFact ?? null,
-                universe: r.screen.universe ?? null,
-              })),
+            metrics: (rowsByScreen.get(screenKey(s)) ?? []).map(r => ({
+              periodStart: r.periodStart,
+              periodEnd: r.periodEnd,
+              periodLabel: r.periodLabel,
+              otsPlan: r.screen.otsPlan ?? null,
+              ratingPlan: r.screen.ratingPlan ?? null,
+              otsFact: r.screen.otsFact ?? null,
+              ratingFact: r.screen.ratingFact ?? null,
+              universe: r.screen.universe ?? null,
+            })),
           })),
         }
       : {
@@ -295,22 +310,21 @@ export function UploadDropzone({
   const unmatchedCount = screenGeo.filter(g => !g.matched).length;
 
   // Per-screen aggregates for the multi-period table: sum OTS and count periods.
-  const multiPeriodAggregates = preview?.mode === 'multi-period'
-    ? preview.screens.map(s => {
-        const matchingRows = preview.rows.filter(
-          r => r.screen.city === s.city && r.screen.address === s.address && r.screen.typeCode === s.typeCode,
-        );
-        const sumOrNull = (vals: (number | null | undefined)[]) => {
-          const nums = vals.filter((v): v is number => v != null);
-          return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) : null;
-        };
-        return {
-          totalOtsPlan: sumOrNull(matchingRows.map(r => r.screen.otsPlan)),
-          totalOtsFact: sumOrNull(matchingRows.map(r => r.screen.otsFact)),
-          periodCount: matchingRows.length,
-        };
-      })
-    : null;
+  const multiPeriodAggregates = useMemo(() => {
+    if (preview?.mode !== 'multi-period') return null;
+    const sumOrNull = (vals: (number | null | undefined)[]) => {
+      const nums = vals.filter((v): v is number => v != null);
+      return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) : null;
+    };
+    return preview.screens.map(s => {
+      const matchingRows = rowsByScreen.get(screenKey(s)) ?? [];
+      return {
+        totalOtsPlan: sumOrNull(matchingRows.map(r => r.screen.otsPlan)),
+        totalOtsFact: sumOrNull(matchingRows.map(r => r.screen.otsFact)),
+        periodCount: matchingRows.length,
+      };
+    });
+  }, [preview, rowsByScreen]);
 
   return (
     <div className="space-y-6">
