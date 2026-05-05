@@ -181,12 +181,32 @@ model CampaignPeriod {
   @@index([campaignId])
 }
 
+// Reference table for screen types. Named ScreenTypeRef (rather than ScreenType)
+// to avoid a name collision with the legacy `enum ScreenType`. The enum is
+// kept until Task 13 of the other-carriers-template plan, after which this
+// model may be renamed to ScreenType. The DB table is mapped to "ScreenType".
+model ScreenTypeRef {
+  id        String   @id @default(uuid())
+  code      String   @unique // e.g. "LED", "ROOF", "BRANDMAUER"
+  nameRu    String
+  nameEn    String
+  nameUz    String
+  category  String // "SCREENS" or "OTHER_CARRIERS" — informational only
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  screens   Screen[]
+}
+
 model Screen {
   id                String          @id @default(uuid())
   campaignId        String
   campaign          Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   externalId        String?
   type              ScreenType
+  typeId            String?
+  screenType        ScreenTypeRef?  @relation(fields: [typeId], references: [id])
   city              String
   address           String
   lat               Float?
@@ -205,6 +225,7 @@ model Screen {
   @@index([campaignId])
   @@index([city])
   @@index([type])
+  @@index([typeId])
 }
 
 model ScreenPricing {
