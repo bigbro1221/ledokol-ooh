@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const ScreenRowSchema = z.object({
   type: z.enum(['LED', 'STATIC', 'STOP', 'AIRPORT', 'BUS']),
+  // Transitional canonical string code; in Task 6 it replaces `type` entirely.
+  typeCode: z.string().min(1).nullable(),
   city: z.string().min(1, 'City is required'),
   address: z.string().min(1, 'Address is required'),
   size: z.string().nullable(),
@@ -24,6 +26,22 @@ export const ScreenRowSchema = z.object({
 });
 
 export type ScreenRow = z.infer<typeof ScreenRowSchema>;
+
+export const MultiPeriodRowSchema = z.object({
+  screen: ScreenRowSchema,
+  periodStart: z.date(),
+  periodEnd: z.date(),
+  periodLabel: z.string(),
+});
+
+export type MultiPeriodRow = z.infer<typeof MultiPeriodRowSchema>;
+
+export interface MultiPeriodParseResult {
+  campaign: CampaignData;
+  rows: MultiPeriodRow[];
+  errors: ParseError[];
+  warnings: ParseWarning[];
+}
 
 export const CampaignDataSchema = z.object({
   clientName: z.string().min(1),

@@ -65,3 +65,23 @@ export function typeFromColumnValue(val: string): ScreenType | null {
   if (v.includes('метро') || v.includes('metro') || v.includes('монитор')) return 'STOP'; // metro → STOP
   return null;
 }
+
+/**
+ * Detect a canonical type code (string) from a column value.
+ * Includes the new types (ROOF, BRANDMAUER, CINEMA, METRO) which are not in the
+ * legacy `ScreenType` enum. Used by the multi-period parser branch.
+ */
+export function typeCodeFromColumnValue(s: string): string | null {
+  const v = s.trim().toLowerCase();
+  if (!v) return null;
+  if (/лед|led/.test(v)) return 'LED';
+  if (/остановк/.test(v)) return 'STOP';
+  if (/статик/.test(v)) return 'STATIC';
+  if (/аэропорт/.test(v)) return 'AIRPORT';
+  if (/автобус/.test(v)) return 'BUS';
+  if (/крыш/.test(v)) return 'ROOF';
+  if (/брендмауэр|брендмаур|brandmauer/.test(v)) return 'BRANDMAUER';
+  if (/кинотеатр|cinema/.test(v)) return 'CINEMA';
+  if (/метро|metro/.test(v)) return 'METRO';
+  return null;
+}

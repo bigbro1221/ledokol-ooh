@@ -92,6 +92,7 @@ function parseScreenSheet(
 
     const rawRow = {
       type: screenType,
+      typeCode: screenType,
       city: city || 'Ташкент',
       address: address || `${sheetName} — строка ${r + 1}`,
       size,
