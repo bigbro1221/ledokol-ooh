@@ -1,10 +1,9 @@
-import { pathToFileURL } from 'node:url';
 import { readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const files = readdirSync(__dirname).filter(f => f.endsWith('.test.ts'));
+const files = readdirSync(__dirname).filter(f => f.endsWith('.test.ts')).sort();
 
 async function main() {
   let failed = 0;
