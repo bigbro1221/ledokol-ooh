@@ -52,6 +52,11 @@ enum DateFormat {
   NUMERIC_DMON
 }
 
+enum MediaType {
+  SCREENS
+  OTHER_CARRIERS
+}
+
 model User {
   id               String             @id @default(uuid())
   email            String             @unique
@@ -133,6 +138,9 @@ model Campaign {
   productionCost BigInt?
   acRate         Decimal  @default("0") @db.Decimal(5, 4)
   totalFinal     BigInt?
+  mediaType      MediaType @default(SCREENS)
+  additionalCurrency String?
+  additionalAmount   BigInt?
   screens        Screen[]
   periods        CampaignPeriod[]
   creatives      Creative[]
@@ -173,6 +181,8 @@ model CampaignPeriod {
   productionCost BigInt?
   acRate         Decimal         @default("0") @db.Decimal(5, 4)
   totalFinal     BigInt?
+  additionalCurrency String?
+  additionalAmount   BigInt?
   metrics        ScreenMetrics[]
   pricing        ScreenPricing[]
   createdAt      DateTime        @default(now())
