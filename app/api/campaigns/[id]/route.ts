@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { MediaType } from '@prisma/client';
 import { requireAdmin } from '@/lib/api-auth';
+import { serializeCampaign } from '@/lib/serializers';
 
 const UpdateCampaignSchema = z.object({
   name: z.string().min(1).optional(),
@@ -16,7 +18,7 @@ const UpdateCampaignSchema = z.object({
   productionCost: z.number().nullable().optional(),
   acRate: z.number().min(0).max(1).optional(),
   totalFinal: z.number().nullable().optional(),
-  mediaType: z.enum(['SCREENS', 'OTHER_CARRIERS']).optional(),
+  mediaType: z.nativeEnum(MediaType).optional(),
   additionalCurrency: z.string().trim().min(1).nullable().optional(),
   additionalAmount: z.number().nullable().optional(),
 });
@@ -34,14 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     },
   });
   if (!campaign) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({
-    ...campaign,
-    totalBudgetUzs: campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : null,
-    totalBudgetRub: campaign.totalBudgetRub ? Number(campaign.totalBudgetRub) : null,
-    productionCost: campaign.productionCost ? Number(campaign.productionCost) : null,
-    totalFinal: campaign.totalFinal ? Number(campaign.totalFinal) : null,
-    additionalAmount: campaign.additionalAmount ? Number(campaign.additionalAmount) : null,
-  });
+  return NextResponse.json(serializeCampaign(campaign));
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -101,14 +96,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     },
   });
 
-  return NextResponse.json({
-    ...campaign,
-    totalBudgetUzs: campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : null,
-    totalBudgetRub: campaign.totalBudgetRub ? Number(campaign.totalBudgetRub) : null,
-    productionCost: campaign.productionCost ? Number(campaign.productionCost) : null,
-    totalFinal: campaign.totalFinal ? Number(campaign.totalFinal) : null,
-    additionalAmount: campaign.additionalAmount ? Number(campaign.additionalAmount) : null,
-  });
+  return NextResponse.json(serializeCampaign(campaign));
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {

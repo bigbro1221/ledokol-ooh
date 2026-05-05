@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { MediaType } from '@prisma/client';
 import { requireAdmin } from '@/lib/api-auth';
+import { serializeCampaign } from '@/lib/serializers';
 
 const CreateCampaignSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -13,7 +15,7 @@ const CreateCampaignSchema = z.object({
   yandexMapUrl: z.string().url().optional().nullable(),
   reportsUrl: z.string().url().optional().nullable(),
   acRate: z.number().min(0).max(1).optional().default(0),
-  mediaType: z.enum(['SCREENS', 'OTHER_CARRIERS']).optional().default('SCREENS'),
+  mediaType: z.nativeEnum(MediaType).optional().default('SCREENS'),
   additionalCurrency: z.string().trim().min(1).optional().nullable(),
   additionalAmount: z.number().nullable().optional(),
 });
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
         ...(additionalAmount != null && { additionalAmount: BigInt(Math.round(additionalAmount)) }),
       },
     });
-    return NextResponse.json(campaign, { status: 201 });
+    return NextResponse.json(serializeCampaign(campaign), { status: 201 });
   } catch (err) {
     console.error('POST /api/campaigns failed:', err);
     return NextResponse.json(
