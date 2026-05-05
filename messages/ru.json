@@ -153,7 +153,19 @@
     "resetSuccess": "Статус сброшен. Новое приглашение отправлено.",
     "deleteUser": "Удалить пользователя",
     "deleteUserConfirm": "Удалить пользователя {email} безвозвратно? Все связанные данные (сессии, токены, привязки Google) будут удалены.",
-    "deleteUserError": "Не удалось удалить пользователя"
+    "deleteUserError": "Не удалось удалить пользователя",
+    "mediaType": "Тип кампании",
+    "mediaTypeScreens": "Экраны",
+    "mediaTypeOtherCarriers": "Другие носители (Брендмауеры, вокзалы, Крыши и др.)",
+    "mediaTypeLockedHint": "Чтобы сменить тип, удалите все периоды и финансовые данные",
+    "financialsHeader": "Финансовые данные",
+    "totalBudgetUzs": "Бюджет (UZS)",
+    "productionCost": "Стоимость производства (UZS)",
+    "totalFinal": "Итого с АК и НДС (UZS)",
+    "additionalCurrency": "Доп. валюта",
+    "additionalCurrencyPlaceholder": "RUB / USD / EUR",
+    "additionalAmount": "Сумма в доп. валюте",
+    "mediaTypeLocked": "Очистите периоды и финансовые данные перед сменой типа кампании"
   },
   "profile": {
     "cardTitle": "Профиль",

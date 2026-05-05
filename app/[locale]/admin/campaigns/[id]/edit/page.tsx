@@ -29,6 +29,13 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
         yandexMapUrl: true,
         reportsUrl: true,
         acRate: true,
+        mediaType: true,
+        additionalCurrency: true,
+        additionalAmount: true,
+        totalBudgetUzs: true,
+        productionCost: true,
+        totalFinal: true,
+        _count: { select: { periods: true } },
       },
     }),
     prisma.client.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
@@ -38,6 +45,13 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
 
   // Format dates as YYYY-MM-DD for date inputs
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+  const hasFinancials =
+    campaign.totalBudgetUzs != null ||
+    campaign.productionCost != null ||
+    campaign.totalFinal != null ||
+    campaign.additionalAmount != null;
+  const canChangeMediaType = campaign._count.periods === 0 && !hasFinancials;
 
   return (
     <div>
@@ -66,6 +80,13 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
           yandexMapUrl: campaign.yandexMapUrl,
           reportsUrl: campaign.reportsUrl,
           acRate: campaign.acRate ? String(Number(campaign.acRate) * 100) : '',
+          mediaType: campaign.mediaType,
+          additionalCurrency: campaign.additionalCurrency,
+          additionalAmount: campaign.additionalAmount != null ? Number(campaign.additionalAmount) : null,
+          totalBudgetUzs: campaign.totalBudgetUzs != null ? Number(campaign.totalBudgetUzs) : null,
+          productionCost: campaign.productionCost != null ? Number(campaign.productionCost) : null,
+          totalFinal: campaign.totalFinal != null ? Number(campaign.totalFinal) : null,
+          canChangeMediaType,
         }}
       />
     </div>

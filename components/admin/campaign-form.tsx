@@ -18,6 +18,13 @@ interface CampaignFormProps {
     yandexMapUrl?: string | null;
     reportsUrl?: string | null;
     acRate?: string | null;
+    mediaType?: 'SCREENS' | 'OTHER_CARRIERS';
+    additionalCurrency?: string | null;
+    additionalAmount?: number | string | null;
+    totalBudgetUzs?: number | string | null;
+    productionCost?: number | string | null;
+    totalFinal?: number | string | null;
+    canChangeMediaType?: boolean;
   };
 }
 
@@ -31,6 +38,12 @@ interface DraftState {
   yandexMapUrl: string;
   reportsUrl: string;
   acRate: string;
+  mediaType: 'SCREENS' | 'OTHER_CARRIERS';
+  totalBudgetUzs: string;
+  productionCost: string;
+  totalFinal: string;
+  additionalCurrency: string;
+  additionalAmount: string;
 }
 
 const DRAFT_KEY = 'ledokol_campaign_draft';
@@ -72,6 +85,20 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   const [yandexMapUrl, setYandexMapUrl] = useState(initial?.yandexMapUrl ?? '');
   const [reportsUrl, setReportsUrl] = useState(initial?.reportsUrl ?? '');
   const [acRate, setAcRate] = useState(initial?.acRate ?? '');
+  const [mediaType, setMediaType] = useState<'SCREENS' | 'OTHER_CARRIERS'>(initial?.mediaType ?? 'SCREENS');
+  const [totalBudgetUzs, setTotalBudgetUzs] = useState(
+    initial?.totalBudgetUzs != null ? String(initial.totalBudgetUzs) : ''
+  );
+  const [productionCost, setProductionCost] = useState(
+    initial?.productionCost != null ? String(initial.productionCost) : ''
+  );
+  const [totalFinal, setTotalFinal] = useState(
+    initial?.totalFinal != null ? String(initial.totalFinal) : ''
+  );
+  const [additionalCurrency, setAdditionalCurrency] = useState(initial?.additionalCurrency ?? '');
+  const [additionalAmount, setAdditionalAmount] = useState(
+    initial?.additionalAmount != null ? String(initial.additionalAmount) : ''
+  );
 
   const [loading, setLoading] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -100,6 +127,12 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       setYandexMapUrl(draft.yandexMapUrl);
       setReportsUrl(draft.reportsUrl ?? '');
       setAcRate(draft.acRate ?? '');
+      setMediaType(draft.mediaType ?? 'SCREENS');
+      setTotalBudgetUzs(draft.totalBudgetUzs ?? '');
+      setProductionCost(draft.productionCost ?? '');
+      setTotalFinal(draft.totalFinal ?? '');
+      setAdditionalCurrency(draft.additionalCurrency ?? '');
+      setAdditionalAmount(draft.additionalAmount ?? '');
       if (draft.name || draft.clientId) setDraftRestored(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,8 +145,18 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   useEffect(() => {
     if (isEdit) return;
     if (skipFirstSave.current) { skipFirstSave.current = false; return; }
-    saveDraft({ name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl, reportsUrl, acRate });
-  }, [isEdit, name, clientId, periodStart, periodEnd, splitByPeriods, heatmapUrl, yandexMapUrl, reportsUrl, acRate]);
+    saveDraft({
+      name, clientId, periodStart, periodEnd, splitByPeriods,
+      heatmapUrl, yandexMapUrl, reportsUrl, acRate,
+      mediaType, totalBudgetUzs, productionCost, totalFinal,
+      additionalCurrency, additionalAmount,
+    });
+  }, [
+    isEdit, name, clientId, periodStart, periodEnd, splitByPeriods,
+    heatmapUrl, yandexMapUrl, reportsUrl, acRate,
+    mediaType, totalBudgetUzs, productionCost, totalFinal,
+    additionalCurrency, additionalAmount,
+  ]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -121,6 +164,11 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
     setError('');
 
     const acRatePct = parseFloat(acRate);
+    const num = (s: string) => {
+      const n = parseFloat(s);
+      return !isNaN(n) ? n : null;
+    };
+
     const data = {
       name,
       clientId,
@@ -131,6 +179,14 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       yandexMapUrl: yandexMapUrl.trim() || null,
       reportsUrl: reportsUrl.trim() || null,
       acRate: !isNaN(acRatePct) && acRatePct > 0 ? acRatePct / 100 : 0,
+      mediaType,
+      ...(mediaType === 'OTHER_CARRIERS' && {
+        totalBudgetUzs: num(totalBudgetUzs),
+        productionCost: num(productionCost),
+        totalFinal: num(totalFinal),
+        additionalCurrency: additionalCurrency.trim() || null,
+        additionalAmount: num(additionalAmount),
+      }),
     };
 
     const url = isEdit ? `/api/campaigns/${initial.id}` : '/api/campaigns';
@@ -140,7 +196,11 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(err.error || err.errors?.fieldErrors?.name?.[0] || tc('error'));
+        if (err.error === 'mediaType_locked') {
+          setError(tf('mediaTypeLocked'));
+        } else {
+          setError(err.message || err.error || err.errors?.fieldErrors?.name?.[0] || tc('error'));
+        }
         setLoading(false);
         return;
       }
@@ -168,6 +228,8 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
               clearDraft();
               setName(''); setClientId(''); setPeriodStart(''); setPeriodEnd('');
               setSplitByPeriods(false); setHeatmapUrl(''); setYandexMapUrl(''); setAcRate('');
+              setMediaType('SCREENS'); setTotalBudgetUzs(''); setProductionCost('');
+              setTotalFinal(''); setAdditionalCurrency(''); setAdditionalAmount('');
               setDraftRestored(false);
             }}
             className="ml-4 text-[11px] text-[var(--text-3)] underline hover:text-[var(--text)]"
@@ -204,6 +266,25 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+      </div>
+
+      {/* Media type */}
+      <div>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+          {tf('mediaType')}
+        </label>
+        <select
+          value={mediaType}
+          disabled={isEdit && initial?.canChangeMediaType === false}
+          onChange={e => setMediaType(e.target.value as 'SCREENS' | 'OTHER_CARRIERS')}
+          className={inputCls}
+        >
+          <option value="SCREENS">{tf('mediaTypeScreens')}</option>
+          <option value="OTHER_CARRIERS">{tf('mediaTypeOtherCarriers')}</option>
+        </select>
+        {isEdit && initial?.canChangeMediaType === false && (
+          <p className="mt-1 text-[11px] text-[var(--text-4)]">{tf('mediaTypeLockedHint')}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -250,6 +331,86 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
         />
         <p className="mt-1 text-[11px] text-[var(--text-4)]">{tf('agencyCommissionHelp')}</p>
       </div>
+
+      {/* Financials sub-form (only for OTHER_CARRIERS) */}
+      {mediaType === 'OTHER_CARRIERS' && (
+        <fieldset className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] p-4">
+          <legend className="px-1 text-[11px] font-medium uppercase tracking-wide text-[var(--text-3)]">
+            {tf('financialsHeader')}
+          </legend>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+                {tf('totalBudgetUzs')}
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                value={totalBudgetUzs}
+                onChange={e => setTotalBudgetUzs(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+                {tf('productionCost')}
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                value={productionCost}
+                onChange={e => setProductionCost(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+                {tf('totalFinal')}
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                value={totalFinal}
+                onChange={e => setTotalFinal(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+                {tf('additionalCurrency')}
+              </label>
+              <input
+                type="text"
+                maxLength={8}
+                placeholder={tf('additionalCurrencyPlaceholder')}
+                value={additionalCurrency}
+                onChange={e => setAdditionalCurrency(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+                {tf('additionalAmount')}
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                value={additionalAmount}
+                onChange={e => setAdditionalAmount(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+          </div>
+        </fieldset>
+      )}
 
       {/* Heatmap URL */}
       <div>

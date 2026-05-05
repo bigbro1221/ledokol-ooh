@@ -153,7 +153,19 @@
     "resetSuccess": "Status reset. A new invitation has been sent.",
     "deleteUser": "Delete user",
     "deleteUserConfirm": "Permanently delete user {email}? All related data (sessions, tokens, Google links) will be removed.",
-    "deleteUserError": "Could not delete the user"
+    "deleteUserError": "Could not delete the user",
+    "mediaType": "Campaign type",
+    "mediaTypeScreens": "Screens",
+    "mediaTypeOtherCarriers": "Other carriers (brandmauers, train stations, rooftops, etc.)",
+    "mediaTypeLockedHint": "Clear all periods and financial data to change the type",
+    "financialsHeader": "Financials",
+    "totalBudgetUzs": "Budget (UZS)",
+    "productionCost": "Production cost (UZS)",
+    "totalFinal": "Total with commission & VAT (UZS)",
+    "additionalCurrency": "Additional currency",
+    "additionalCurrencyPlaceholder": "RUB / USD / EUR",
+    "additionalAmount": "Additional amount",
+    "mediaTypeLocked": "Clear periods and financial data before changing the campaign type"
   },
   "profile": {
     "cardTitle": "Profile",

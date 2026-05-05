@@ -153,7 +153,19 @@
     "resetSuccess": "Holat qayta tiklandi. Yangi taklif yuborildi.",
     "deleteUser": "Foydalanuvchini o'chirish",
     "deleteUserConfirm": "Foydalanuvchi {email} ni butunlay o'chirib tashlaysizmi? Barcha bog'liq ma'lumotlar (sessiyalar, tokenlar, Google bog'lanishlari) o'chiriladi.",
-    "deleteUserError": "Foydalanuvchini o'chirib bo'lmadi"
+    "deleteUserError": "Foydalanuvchini o'chirib bo'lmadi",
+    "mediaType": "Kampaniya turi",
+    "mediaTypeScreens": "Ekranlar",
+    "mediaTypeOtherCarriers": "Boshqa tashuvchilar (brandmauerlar, vokzallar, tomlar va h.k.)",
+    "mediaTypeLockedHint": "Turini o'zgartirish uchun barcha davrlarni va moliyaviy ma'lumotlarni tozalang",
+    "financialsHeader": "Moliyaviy ma'lumotlar",
+    "totalBudgetUzs": "Byudjet (UZS)",
+    "productionCost": "Ishlab chiqarish narxi (UZS)",
+    "totalFinal": "Komissiya va QQS bilan jami (UZS)",
+    "additionalCurrency": "Qo'shimcha valyuta",
+    "additionalCurrencyPlaceholder": "RUB / USD / EUR",
+    "additionalAmount": "Qo'shimcha summa",
+    "mediaTypeLocked": "Kampaniya turini o'zgartirishdan oldin davrlarni va moliyaviy ma'lumotlarni tozalang"
   },
   "profile": {
     "cardTitle": "Profil",
