@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -38,24 +38,123 @@ interface MapScreen {
 }
 
 
+function buildHeatFeatures(data: MapScreen[]) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: data.map(s => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [s.lng, s.lat] },
+      properties: { ots: s.ots || 1000 },
+    })),
+  };
+}
+
+function applyData(
+  m: mapboxgl.Map,
+  data: MapScreen[],
+  markersRef: React.MutableRefObject<mapboxgl.Marker[]>,
+) {
+  // Replace markers
+  markersRef.current.forEach(mk => mk.remove());
+  markersRef.current = [];
+  for (const s of data) {
+    const color = TYPE_COLORS[s.type] || '#888';
+
+    const el = document.createElement('div');
+    el.style.width = '14px';
+    el.style.height = '14px';
+    el.style.borderRadius = '50%';
+    el.style.backgroundColor = color;
+    el.style.border = '2px solid white';
+    el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    el.style.cursor = 'pointer';
+
+    const popup = new mapboxgl.Popup({ offset: 15, maxWidth: '260px' }).setHTML(`
+      <div style="font-family:var(--font-sans);font-size:13px;line-height:1.4;">
+        <div style="font-weight:600;margin-bottom:6px;">${s.address}</div>
+        <div style="color:#888;font-size:11px;margin-bottom:6px;">${s.city} · ${TYPE_LABELS[s.type] || s.type}${s.size ? ` · ${s.size}` : ''}</div>
+        ${s.otsFact != null
+          ? `<div style="display:flex;align-items:baseline;gap:6px;">
+               <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#888;">Показы</span>
+               <span style="font-family:monospace;font-size:13px;font-weight:600;">${s.otsFact.toLocaleString('ru-RU')}</span>
+             </div>`
+          : s.ots != null
+            ? `<div style="display:flex;align-items:baseline;gap:6px;">
+                 <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#888;">OTS план</span>
+                 <span style="font-family:monospace;font-size:13px;font-weight:600;">${s.ots.toLocaleString('ru-RU')}</span>
+               </div>`
+            : ''}
+      </div>
+    `);
+
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat([s.lng, s.lat])
+      .setPopup(popup)
+      .addTo(m);
+
+    markersRef.current.push(marker);
+  }
+
+  // Fit bounds
+  if (data.length > 0) {
+    const bounds = new mapboxgl.LngLatBounds();
+    data.forEach(s => bounds.extend([s.lng, s.lat]));
+    m.fitBounds(bounds, { padding: 50, maxZoom: 14 });
+  }
+
+  // Heatmap source/layer — update data if already present, otherwise add.
+  const existing = m.getSource('screens-heat') as mapboxgl.GeoJSONSource | undefined;
+  const fc = buildHeatFeatures(data);
+  if (existing) {
+    existing.setData(fc);
+  } else {
+    m.addSource('screens-heat', { type: 'geojson', data: fc });
+    m.addLayer({
+      id: 'heatmap-layer',
+      type: 'heatmap',
+      source: 'screens-heat',
+      layout: { visibility: 'none' },
+      paint: {
+        'heatmap-weight': ['interpolate', ['linear'], ['get', 'ots'], 0, 0, 10000, 1],
+        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 8, 15, 14, 30],
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0, 'rgba(0,0,0,0)',
+          0.2, '#ffffb2',
+          0.4, '#feb24c',
+          0.6, '#fd8d3c',
+          0.8, '#f03b20',
+          1, '#bd0026',
+        ],
+        'heatmap-opacity': 0.7,
+      },
+    });
+  }
+}
+
 export function ScreenMap({ screens }: { screens: MapScreen[] }) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const { resolvedTheme } = useTheme();
 
-  const screensWithCoords = screens.filter(s => s.lat && s.lng);
+  // Stable reference: only changes when the underlying screens prop changes.
+  // Without this, the data effect would refire on every parent re-render
+  // (filter() returns a new array each time), tearing down WebGL state.
+  const screensWithCoords = useMemo(
+    () => screens.filter(s => s.lat && s.lng),
+    [screens],
+  );
 
+  // The map-creation effect can't depend on screensWithCoords (otherwise
+  // every screens change rebuilds the map). It reads the latest value via
+  // this ref when the map's 'load' event fires.
+  const screensRef = useRef(screensWithCoords);
+  screensRef.current = screensWithCoords;
+
+  // Effect 1: create the map; rebuild only when the theme (style) changes.
   useEffect(() => {
     if (!mapContainer.current || !TOKEN || TOKEN.includes('placeholder')) return;
-
-    // Destroy previous map on theme change
-    if (map.current) {
-      markersRef.current.forEach(m => m.remove());
-      markersRef.current = [];
-      map.current.remove();
-      map.current = null;
-    }
 
     mapboxgl.accessToken = TOKEN;
 
@@ -69,96 +168,30 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
     m.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     m.on('load', () => {
-      // Add markers
-      for (const s of screensWithCoords) {
-        const color = TYPE_COLORS[s.type] || '#888';
-
-        const el = document.createElement('div');
-        el.style.width = '14px';
-        el.style.height = '14px';
-        el.style.borderRadius = '50%';
-        el.style.backgroundColor = color;
-        el.style.border = '2px solid white';
-        el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-        el.style.cursor = 'pointer';
-
-        const popup = new mapboxgl.Popup({ offset: 15, maxWidth: '260px' }).setHTML(`
-          <div style="font-family:var(--font-sans);font-size:13px;line-height:1.4;">
-            <div style="font-weight:600;margin-bottom:6px;">${s.address}</div>
-            <div style="color:#888;font-size:11px;margin-bottom:6px;">${s.city} · ${TYPE_LABELS[s.type] || s.type}${s.size ? ` · ${s.size}` : ''}</div>
-            ${s.otsFact != null
-              ? `<div style="display:flex;align-items:baseline;gap:6px;">
-                   <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#888;">Показы</span>
-                   <span style="font-family:monospace;font-size:13px;font-weight:600;">${s.otsFact.toLocaleString('ru-RU')}</span>
-                 </div>`
-              : s.ots != null
-                ? `<div style="display:flex;align-items:baseline;gap:6px;">
-                     <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#888;">OTS план</span>
-                     <span style="font-family:monospace;font-size:13px;font-weight:600;">${s.ots.toLocaleString('ru-RU')}</span>
-                   </div>`
-                : ''}
-          </div>
-        `);
-
-        const marker = new mapboxgl.Marker(el)
-          .setLngLat([s.lng, s.lat])
-          .setPopup(popup)
-          .addTo(m);
-
-        markersRef.current.push(marker);
-      }
-
-      // Fit bounds
-      if (screensWithCoords.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds();
-        screensWithCoords.forEach(s => bounds.extend([s.lng, s.lat]));
-        m.fitBounds(bounds, { padding: 50, maxZoom: 14 });
-      }
-
-      // Add heatmap source
-      m.addSource('screens-heat', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: screensWithCoords.map(s => ({
-            type: 'Feature' as const,
-            geometry: { type: 'Point' as const, coordinates: [s.lng, s.lat] },
-            properties: { ots: s.ots || 1000 },
-          })),
-        },
-      });
-
-      m.addLayer({
-        id: 'heatmap-layer',
-        type: 'heatmap',
-        source: 'screens-heat',
-        layout: { visibility: 'none' },
-        paint: {
-          'heatmap-weight': ['interpolate', ['linear'], ['get', 'ots'], 0, 0, 10000, 1],
-          'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 8, 15, 14, 30],
-          'heatmap-color': [
-            'interpolate', ['linear'], ['heatmap-density'],
-            0, 'rgba(0,0,0,0)',
-            0.2, '#ffffb2',
-            0.4, '#feb24c',
-            0.6, '#fd8d3c',
-            0.8, '#f03b20',
-            1, '#bd0026',
-          ],
-          'heatmap-opacity': 0.7,
-        },
-      });
+      // Cleanup may have run before 'load' fired (rapid theme toggles); skip
+      // if this map is no longer the active one.
+      if (map.current !== m) return;
+      applyData(m, screensRef.current, markersRef);
     });
 
     map.current = m;
 
     return () => {
-      markersRef.current.forEach(m => m.remove());
+      markersRef.current.forEach(mk => mk.remove());
       markersRef.current = [];
-      if (map.current) { map.current.remove(); map.current = null; }
+      m.remove();
+      if (map.current === m) map.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screensWithCoords, resolvedTheme]);
+  }, [resolvedTheme]);
+
+  // Effect 2: refresh markers + heatmap data when screens change, without
+  // tearing down the map. Skipped if the map's style hasn't loaded yet —
+  // effect 1's load handler will pick up the latest data via screensRef.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !m.isStyleLoaded()) return;
+    applyData(m, screensWithCoords, markersRef);
+  }, [screensWithCoords]);
 
 
   if (!TOKEN || TOKEN.includes('placeholder')) {
