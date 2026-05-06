@@ -233,6 +233,24 @@ export function UploadDropzone({
     return m;
   }, [preview]);
 
+  // Per-screen aggregates for the multi-period table: sum OTS and count periods.
+  // Defined alongside rowsByScreen so it sits before any early-return below.
+  const multiPeriodAggregates = useMemo(() => {
+    if (preview?.mode !== 'multi-period') return null;
+    const sumOrNull = (vals: (number | null | undefined)[]) => {
+      const nums = vals.filter((v): v is number => v != null);
+      return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) : null;
+    };
+    return preview.screens.map(s => {
+      const matchingRows = rowsByScreen.get(screenKey(s)) ?? [];
+      return {
+        totalOtsPlan: sumOrNull(matchingRows.map(r => r.screen.otsPlan)),
+        totalOtsFact: sumOrNull(matchingRows.map(r => r.screen.otsFact)),
+        periodCount: matchingRows.length,
+      };
+    });
+  }, [preview, rowsByScreen]);
+
   const handleConfirm = async () => {
     if (!preview) return;
     setConfirming(true);
@@ -307,23 +325,6 @@ export function UploadDropzone({
   }
 
   const unmatchedCount = screenGeo.filter(g => !g.matched).length;
-
-  // Per-screen aggregates for the multi-period table: sum OTS and count periods.
-  const multiPeriodAggregates = useMemo(() => {
-    if (preview?.mode !== 'multi-period') return null;
-    const sumOrNull = (vals: (number | null | undefined)[]) => {
-      const nums = vals.filter((v): v is number => v != null);
-      return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) : null;
-    };
-    return preview.screens.map(s => {
-      const matchingRows = rowsByScreen.get(screenKey(s)) ?? [];
-      return {
-        totalOtsPlan: sumOrNull(matchingRows.map(r => r.screen.otsPlan)),
-        totalOtsFact: sumOrNull(matchingRows.map(r => r.screen.otsFact)),
-        periodCount: matchingRows.length,
-      };
-    });
-  }, [preview, rowsByScreen]);
 
   return (
     <div className="space-y-6">
