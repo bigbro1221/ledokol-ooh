@@ -228,7 +228,6 @@ async function main() {
             typeId,
             city: city || 'Ташкент',
             address: address || `${sheetName} — строка ${r + 1}`,
-            size,
             resolution: resolution !== 'х' && resolution !== 'x' ? resolution : null,
             photoUrl,
             pricing: (priceUnit || priceDiscounted || priceRub || productionCost)
@@ -243,6 +242,7 @@ async function main() {
               : undefined,
             metrics: {
               create: {
+                size,
                 otsPlan: Math.round(3000 + Math.random() * 7000),
                 ratingPlan: Number((Math.random() * 5).toFixed(2)),
                 universe: Math.round(50000 + Math.random() * 200000),

@@ -44,6 +44,17 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     'Прогнозное количество выходов в сутки',
     'Кол-во выходов в сутки',
   ],
+  spotDurationSec: [
+    'Длительность ролика',
+    'Длительность',
+  ],
+  workingHours: [
+    'Время работы',
+  ],
+  spotsPerBlock: [
+    'Кол-во выходов в блоке',
+    'Количество выходов в блоке',
+  ],
   externalId: ['id', 'ID'],
   productionCost: [
     'Стоимость производства',

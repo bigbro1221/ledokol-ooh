@@ -12,6 +12,9 @@ interface ScreenData {
   size?: string | null;
   resolution?: string | null;
   impressionsPerDay?: number | null;
+  spotDurationSec?: number | null;
+  workingHours?: string | null;
+  spotsPerBlock?: number | null;
   externalId?: string | null;
   photoUrl?: string | null;
   lat?: number | null;
@@ -34,6 +37,11 @@ interface PeriodMetrics {
   periodStart: string; // ISO string
   periodEnd: string; // ISO string
   periodLabel: string;
+  size: string | null;
+  impressionsPerDay: number | null;
+  spotDurationSec: number | null;
+  workingHours: string | null;
+  spotsPerBlock: number | null;
   otsPlan: number | null;
   ratingPlan: number | null;
   otsFact: number | null;
@@ -46,9 +54,7 @@ interface MultiPeriodScreenData {
   typeName?: string | null;
   city: string;
   address: string;
-  size?: string | null;
   resolution?: string | null;
-  impressionsPerDay?: number | null;
   externalId?: string | null;
   photoUrl?: string | null;
   lat?: number | null;
@@ -74,10 +80,12 @@ type MultiPeriodBody = {
 
 type ConfirmBody = ScreensModeBody | MultiPeriodBody;
 
-// Common fields needed to upsert a Screen — shared between modes.
+// Physical-screen fields used to upsert a Screen row (one per panel, stable
+// across periods). Per-flight attributes (size, impressionsPerDay, etc.) live
+// on ScreenMetrics now.
 type UpsertableScreen = Pick<
   ScreenData,
-  'typeCode' | 'city' | 'address' | 'externalId' | 'size' | 'resolution' | 'impressionsPerDay' | 'photoUrl' | 'lat' | 'lng'
+  'typeCode' | 'city' | 'address' | 'externalId' | 'resolution' | 'photoUrl' | 'lat' | 'lng'
 >;
 
 function buildScreenWriteData(s: UpsertableScreen, typeIdByCode: Map<string, string>) {
@@ -85,16 +93,24 @@ function buildScreenWriteData(s: UpsertableScreen, typeIdByCode: Map<string, str
   if (!typeId) {
     throw new Error(`Unknown screen type code "${s.typeCode}" — no matching ScreenTypeRef row`);
   }
-  return {
+  // Two payloads: `create` writes all fields (including nulls) for new screens.
+  // `update` only writes non-null values — re-uploads with empty cells must
+  // preserve existing data instead of wiping it.
+  const create = {
     externalId: s.externalId || null,
     typeId,
-    size: s.size || null,
     resolution: s.resolution || null,
-    impressionsPerDay: s.impressionsPerDay ? Math.round(s.impressionsPerDay) : null,
     photoUrl: s.photoUrl || null,
     lat: s.lat || null,
     lng: s.lng || null,
-  } as const;
+  };
+  const update: Partial<typeof create> = { typeId };
+  if (s.externalId) update.externalId = s.externalId;
+  if (s.resolution) update.resolution = s.resolution;
+  if (s.photoUrl) update.photoUrl = s.photoUrl;
+  if (s.lat) update.lat = s.lat;
+  if (s.lng) update.lng = s.lng;
+  return { create, update };
 }
 
 /**
@@ -210,17 +226,22 @@ async function handleScreensConfirm(campaignId: string, body: ScreensModeBody) {
     }
 
     for (const s of body.screens) {
-      const data = buildScreenWriteData(s, typeIdByCode);
+      const { create, update } = buildScreenWriteData(s, typeIdByCode);
       const screen = await tx.screen.upsert({
         where: { campaignId_city_address: { campaignId, city: s.city, address: s.address } },
-        create: { ...data, campaignId, city: s.city, address: s.address },
-        update: data,
+        create: { ...create, campaignId, city: s.city, address: s.address },
+        update,
       });
 
       await tx.screenMetrics.create({
         data: {
           screenId: screen.id,
           periodId: body.periodId || null,
+          size: s.size || null,
+          impressionsPerDay: s.impressionsPerDay ? Math.round(s.impressionsPerDay) : null,
+          spotDurationSec: s.spotDurationSec ? Math.round(s.spotDurationSec) : null,
+          workingHours: s.workingHours || null,
+          spotsPerBlock: s.spotsPerBlock ? Math.round(s.spotsPerBlock) : null,
           otsPlan: s.otsPlan ? Math.round(s.otsPlan) : null,
           ratingPlan: s.ratingPlan != null ? Number(s.ratingPlan.toFixed(4)) : null,
           otsFact: s.otsFact ? Math.round(s.otsFact) : null,
@@ -328,11 +349,11 @@ async function handleMultiPeriodConfirm(campaignId: string, body: MultiPeriodBod
 
     // 5. Upsert screens, write metrics per period.
     for (const sc of body.screens) {
-      const data = buildScreenWriteData(sc, typeIdByCode);
+      const { create, update } = buildScreenWriteData(sc, typeIdByCode);
       const screen = await tx.screen.upsert({
         where: { campaignId_city_address: { campaignId, city: sc.city, address: sc.address } },
-        create: { ...data, campaignId, city: sc.city, address: sc.address },
-        update: data,
+        create: { ...create, campaignId, city: sc.city, address: sc.address },
+        update,
       });
 
       for (const m of sc.metrics) {
@@ -343,6 +364,11 @@ async function handleMultiPeriodConfirm(campaignId: string, body: MultiPeriodBod
           data: {
             screenId: screen.id,
             periodId,
+            size: m.size || null,
+            impressionsPerDay: m.impressionsPerDay ? Math.round(m.impressionsPerDay) : null,
+            spotDurationSec: m.spotDurationSec ? Math.round(m.spotDurationSec) : null,
+            workingHours: m.workingHours || null,
+            spotsPerBlock: m.spotsPerBlock ? Math.round(m.spotsPerBlock) : null,
             otsPlan: m.otsPlan ? Math.round(m.otsPlan) : null,
             ratingPlan: m.ratingPlan != null ? Number(m.ratingPlan.toFixed(4)) : null,
             otsFact: m.otsFact ? Math.round(m.otsFact) : null,

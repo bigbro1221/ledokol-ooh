@@ -363,6 +363,7 @@
     "colCity": "Город",
     "colAddress": "Адрес",
     "colSize": "Размер",
+    "colImpressions": "Выходов/день",
     "colProduction": "Произв.",
     "colNoVat": "Без АК/НДС",
     "colCommissionPct": "АК%",

@@ -140,10 +140,16 @@ export default async function DashboardPage({
           where: Object.keys(screenWhere).length > 0 ? screenWhere : undefined,
           select: {
             id: true, externalId: true, city: true, address: true,
-            size: true, resolution: true, photoUrl: true, lat: true, lng: true,
-            impressionsPerDay: true,
+            resolution: true, photoUrl: true, lat: true, lng: true,
             screenType: { select: { code: true } },
-            metrics: { select: { periodId: true, otsPlan: true, ratingPlan: true, otsFact: true, ratingFact: true } },
+            metrics: {
+              select: {
+                periodId: true,
+                size: true,
+                impressionsPerDay: true,
+                otsPlan: true, ratingPlan: true, otsFact: true, ratingFact: true,
+              },
+            },
             pricing: { select: { periodId: true, priceUnit: true, priceDiscounted: true, priceTotal: true, agencyFeeAmt: true } },
           },
         },
@@ -240,16 +246,24 @@ export default async function DashboardPage({
     s + filterMetrics(sc.metrics).reduce((ms, m) => ms + (m.ratingFact ? Number(m.ratingFact) : 0), 0), 0);
 
   // "Сред. показов/день" cell — average daily plays per screen, computed as
-  // (Σ Screen.impressionsPerDay) / (count of filtered screens with a value).
-  // Only meaningful for SCREENS campaigns (XLSX has the "Прогнозное кол-во
-  // выходов в сутки" column per screen); OTHER_CARRIERS leaves this null
-  // and the cell hides.
+  // (Σ per-screen impressionsPerDay) / (count of filtered screens with a value).
+  // The value lives on ScreenMetrics now (per-period); when multiple periods
+  // are visible we pick the latest non-null value per screen so the headline
+  // reflects the current flight, not a stale earlier one.
   let avgImpressionsPerDay: number | null = null;
   if (campaign.mediaType !== 'OTHER_CARRIERS') {
-    const screensWithImpressions = campaign.screens.filter(sc => sc.impressionsPerDay != null && sc.impressionsPerDay > 0);
-    if (screensWithImpressions.length > 0) {
-      const sum = screensWithImpressions.reduce((s, sc) => s + (sc.impressionsPerDay ?? 0), 0);
-      avgImpressionsPerDay = Math.round(sum / screensWithImpressions.length);
+    const perScreenImpressions: number[] = [];
+    for (const sc of campaign.screens) {
+      const candidates = filterMetrics(sc.metrics)
+        .map(m => m.impressionsPerDay)
+        .filter((v): v is number => v != null && v > 0);
+      if (candidates.length > 0) {
+        perScreenImpressions.push(candidates[candidates.length - 1]);
+      }
+    }
+    if (perScreenImpressions.length > 0) {
+      const sum = perScreenImpressions.reduce((s, v) => s + v, 0);
+      avgImpressionsPerDay = Math.round(sum / perScreenImpressions.length);
     }
   }
 
@@ -378,10 +392,21 @@ export default async function DashboardPage({
     .filter(s => s.ots > 0)
     .sort((a, b) => b.ots - a.ots).slice(0, 20);
 
+  // Pick the latest non-null per-period value for display in the screens table.
+  // metrics is ordered by insertion (no orderBy on the relation), so we walk
+  // backwards — last filtered metric with a value wins.
+  const pickLatest = <T,>(vals: (T | null | undefined)[]): T | null => {
+    for (let i = vals.length - 1; i >= 0; i--) {
+      if (vals[i] != null) return vals[i] as T;
+    }
+    return null;
+  };
+
   const tableScreens: ScreenRow[] = campaign.screens
     .map(s => {
-      const totalOtsPlan = filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0);
-      const totalOtsFact = filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0);
+      const visibleMetrics = filterMetrics(s.metrics);
+      const totalOtsPlan = visibleMetrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0);
+      const totalOtsFact = visibleMetrics.reduce((ms, m) => ms + (m.otsFact || 0), 0);
       const price = screenTotalPrice(s);
       return {
         id: s.id,
@@ -389,9 +414,9 @@ export default async function DashboardPage({
         type: s.screenType.code,
         city: s.city.trim(),
         address: s.address,
-        size: s.size,
+        size: pickLatest(visibleMetrics.map(m => m.size)),
         resolution: s.resolution,
-        impressionsPerDay: s.impressionsPerDay,
+        impressionsPerDay: pickLatest(visibleMetrics.map(m => m.impressionsPerDay)),
         periodId: null,
         periodName: null,
         otsPlan: totalOtsPlan || null,
@@ -410,18 +435,21 @@ export default async function DashboardPage({
 
   const mapScreens = campaign.screens
     .filter(s => s.lat && s.lng)
-    .map(s => ({
-      id: s.id,
-      lat: s.lat!,
-      lng: s.lng!,
-      type: s.screenType.code,
-      address: s.address,
-      city: s.city.trim(),
-      size: s.size,
-      ots: filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0) || null,
-      otsFact: filterMetrics(s.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0) || null,
-      photoUrl: s.photoUrl,
-    }));
+    .map(s => {
+      const visibleMetrics = filterMetrics(s.metrics);
+      return {
+        id: s.id,
+        lat: s.lat!,
+        lng: s.lng!,
+        type: s.screenType.code,
+        address: s.address,
+        city: s.city.trim(),
+        size: pickLatest(visibleMetrics.map(m => m.size)),
+        ots: visibleMetrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0) || null,
+        otsFact: visibleMetrics.reduce((ms, m) => ms + (m.otsFact || 0), 0) || null,
+        photoUrl: s.photoUrl,
+      };
+    });
 
   function toEmbedUrl(url: string): string {
     const stripped = url.replace(/\/+$/, '');

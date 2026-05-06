@@ -24,6 +24,9 @@ interface ScreenRow {
   size?: string | null;
   resolution?: string | null;
   impressionsPerDay?: number | null;
+  spotDurationSec?: number | null;
+  workingHours?: string | null;
+  spotsPerBlock?: number | null;
   productionCost?: number | null;
   priceTotal?: number | null;
   commissionPct?: number | null;
@@ -266,9 +269,7 @@ export function UploadDropzone({
             typeName: s.typeName ?? null,
             city: s.city,
             address: s.address,
-            size: s.size ?? null,
             resolution: s.resolution ?? null,
-            impressionsPerDay: s.impressionsPerDay ?? null,
             externalId: (s.externalId as string | null | undefined) ?? null,
             photoUrl: (s.photoUrl as string | null | undefined) ?? null,
             lat: s.lat ?? null,
@@ -277,6 +278,11 @@ export function UploadDropzone({
               periodStart: r.periodStart,
               periodEnd: r.periodEnd,
               periodLabel: r.periodLabel,
+              size: r.screen.size ?? null,
+              impressionsPerDay: r.screen.impressionsPerDay ?? null,
+              spotDurationSec: r.screen.spotDurationSec ?? null,
+              workingHours: r.screen.workingHours ?? null,
+              spotsPerBlock: r.screen.spotsPerBlock ?? null,
               otsPlan: r.screen.otsPlan ?? null,
               ratingPlan: r.screen.ratingPlan ?? null,
               otsFact: r.screen.otsFact ?? null,
@@ -472,6 +478,7 @@ export function UploadDropzone({
                           { label: tu('colCity'), align: 'left' },
                           { label: tu('colAddress'), align: 'left' },
                           { label: tu('colSize'), align: 'left' },
+                          { label: tu('colImpressions'), align: 'right' },
                           { label: tu('colOtsPlan'), align: 'right' },
                           { label: tu('colOtsFact'), align: 'right' },
                           { label: tu('colPeriods'), align: 'right' },
@@ -509,6 +516,7 @@ export function UploadDropzone({
                               <span className="line-clamp-1" style={{ fontFamily: 'var(--font-sans)' }}>{screen.address}</span>
                             </td>
                             <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.size ?? '—'}</td>
+                            <td className="px-3 py-1.5 text-right">{num(screen.impressionsPerDay)}</td>
                             <td className="px-3 py-1.5 text-right">{num(agg.totalOtsPlan)}</td>
                             <td className="px-3 py-1.5 text-right">{num(agg.totalOtsFact)}</td>
                             <td className="px-3 py-1.5 text-right text-[var(--text-3)]">{agg.periodCount}</td>
@@ -537,6 +545,7 @@ export function UploadDropzone({
                           { label: tu('colCity'), align: 'left' },
                           { label: tu('colAddress'), align: 'left' },
                           { label: tu('colSize'), align: 'left' },
+                          { label: tu('colImpressions'), align: 'right' },
                           { label: tu('colProduction'), align: 'right' },
                           { label: tu('colNoVat'), align: 'right' },
                           { label: tu('colCommissionPct'), align: 'right' },
@@ -580,6 +589,7 @@ export function UploadDropzone({
                               <span className="line-clamp-1" style={{ fontFamily: 'var(--font-sans)' }}>{screen.address}</span>
                             </td>
                             <td className="whitespace-nowrap px-3 py-1.5 text-[var(--text-2)]">{screen.size ?? '—'}</td>
+                            <td className="px-3 py-1.5 text-right">{num(screen.impressionsPerDay)}</td>
                             <td className="px-3 py-1.5 text-right">{num(screen.productionCost)}</td>
                             <td className="px-3 py-1.5 text-right">{num(screen.priceTotal)}</td>
                             <td className="px-3 py-1.5 text-right">{pct(screen.commissionPct)}</td>

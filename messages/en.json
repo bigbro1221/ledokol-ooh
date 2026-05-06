@@ -363,6 +363,7 @@
     "colCity": "City",
     "colAddress": "Address",
     "colSize": "Size",
+    "colImpressions": "Imp./day",
     "colProduction": "Production",
     "colNoVat": "Excl. AC/VAT",
     "colCommissionPct": "AC%",

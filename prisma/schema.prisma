@@ -253,9 +253,7 @@ model Screen {
   address           String
   lat               Float?
   lng               Float?
-  size              String?
   resolution        String?
-  impressionsPerDay Int?
   photoUrl          String?
   pricing           ScreenPricing[]
   metrics           ScreenMetrics[]
@@ -288,17 +286,26 @@ model ScreenPricing {
 }
 
 model ScreenMetrics {
-  id         String          @id @default(uuid())
-  screenId   String
-  screen     Screen          @relation(fields: [screenId], references: [id], onDelete: Cascade)
-  periodId   String?
-  period     CampaignPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  otsPlan    Int?
-  ratingPlan Decimal?
-  otsFact    Int?
-  ratingFact Decimal?
-  universe   Int?
-  source     DataSource      @default(XLSX)
+  id                String          @id @default(uuid())
+  screenId          String
+  screen            Screen          @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  periodId          String?
+  period            CampaignPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  // Per-flight physical/scheduling attributes — moved off Screen so each
+  // (screen × period) row can carry its own values. The same panel can run
+  // 15s spots in one flight and 30s in the next; the previous design wiped
+  // earlier values when a later upload had empty cells.
+  size              String?
+  impressionsPerDay Int?
+  spotDurationSec   Int?
+  workingHours      String?
+  spotsPerBlock     Int?
+  otsPlan           Int?
+  ratingPlan        Decimal?
+  otsFact           Int?
+  ratingFact        Decimal?
+  universe          Int?
+  source            DataSource      @default(XLSX)
 
   @@index([screenId])
   @@index([periodId])

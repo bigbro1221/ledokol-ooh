@@ -39,9 +39,7 @@ export default async function CampaignScreensPage({
       externalId: true,
       city: true,
       address: true,
-      size: true,
       resolution: true,
-      impressionsPerDay: true,
       photoUrl: true,
       lat: true,
       lng: true,
@@ -50,11 +48,27 @@ export default async function CampaignScreensPage({
         select: { periodId: true, priceUnit: true, priceDiscounted: true, priceTotal: true },
       },
       metrics: {
-        select: { periodId: true, otsPlan: true, otsFact: true },
+        select: {
+          periodId: true,
+          size: true,
+          impressionsPerDay: true,
+          otsPlan: true,
+          otsFact: true,
+        },
       },
     },
     orderBy: [{ city: 'asc' }, { address: 'asc' }],
   });
+
+  // Surface a single representative size + impressionsPerDay per screen for the
+  // aggregate row view: pick the most recent non-null value across periods.
+  // (Per-period detail surfaces in the period drilldown.)
+  const pickLatest = <T,>(vals: (T | null | undefined)[]): T | null => {
+    for (let i = vals.length - 1; i >= 0; i--) {
+      if (vals[i] != null) return vals[i] as T;
+    }
+    return null;
+  };
 
   const rows: ScreenRow[] = screens.map(s => {
     const totalOtsPlan = s.metrics.reduce((ms, m) => ms + (m.otsPlan || 0), 0);
@@ -71,9 +85,9 @@ export default async function CampaignScreensPage({
       type: s.screenType.code,
       city: s.city.trim(),
       address: s.address,
-      size: s.size,
+      size: pickLatest(s.metrics.map(m => m.size)),
       resolution: s.resolution,
-      impressionsPerDay: s.impressionsPerDay,
+      impressionsPerDay: pickLatest(s.metrics.map(m => m.impressionsPerDay)),
       periodId: null,
       periodName: null,
       otsPlan: totalOtsPlan || null,

@@ -9,6 +9,14 @@ function parseNum(val: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
+// "15 секунд" / "15s" / "15" → 15. Pulls the first integer from the string.
+function parseSeconds(val: unknown): number | null {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return Math.round(val);
+  const m = String(val).match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
 function getHyperlink(sheet: XLSX.WorkSheet, row: number, col: number): string | null {
   const ref = XLSX.utils.encode_cell({ r: row, c: col });
   return sheet[ref]?.l?.Target || null;
@@ -103,6 +111,9 @@ function parseScreenSheet(
       externalId: colMap.externalId !== undefined ? String(row[colMap.externalId] || '').trim() || null : null,
       photoUrl,
       impressionsPerDay: colMap.impressionsPerDay !== undefined ? parseNum(row[colMap.impressionsPerDay]) : null,
+      spotDurationSec: colMap.spotDurationSec !== undefined ? parseSeconds(row[colMap.spotDurationSec]) : null,
+      workingHours: colMap.workingHours !== undefined ? (String(row[colMap.workingHours] || '').trim() || null) : null,
+      spotsPerBlock: colMap.spotsPerBlock !== undefined ? parseNum(row[colMap.spotsPerBlock]) : null,
       priceUnit: colMap.priceUnit !== undefined ? parseNum(row[colMap.priceUnit]) : null,
       priceDiscounted: colMap.priceDiscounted !== undefined ? parseNum(row[colMap.priceDiscounted]) : null,
       priceTotal: colMap.priceTotal !== undefined ? parseNum(row[colMap.priceTotal]) : null,
