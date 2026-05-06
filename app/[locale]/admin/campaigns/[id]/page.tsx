@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import Link from 'next/link';
-import { Upload, FileSpreadsheet, Layers, Pencil, Table2, Film, Eye, ArrowLeft } from 'lucide-react';
+import { Upload, FileSpreadsheet, Layers, Pencil, Table2, Film, Eye, ArrowLeft, Download } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { StatusToggle } from '@/components/admin/status-toggle';
 import { PeriodManager } from '@/components/admin/period-manager';
@@ -10,6 +10,7 @@ import { DeleteCampaignButton } from '@/components/admin/delete-campaign-button'
 import { ClearScreensButton } from '@/components/admin/clear-screens-button';
 import { CampaignFinancials } from '@/components/admin/campaign-financials';
 import { RegeocodeButton } from '@/components/admin/regeocodebutton';
+import { ScreensCard, type PeriodSummary } from '@/components/admin/screens-card';
 import { getVatRateAt } from '@/lib/vat';
 
 export default async function CampaignDetailPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
@@ -27,7 +28,12 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
     where: { id },
     include: {
       client: true,
-      screens: { select: { screenType: { select: { code: true } } } },
+      screens: {
+        select: {
+          screenType: { select: { code: true } },
+          metrics: { select: { periodId: true, otsPlan: true, otsFact: true } },
+        },
+      },
       periods: {
         include: { _count: { select: { metrics: true } } },
         orderBy: { periodStart: 'asc' },
@@ -69,6 +75,35 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
     _count: p._count,
   }));
 
+  // Per-period aggregates for the Screens card modal: how many screens have
+  // metrics for that period, sum of OTS plan/fact across them. Only built
+  // for split-by-periods campaigns (mono campaigns have one implicit period).
+  const periodSummaries: PeriodSummary[] = campaign.splitByPeriods
+    ? campaign.periods.map(p => {
+        let otsPlan = 0;
+        let otsFact = 0;
+        let screensCount = 0;
+        for (const s of campaign.screens) {
+          const ms = s.metrics.filter(m => m.periodId === p.id);
+          if (ms.length === 0) continue;
+          screensCount += 1;
+          for (const m of ms) {
+            otsPlan += m.otsPlan ?? 0;
+            otsFact += m.otsFact ?? 0;
+          }
+        }
+        return {
+          id: p.id,
+          name: p.name,
+          periodStart: p.periodStart.toISOString(),
+          periodEnd: p.periodEnd.toISOString(),
+          otsPlan,
+          otsFact,
+          screensCount,
+        };
+      })
+    : [];
+
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -106,6 +141,15 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               <Upload size={16} strokeWidth={1.5} /> {tAdmin('uploadXlsx')}
             </Link>
           )}
+          {campaign.sourceFileUrl && (
+            <a
+              href={`/api/storage/${campaign.sourceFileUrl.split('/').map(encodeURIComponent).join('/')}`}
+              download
+              className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
+            >
+              <Download size={13} strokeWidth={1.5} /> {tAdmin('downloadXlsx')}
+            </a>
+          )}
           {totalScreens > 0 && (
             <Link
               href={`/${locale}/admin/campaigns/${id}/screens`}
@@ -142,10 +186,11 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
             {campaign.periodStart.toLocaleDateString(locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU')} — {campaign.periodEnd.toLocaleDateString(locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU')}
           </div>
         </div>
-        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="text-xs text-[var(--text-3)]">{tAdmin('tableScreens')}</div>
-          <div className="mt-1 text-2xl font-semibold">{totalScreens}</div>
-        </div>
+        <ScreensCard
+          totalScreens={totalScreens}
+          periodSummaries={periodSummaries}
+          label={tAdmin('tableScreens')}
+        />
 
         {campaign.splitByPeriods ? (
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
