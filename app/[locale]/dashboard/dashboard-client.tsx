@@ -295,7 +295,9 @@ export function DashboardClient({
       )}
 
       {/* Top screens */}
-      {topScreens.length > 0 && (
+      {/* "Top screens" bar — only meaningful when there's more than one
+          screen to compare. A single bar isn't useful. */}
+      {topScreens.length > 1 && (
         <div className="mb-6">
           <TopScreensBar data={topScreens} />
         </div>
