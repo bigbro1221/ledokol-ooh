@@ -13,31 +13,6 @@ function shortNumber(n: number): string {
   return n.toString();
 }
 
-function computeAvgImpressionsPerDay(
-  totalOtsFact: number,
-  totalOtsPlan: number,
-  periodStart: string,
-  periodEnd: string,
-  status: string,
-): number | null {
-  const totalOts = totalOtsFact > 0 ? totalOtsFact : totalOtsPlan;
-  if (totalOts === 0) return null;
-
-  const start = new Date(periodStart);
-  const end = new Date(periodEnd);
-  const today = new Date();
-  const MS_PER_DAY = 86_400_000;
-
-  if (status === 'COMPLETED' || today > end) {
-    const totalDays = Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
-    return Math.round(totalOts / Math.max(1, totalDays));
-  }
-  // ACTIVE / PAUSED — use elapsed days up to today
-  const effectiveEnd = today < end ? today : end;
-  const elapsedDays = Math.max(1, Math.round((effectiveEnd.getTime() - start.getTime()) / MS_PER_DAY));
-  return Math.round(totalOts / elapsedDays);
-}
-
 interface Props {
   totalBudget: number;
   // Same number minus VAT — used by the CPT факт cell only. CPM/avg-budget
@@ -46,10 +21,11 @@ interface Props {
   totalOtsPlan: number;
   totalOtsFact: number;
   totalRatingFact: number;
+  // Σ Screen.impressionsPerDay across filtered screens — drives the
+  // "Сред. показов/день" cell. Null for OTHER_CARRIERS campaigns (no
+  // per-screen impressions data); the cell hides.
+  totalImpressionsPerDay: number | null;
   totalScreens: number;
-  periodStart: string;
-  periodEnd: string;
-  status: string;
   locale?: string;
   currency?: string;
 }
@@ -72,8 +48,7 @@ function GradientText({ children, gradient }: { children: ReactNode; gradient: G
 
 export function EfficiencyStrip({
   totalBudget, totalBudgetWithoutVat,
-  totalOtsPlan, totalOtsFact, totalRatingFact, totalScreens,
-  periodStart, periodEnd, status,
+  totalOtsPlan, totalOtsFact, totalRatingFact, totalImpressionsPerDay, totalScreens,
   currency = 'UZS',
 }: Props) {
   const t = useTranslations('charts');
@@ -90,9 +65,11 @@ export function EfficiencyStrip({
   const cptFact = totalBudgetWithoutVat > 0 && totalRatingFact > 0
     ? totalBudgetWithoutVat / totalRatingFact
     : null;
-  const avgImpressions = computeAvgImpressionsPerDay(
-    totalOtsFact, totalOtsPlan, periodStart, periodEnd, status,
-  );
+  // Sum of "Прогнозное кол-во выходов в сутки" across filtered screens.
+  // OTHER_CARRIERS sends null → cell hidden.
+  const avgImpressions = totalImpressionsPerDay && totalImpressionsPerDay > 0
+    ? totalImpressionsPerDay
+    : null;
 
   type Cell = { label: string; value: string; gradient: Gradient; sub?: string };
   const cells: Cell[] = [];

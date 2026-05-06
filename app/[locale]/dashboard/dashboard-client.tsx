@@ -47,7 +47,7 @@ interface Props {
   campaigns: { id: string; name: string; status: string; clientName: string; periodStart: string; periodEnd: string }[];
   selectedCampaignId: string;
   campaign: { name: string; clientName: string; periodStart: string; periodEnd: string; status: string };
-  kpis: { totalOtsPlan: number; totalOtsFact: number; totalRatingFact: number; totalScreens: number; cities: number; totalBudget: number; totalBudgetWithoutVat: number; formatBudget: string };
+  kpis: { totalOtsPlan: number; totalOtsFact: number; totalRatingFact: number; totalImpressionsPerDay: number | null; totalScreens: number; cities: number; totalBudget: number; totalBudgetWithoutVat: number; formatBudget: string };
   // TODO: disabled per product decision 2026-04-20; restore if re-enabled
   // donutData: { name: string; value: number }[];
   // donutIsFact: boolean;
@@ -201,10 +201,8 @@ export function DashboardClient({
           totalOtsPlan={kpis.totalOtsPlan}
           totalOtsFact={kpis.totalOtsFact}
           totalRatingFact={kpis.totalRatingFact}
+          totalImpressionsPerDay={kpis.totalImpressionsPerDay}
           totalScreens={kpis.totalScreens}
-          periodStart={campaign.periodStart}
-          periodEnd={campaign.periodEnd}
-          status={campaign.status}
           locale={locale}
         />
       </div>
