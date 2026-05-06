@@ -10,6 +10,7 @@ import { DeleteCampaignButton } from '@/components/admin/delete-campaign-button'
 import { ClearScreensButton } from '@/components/admin/clear-screens-button';
 import { CampaignFinancials } from '@/components/admin/campaign-financials';
 import { RegeocodeButton } from '@/components/admin/regeocodebutton';
+import { getVatRateAt } from '@/lib/vat';
 
 export default async function CampaignDetailPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
@@ -48,6 +49,10 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   // period management. The "Upload XLSX" button stays available regardless of
   // splitByPeriods, and PeriodManager is hidden for this media type.
   const isOtherCarriers = campaign.mediaType === 'OTHER_CARRIERS';
+
+  // VAT rate active at periodStart — used by the inline financials editor
+  // for the live totalFinal preview.
+  const vatRate = (await getVatRateAt(campaign.periodStart)) ?? 0;
 
   // Serialise periods (BigInt → number)
   const periods = campaign.periods.map(p => ({
@@ -196,6 +201,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
           <CampaignFinancials
             campaignId={id}
+            vatRate={vatRate}
             initialValues={{
               totalBudgetUzs: campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : null,
               productionCost: campaign.productionCost ? Number(campaign.productionCost) : null,
