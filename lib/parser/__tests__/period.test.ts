@@ -52,11 +52,22 @@ assert(parsePeriodString('05.05.2025 — 31.05.2025'));
   assert.equal(periodName(r.periodStart, r.periodEnd), 'Февраль 2025');
 }
 
-// Day-6 start falls outside the "≤ 5" heuristic → raw range, not "Май 2025"
+// Any range entirely within one calendar month → "<Month> <Year>",
+// even partial coverage (mid-month chunks, end-of-campaign tails).
 {
   const r = parsePeriodString('06.05.2025 - 31.05.2025');
   assert(r);
-  assert.equal(periodName(r.periodStart, r.periodEnd), '06.05.2025 – 31.05.2025');
+  assert.equal(periodName(r.periodStart, r.periodEnd), 'Май 2025');
+}
+{
+  const r = parsePeriodString('01.05.2026 - 04.05.2026');
+  assert(r);
+  assert.equal(periodName(r.periodStart, r.periodEnd), 'Май 2026');
+}
+{
+  const r = parsePeriodString('15.04.2026 - 20.04.2026');
+  assert(r);
+  assert.equal(periodName(r.periodStart, r.periodEnd), 'Апрель 2026');
 }
 
 // Bad input

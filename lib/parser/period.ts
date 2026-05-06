@@ -36,20 +36,24 @@ export function parsePeriodString(raw: string): ParsedPeriod | null {
   return { periodStart: start, periodEnd: end };
 }
 
-function isLastDayOfMonth(d: Date): boolean {
-  const next = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1));
-  return next.getUTCMonth() !== d.getUTCMonth();
-}
-
 function pad2(n: number): string {
   return n.toString().padStart(2, '0');
 }
 
+/**
+ * Render a period name. Any range falling entirely within one calendar month
+ * (full or partial) gets the friendly "<Month> <Year>" form — admins read
+ * "Май 2026" much faster than "01.05.2026 – 04.05.2026". Cross-month ranges
+ * keep the raw dd.mm.yyyy – dd.mm.yyyy format.
+ *
+ * Caveat: a campaign with two non-overlapping ranges in the same month would
+ * collide on names. Not seen in real data so far; if it happens we'd need a
+ * dedup pass at the call site.
+ */
 export function periodName(start: Date, end: Date): string {
   const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
   const sameMonth = sameYear && start.getUTCMonth() === end.getUTCMonth();
-  // "Full month": starts on day 1 OR before, ends on last day of that month
-  if (sameMonth && start.getUTCDate() <= 5 && isLastDayOfMonth(end)) {
+  if (sameMonth) {
     return `${RU_MONTHS_NOM[start.getUTCMonth()]} ${start.getUTCFullYear()}`;
   }
   const fmt = (d: Date) =>
