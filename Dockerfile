@@ -52,7 +52,11 @@ COPY --from=deps /app/node_modules/@prisma/engines-version ./node_modules/@prism
 
 # Install Postmark with its full transitive tree — Next.js standalone tracer
 # doesn't follow postmark's CJS requires reliably, so let npm resolve them.
-RUN npm install --no-save --no-package-lock --omit=dev postmark@4.0.7
+# --legacy-peer-deps because prisma generate rewrites @prisma/client's
+# package.json in the builder stage; npm then can't read its version when
+# checking @auth/prisma-adapter's peer-dep range and aborts. Postmark itself
+# has no peer deps in this graph, so skipping the check is safe.
+RUN npm install --no-save --no-package-lock --omit=dev --legacy-peer-deps postmark@4.0.7
 
 USER nextjs
 EXPOSE 3000
