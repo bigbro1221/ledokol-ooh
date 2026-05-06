@@ -5,6 +5,7 @@ import { CampaignForm } from '@/components/admin/campaign-form';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { getVatRateAt } from '@/lib/vat';
 
 export default async function NewCampaignPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -13,7 +14,7 @@ export default async function NewCampaignPage({ params }: { params: Promise<{ lo
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
-  const [clients, currencies] = await Promise.all([
+  const [clients, currencies, vatRate] = await Promise.all([
     prisma.client.findMany({
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
@@ -23,6 +24,11 @@ export default async function NewCampaignPage({ params }: { params: Promise<{ lo
       orderBy: { sortOrder: 'asc' },
       select: { id: true, code: true, nameRu: true, nameEn: true, nameUz: true },
     }),
+    // For new campaigns we don't yet know periodStart, so the form preview
+    // uses today's rate. The server resolves the actual VAT from the
+    // user-entered periodStart on save, so the stored totalFinal is exact
+    // even if the preview is briefly off.
+    getVatRateAt(new Date()),
   ]);
   const t = await getTranslations({ locale, namespace: 'admin' });
 
@@ -38,7 +44,7 @@ export default async function NewCampaignPage({ params }: { params: Promise<{ lo
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{t('newCampaignTitle')}</h1>
       </div>
-      <CampaignForm locale={locale} clients={clients} currencies={currencies} />
+      <CampaignForm locale={locale} clients={clients} currencies={currencies} vatRate={vatRate ?? 0} />
     </div>
   );
 }

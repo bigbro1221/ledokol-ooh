@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { CampaignForm } from '@/components/admin/campaign-form';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import { getTranslations } from 'next-intl/server';
+import { getVatRateAt } from '@/lib/vat';
 
 export default async function EditCampaignPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
@@ -48,6 +49,10 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
 
   if (!campaign) notFound();
 
+  // VAT rate active at this campaign's periodStart — used by the form's
+  // read-only totalFinal preview. Server is authoritative on save.
+  const vatRate = (await getVatRateAt(campaign.periodStart)) ?? 0;
+
   // Format dates as YYYY-MM-DD for date inputs
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -75,6 +80,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
         locale={locale}
         clients={clients}
         currencies={currencies}
+        vatRate={vatRate}
         initial={{
           id: campaign.id,
           name: campaign.name,

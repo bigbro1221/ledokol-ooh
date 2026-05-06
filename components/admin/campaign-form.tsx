@@ -8,6 +8,10 @@ interface CampaignFormProps {
   locale: string;
   clients: { id: string; name: string }[];
   currencies: { id: string; code: string; nameRu: string; nameEn: string; nameUz: string }[];
+  // VAT rate active at the campaign's periodStart (or today's rate for new
+  // campaigns). Used purely for the read-only totalFinal preview; the
+  // server is the source of truth on save.
+  vatRate: number;
   initial?: {
     id: string;
     name: string;
@@ -70,7 +74,7 @@ function clearDraft() {
   } catch {}
 }
 
-export function CampaignForm({ locale, clients, currencies, initial }: CampaignFormProps) {
+export function CampaignForm({ locale, clients, currencies, vatRate, initial }: CampaignFormProps) {
   const router = useRouter();
   const tc = useTranslations('common');
   const tf = useTranslations('forms');
@@ -184,7 +188,8 @@ export function CampaignForm({ locale, clients, currencies, initial }: CampaignF
       ...(mediaType === 'OTHER_CARRIERS' && {
         totalBudgetUzs: num(totalBudgetUzs),
         productionCost: num(productionCost),
-        totalFinal: num(totalFinal),
+        // totalFinal is computed server-side from totalBudgetUzs × (1 + VAT@periodStart);
+        // not sent from the client.
         additionalCurrencyId: additionalCurrencyId || null,
         additionalAmount: num(additionalAmount),
       }),
@@ -372,15 +377,23 @@ export function CampaignForm({ locale, clients, currencies, initial }: CampaignF
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
                 {tf('totalFinal')}
               </label>
-              <input
-                type="number"
-                inputMode="numeric"
-                min="0"
-                step="1"
-                value={totalFinal}
-                onChange={e => setTotalFinal(e.target.value)}
-                className={inputCls}
-              />
+              {/* Computed live as totalBudgetUzs × (1 + VAT). Server recomputes
+                  authoritatively on save using the VatRate active at periodStart. */}
+              <div
+                aria-readonly="true"
+                className={`${inputCls} flex items-center justify-between bg-[var(--surface-2)] text-[var(--text-2)]`}
+              >
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {(() => {
+                    const base = parseFloat(totalBudgetUzs);
+                    if (!isFinite(base)) return '—';
+                    return Math.round(base * (1 + vatRate)).toLocaleString('ru-RU');
+                  })()}
+                </span>
+                <span className="text-[11px] text-[var(--text-4)]">
+                  {tf('vatPreview', { pct: (vatRate * 100).toFixed(0) })}
+                </span>
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
