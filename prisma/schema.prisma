@@ -207,6 +207,25 @@ model ScreenTypeRef {
   screens   Screen[]
 }
 
+// Reference table for VAT rates by validity window. Looked up via
+// validFrom <= <date> <= COALESCE(validTo, +inf) — historically constant
+// once a campaign starts (we resolve by Campaign.periodStart so VAT changes
+// don't retroactively shift past totals). Admin can append a new row when
+// the country changes the rate; the prior row's validTo is set to the day
+// before the new one's validFrom.
+model VatRate {
+  id        String    @id @default(uuid())
+  rate      Decimal   @db.Decimal(5, 4) // e.g. 0.1200 = 12%
+  validFrom DateTime
+  validTo   DateTime?
+  notes     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([validFrom, validTo])
+}
+
 // Reference table for currencies. Mirrors ScreenTypeRef pattern; the model
 // name carries the "Ref" suffix to leave room for an admin CRUD model later.
 model CurrencyRef {

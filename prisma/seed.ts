@@ -2,12 +2,14 @@ import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { seedScreenTypes } from './seed-screen-types';
 import { seedCurrencies } from './seed-currencies';
+import { seedVatRates } from './seed-vat-rates';
 
 const prisma = new PrismaClient();
 
 async function main() {
   await seedScreenTypes();
   await seedCurrencies();
+  await seedVatRates();
 
   const passwordHash = await hash('admin123', 12);
 
