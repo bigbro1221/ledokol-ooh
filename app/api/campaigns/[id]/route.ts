@@ -19,7 +19,7 @@ const UpdateCampaignSchema = z.object({
   acRate: z.number().min(0).max(1).optional(),
   totalFinal: z.number().nullable().optional(),
   mediaType: z.nativeEnum(MediaType).optional(),
-  additionalCurrency: z.string().trim().min(1).nullable().optional(),
+  additionalCurrencyId: z.string().uuid().nullable().optional(),
   additionalAmount: z.number().nullable().optional(),
 });
 

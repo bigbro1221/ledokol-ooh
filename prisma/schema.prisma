@@ -130,7 +130,8 @@ model Campaign {
   acRate         Decimal  @default("0") @db.Decimal(5, 4)
   totalFinal     BigInt?
   mediaType      MediaType @default(SCREENS)
-  additionalCurrency String?
+  additionalCurrencyId String?
+  additionalCurrency CurrencyRef? @relation(fields: [additionalCurrencyId], references: [id])
   additionalAmount   BigInt?
   screens        Screen[]
   periods        CampaignPeriod[]
@@ -172,7 +173,8 @@ model CampaignPeriod {
   productionCost BigInt?
   acRate         Decimal         @default("0") @db.Decimal(5, 4)
   totalFinal     BigInt?
-  additionalCurrency String?
+  additionalCurrencyId String?
+  additionalCurrency CurrencyRef? @relation(fields: [additionalCurrencyId], references: [id])
   additionalAmount   BigInt?
   metrics        ScreenMetrics[]
   pricing        ScreenPricing[]
@@ -197,6 +199,22 @@ model ScreenTypeRef {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   screens   Screen[]
+}
+
+// Reference table for currencies. Mirrors ScreenTypeRef pattern; the model
+// name carries the "Ref" suffix to leave room for an admin CRUD model later.
+model CurrencyRef {
+  id        String   @id @default(uuid())
+  code      String   @unique // ISO 4217 code, e.g. "UZS", "RUB", "USD"
+  nameRu    String
+  nameEn    String
+  nameUz    String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  campaigns       Campaign[]
+  campaignPeriods CampaignPeriod[]
 }
 
 model Screen {

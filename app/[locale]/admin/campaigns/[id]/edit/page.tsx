@@ -15,7 +15,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
   }
   const t = await getTranslations({ locale, namespace: 'admin' });
 
-  const [campaign, clients] = await Promise.all([
+  const [campaign, clients, currencies] = await Promise.all([
     prisma.campaign.findUnique({
       where: { id },
       select: {
@@ -30,7 +30,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
         reportsUrl: true,
         acRate: true,
         mediaType: true,
-        additionalCurrency: true,
+        additionalCurrencyId: true,
         additionalAmount: true,
         totalBudgetUzs: true,
         productionCost: true,
@@ -39,6 +39,11 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
       },
     }),
     prisma.client.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.currencyRef.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, code: true, nameRu: true, nameEn: true, nameUz: true },
+    }),
   ]);
 
   if (!campaign) notFound();
@@ -69,6 +74,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
       <CampaignForm
         locale={locale}
         clients={clients}
+        currencies={currencies}
         initial={{
           id: campaign.id,
           name: campaign.name,
@@ -81,7 +87,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
           reportsUrl: campaign.reportsUrl,
           acRate: campaign.acRate ? String(Number(campaign.acRate) * 100) : '',
           mediaType: campaign.mediaType,
-          additionalCurrency: campaign.additionalCurrency,
+          additionalCurrencyId: campaign.additionalCurrencyId,
           additionalAmount: campaign.additionalAmount != null ? Number(campaign.additionalAmount) : null,
           totalBudgetUzs: campaign.totalBudgetUzs != null ? Number(campaign.totalBudgetUzs) : null,
           productionCost: campaign.productionCost != null ? Number(campaign.productionCost) : null,

@@ -16,7 +16,7 @@ const CreateCampaignSchema = z.object({
   reportsUrl: z.string().url().optional().nullable(),
   acRate: z.number().min(0).max(1).optional().default(0),
   mediaType: z.nativeEnum(MediaType).optional().default('SCREENS'),
-  additionalCurrency: z.string().trim().min(1).optional().nullable(),
+  additionalCurrencyId: z.string().uuid().nullable().optional(),
   additionalAmount: z.number().nullable().optional(),
 });
 

@@ -13,10 +13,17 @@ export default async function NewCampaignPage({ params }: { params: Promise<{ lo
   if (session?.user?.id && !(await isGoogleLinked(session.user.id))) {
     redirect(`/${locale}/profile?mustLinkGoogle=1`);
   }
-  const clients = await prisma.client.findMany({
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  });
+  const [clients, currencies] = await Promise.all([
+    prisma.client.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.currencyRef.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, code: true, nameRu: true, nameEn: true, nameUz: true },
+    }),
+  ]);
   const t = await getTranslations({ locale, namespace: 'admin' });
 
   return (
@@ -31,7 +38,7 @@ export default async function NewCampaignPage({ params }: { params: Promise<{ lo
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{t('newCampaignTitle')}</h1>
       </div>
-      <CampaignForm locale={locale} clients={clients} />
+      <CampaignForm locale={locale} clients={clients} currencies={currencies} />
     </div>
   );
 }

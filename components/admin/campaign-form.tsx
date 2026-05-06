@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 interface CampaignFormProps {
   locale: string;
   clients: { id: string; name: string }[];
+  currencies: { id: string; code: string; nameRu: string; nameEn: string; nameUz: string }[];
   initial?: {
     id: string;
     name: string;
@@ -19,7 +20,7 @@ interface CampaignFormProps {
     reportsUrl?: string | null;
     acRate?: string | null;
     mediaType?: 'SCREENS' | 'OTHER_CARRIERS';
-    additionalCurrency?: string | null;
+    additionalCurrencyId?: string | null;
     additionalAmount?: number | string | null;
     totalBudgetUzs?: number | string | null;
     productionCost?: number | string | null;
@@ -42,7 +43,7 @@ interface DraftState {
   totalBudgetUzs: string;
   productionCost: string;
   totalFinal: string;
-  additionalCurrency: string;
+  additionalCurrencyId: string;
   additionalAmount: string;
 }
 
@@ -69,7 +70,7 @@ function clearDraft() {
   } catch {}
 }
 
-export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
+export function CampaignForm({ locale, clients, currencies, initial }: CampaignFormProps) {
   const router = useRouter();
   const tc = useTranslations('common');
   const tf = useTranslations('forms');
@@ -95,7 +96,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
   const [totalFinal, setTotalFinal] = useState(
     initial?.totalFinal != null ? String(initial.totalFinal) : ''
   );
-  const [additionalCurrency, setAdditionalCurrency] = useState(initial?.additionalCurrency ?? '');
+  const [additionalCurrencyId, setAdditionalCurrencyId] = useState(initial?.additionalCurrencyId ?? '');
   const [additionalAmount, setAdditionalAmount] = useState(
     initial?.additionalAmount != null ? String(initial.additionalAmount) : ''
   );
@@ -131,7 +132,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       setTotalBudgetUzs(draft.totalBudgetUzs ?? '');
       setProductionCost(draft.productionCost ?? '');
       setTotalFinal(draft.totalFinal ?? '');
-      setAdditionalCurrency(draft.additionalCurrency ?? '');
+      setAdditionalCurrencyId(draft.additionalCurrencyId ?? '');
       setAdditionalAmount(draft.additionalAmount ?? '');
       if (draft.name || draft.clientId) setDraftRestored(true);
     }
@@ -149,13 +150,13 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
       name, clientId, periodStart, periodEnd, splitByPeriods,
       heatmapUrl, yandexMapUrl, reportsUrl, acRate,
       mediaType, totalBudgetUzs, productionCost, totalFinal,
-      additionalCurrency, additionalAmount,
+      additionalCurrencyId, additionalAmount,
     });
   }, [
     isEdit, name, clientId, periodStart, periodEnd, splitByPeriods,
     heatmapUrl, yandexMapUrl, reportsUrl, acRate,
     mediaType, totalBudgetUzs, productionCost, totalFinal,
-    additionalCurrency, additionalAmount,
+    additionalCurrencyId, additionalAmount,
   ]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -184,7 +185,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
         totalBudgetUzs: num(totalBudgetUzs),
         productionCost: num(productionCost),
         totalFinal: num(totalFinal),
-        additionalCurrency: additionalCurrency.trim() || null,
+        additionalCurrencyId: additionalCurrencyId || null,
         additionalAmount: num(additionalAmount),
       }),
     };
@@ -229,7 +230,7 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
               setName(''); setClientId(''); setPeriodStart(''); setPeriodEnd('');
               setSplitByPeriods(false); setHeatmapUrl(''); setYandexMapUrl(''); setAcRate('');
               setMediaType('SCREENS'); setTotalBudgetUzs(''); setProductionCost('');
-              setTotalFinal(''); setAdditionalCurrency(''); setAdditionalAmount('');
+              setTotalFinal(''); setAdditionalCurrencyId(''); setAdditionalAmount('');
               setDraftRestored(false);
             }}
             className="ml-4 text-[11px] text-[var(--text-3)] underline hover:text-[var(--text)]"
@@ -385,14 +386,18 @@ export function CampaignForm({ locale, clients, initial }: CampaignFormProps) {
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
                 {tf('additionalCurrency')}
               </label>
-              <input
-                type="text"
-                maxLength={8}
-                placeholder={tf('additionalCurrencyPlaceholder')}
-                value={additionalCurrency}
-                onChange={e => setAdditionalCurrency(e.target.value)}
+              <select
+                value={additionalCurrencyId}
+                onChange={e => setAdditionalCurrencyId(e.target.value)}
                 className={inputCls}
-              />
+              >
+                <option value="">—</option>
+                {currencies.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.code} — {locale === 'ru' ? c.nameRu : locale === 'uz' ? c.nameUz : c.nameEn}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
