@@ -139,7 +139,7 @@ export function DashboardClient({
       {/* Campaign Hero — title, status, inline stats, creatives */}
       <CampaignHero
         eyebrow={td('campaignEyebrow')}
-        title={`${campaign.clientName}. ${formattedPeriod}`}
+        title={`${campaign.name}. ${formattedPeriod}`}
         status={campaign.status}
         statusLabel={tStatus(campaign.status)}
         stats={[
