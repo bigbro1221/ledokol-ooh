@@ -239,19 +239,38 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           opacity: 1;
           pointer-events: auto;
         }
+        /* The gradient lives on a pseudo-element so its strength can shift on
+           hover without dimming the chevron above it. Idle = barely visible
+           hint; hover = full vignette. */
+        .cc-fade::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          opacity: 0.3;
+          transition: opacity 180ms ease;
+        }
+        .cc-fade:hover::before {
+          opacity: 1;
+        }
         .cc-fade-left {
           left: 0;
           justify-content: flex-start;
           padding-left: 6px;
-          background: linear-gradient(to right, rgba(0, 0, 0, 0.35), transparent);
         }
         .cc-fade-right {
           right: 0;
           justify-content: flex-end;
           padding-right: 6px;
-          background: linear-gradient(to left, rgba(0, 0, 0, 0.35), transparent);
+        }
+        .cc-fade-left::before {
+          background: linear-gradient(to right, var(--surface) 0%, var(--surface) 40%, transparent 100%);
+        }
+        .cc-fade-right::before {
+          background: linear-gradient(to left, var(--surface) 0%, var(--surface) 40%, transparent 100%);
         }
         .cc-fade-arrow {
+          position: relative;
+          z-index: 1;
           display: flex;
           align-items: center;
           justify-content: center;
