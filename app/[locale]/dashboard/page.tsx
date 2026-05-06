@@ -225,6 +225,10 @@ export default async function DashboardPage({
     orderBy: { city: 'asc' },
   });
 
+  // Total (unfiltered) screen count — used to scale campaign-level budget by
+  // the share of screens that pass the active city/type filter.
+  const totalCampaignScreens = await prisma.screen.count({ where: { campaignId: selectedId } });
+
   const totalScreens = campaign.screens.length;
 
   const totalOts = campaign.screens.reduce((s, sc) =>
@@ -247,9 +251,17 @@ export default async function DashboardPage({
   // Prefer per-period sum when splitByPeriods AND any period has a budget; otherwise
   // fall back to the campaign-level total (covers OTHER_CARRIERS, where pricing lives
   // on the Campaign entity rather than each period).
-  const manualBudget = campaign.splitByPeriods && periodsBudgetSum > 0
+  const manualBudgetUnscaled = campaign.splitByPeriods && periodsBudgetSum > 0
     ? periodsBudgetSum
     : campaignBudget;
+  // City/type filter doesn't reach the Campaign row — only the screens array.
+  // Scale the campaign-level total by the share of screens that pass the filter
+  // so the headline number tracks the visible subset. (When no filter is active,
+  // ratio == 1 and this is a no-op.)
+  const screenFilterRatio = totalCampaignScreens > 0
+    ? totalScreens / totalCampaignScreens
+    : 1;
+  const manualBudget = manualBudgetUnscaled * screenFilterRatio;
   const cities = new Set(campaign.screens.map(s => s.city.trim()));
 
   const screenTotalPrice = (s: { pricing: { periodId: string | null; priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[] }): number => {
