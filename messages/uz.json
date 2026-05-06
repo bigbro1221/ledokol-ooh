@@ -390,9 +390,9 @@
     "successSuffix": "manzil bog'landi"
   },
   "creatives": {
-    "title": "Kreativlar",
+    "title": "Kreativlar / Hisobotlar",
     "subtitle": "Kampaniya medialari",
-    "button": "Kreativlar",
+    "button": "Kreativlar / Hisobotlar",
     "addCreatives": "Kreativ qo'shish",
     "tableCreative": "Kreativ",
     "tableName": "Nomi",

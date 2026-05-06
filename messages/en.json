@@ -390,9 +390,9 @@
     "successSuffix": "addresses linked"
   },
   "creatives": {
-    "title": "Creatives",
+    "title": "Creatives / Reports",
     "subtitle": "Campaign media",
-    "button": "Creatives",
+    "button": "Creatives / Reports",
     "addCreatives": "Add creatives",
     "tableCreative": "Creative",
     "tableName": "Name",

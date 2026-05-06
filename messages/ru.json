@@ -390,9 +390,9 @@
     "successSuffix": "адресов привязано"
   },
   "creatives": {
-    "title": "Креативы",
+    "title": "Креативы / Отчёты",
     "subtitle": "Медиафайлы кампании",
-    "button": "Креативы",
+    "button": "Креативы / Отчёты",
     "addCreatives": "Добавить креативы",
     "tableCreative": "Креатив",
     "tableName": "Название креатива",
