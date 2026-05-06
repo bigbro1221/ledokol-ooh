@@ -121,9 +121,16 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           display: flex;
           gap: 8px;
           overflow-x: auto;
+          overflow-y: hidden;
           padding: 14px;
-          scrollbar-width: thin;
+          scrollbar-width: none;
           -webkit-overflow-scrolling: touch;
+          scroll-snap-type: x proximity;
+          scroll-behavior: smooth;
+          overscroll-behavior-x: contain;
+        }
+        .cc-filmstrip > .cc-tile {
+          scroll-snap-align: start;
         }
         .cc-filmstrip-embedded {
           padding: 0;
@@ -212,85 +219,97 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           width: 18px;
         }
 
-        /* Edge fade affordances — wraps the strip and overlays a gradient on
-           each edge when more content exists in that direction. The button
-           is ignored when its kind is "off" (no overflow); when on, clicking
-           it scrolls the strip by ~one viewport width. */
+        /* Strip wrapper — clip the chevron extension at the edges. */
         .cc-strip-wrap {
           position: relative;
+          overflow: hidden;
         }
+
+        /* Hairline edge nav — 6px idle hint, expands to 32px on parent hover.
+           Chevron icon fades in once the parent is hovered/focus-within.
+           Native scrolling stays on the strip itself; this is purely a
+           click-to-page-scroll affordance. */
         .cc-fade {
           position: absolute;
           top: 0;
           bottom: 0;
-          width: 44px;
-          border: none;
-          padding: 0;
-          background: transparent;
-          opacity: 0;
-          pointer-events: none;
-          transition: opacity 180ms ease;
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-          z-index: 2;
-        }
-        .cc-fade-on {
-          opacity: 1;
-          pointer-events: auto;
-        }
-        /* The gradient lives on a pseudo-element so its strength can shift on
-           hover without dimming the chevron above it. Idle = barely visible
-           hint; hover = full vignette. */
-        .cc-fade::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          opacity: 0.3;
-          transition: opacity 180ms ease;
-        }
-        .cc-fade:hover::before {
-          opacity: 1;
-        }
-        .cc-fade-left {
-          left: 0;
-          justify-content: flex-start;
-          padding-left: 6px;
-        }
-        .cc-fade-right {
-          right: 0;
-          justify-content: flex-end;
-          padding-right: 6px;
-        }
-        .cc-fade-left::before {
-          background: linear-gradient(to right, var(--surface) 0%, var(--surface) 40%, transparent 100%);
-        }
-        .cc-fade-right::before {
-          background: linear-gradient(to left, var(--surface) 0%, var(--surface) 40%, transparent 100%);
-        }
-        .cc-fade-arrow {
-          position: relative;
-          z-index: 1;
+          width: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--text-3);
-          transition: color 120ms ease, transform 120ms ease;
+          z-index: 2;
+          cursor: pointer;
+          border: none;
+          padding: 0;
+          color: var(--text-2);
+          transition: width 200ms ease, background 200ms ease, opacity 180ms ease;
         }
-        .cc-fade:hover .cc-fade-arrow {
+        .cc-fade-left {
+          left: 0;
+          background: linear-gradient(to right, rgba(0, 0, 0, 0.4), transparent);
+        }
+        .cc-fade-right {
+          right: 0;
+          background: linear-gradient(to left, rgba(0, 0, 0, 0.4), transparent);
+        }
+        .cc-fade svg {
+          opacity: 0;
+          transition: opacity 200ms ease;
+        }
+        /* Reveal on parent hover or keyboard focus inside the wrapper. */
+        .cc-strip-wrap:hover > .cc-fade,
+        .cc-strip-wrap:focus-within > .cc-fade {
+          width: 32px;
+        }
+        .cc-strip-wrap:hover > .cc-fade svg,
+        .cc-strip-wrap:focus-within > .cc-fade svg {
+          opacity: 1;
+        }
+        /* Stronger contrast on direct chevron hover. */
+        .cc-fade:hover {
+          background: linear-gradient(to right, rgba(0, 0, 0, 0.7), transparent);
           color: var(--text);
-          transform: scale(1.15);
+        }
+        .cc-fade-right:hover {
+          background: linear-gradient(to left, rgba(0, 0, 0, 0.7), transparent);
+        }
+        /* Hide chevron at the edge it can't scroll toward. */
+        .cc-fade[data-disabled="true"] {
+          pointer-events: none;
+          opacity: 0;
         }
         .cc-fade:focus-visible {
           outline: 2px solid var(--brand-primary);
           outline-offset: -4px;
           border-radius: 6px;
         }
-        /* On mobile we already have scroll-snap + dots; thumb-swipe is the
-           native affordance, so hide both the gradient and the chevron chip. */
-        @media (max-width: 640px) {
-          .cc-fade {
-            display: none;
+
+        /* Mouse-only — grab cursor on the strip itself for click-and-drag. */
+        @media (pointer: fine) {
+          .cc-filmstrip {
+            cursor: grab;
+          }
+          .cc-filmstrip.is-dragging {
+            cursor: grabbing;
+          }
+        }
+        /* Touch / coarse pointer — disable hover reveal entirely. */
+        @media (hover: none), (pointer: coarse) {
+          .cc-strip-wrap:hover > .cc-fade {
+            width: 6px;
+          }
+          .cc-strip-wrap:hover > .cc-fade svg {
+            opacity: 0;
+          }
+        }
+        /* Reduced motion — drop transitions. */
+        @media (prefers-reduced-motion: reduce) {
+          .cc-filmstrip {
+            scroll-behavior: auto;
+          }
+          .cc-fade,
+          .cc-fade svg {
+            transition: none;
           }
         }
       `}</style>
@@ -346,11 +365,83 @@ function Filmstrip({
     return () => window.removeEventListener('resize', onResize);
   }, [updateScrollState]);
 
-  // Click an edge fade → smooth-scroll one viewport-width in that direction.
+  // Click an edge chevron → smooth-scroll ~one viewport-width in that direction.
   const scrollByDirection = useCallback((dir: 1 | -1) => {
     const el = stripRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * (el.clientWidth - 64), behavior: 'smooth' });
+    el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: 'smooth' });
+  }, []);
+
+  // Vertical wheel → horizontal scroll (Windows mice without Shift). Lets
+  // diagonal/horizontal trackpad input pass through, and yields to the page
+  // scroller at the edges so the user can keep scrolling vertically.
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) return;
+      const atStart = el.scrollLeft <= 0 && e.deltaY < 0;
+      const atEnd = el.scrollLeft >= max && e.deltaY > 0;
+      if (atStart || atEnd) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Click-and-drag (mouse only) — touch/pen go through the native scroller.
+  // After a real drag, suppress the synthetic click so the lightbox doesn't
+  // open at release.
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    let isDown = false;
+    let startX = 0;
+    let startScroll = 0;
+    let moved = false;
+
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      if ((e.target as HTMLElement).closest('button, a, [role="button"]')) return;
+      isDown = true;
+      moved = false;
+      startX = e.clientX;
+      startScroll = el.scrollLeft;
+      el.setPointerCapture(e.pointerId);
+      el.classList.add('is-dragging');
+      el.style.scrollBehavior = 'auto';
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!isDown) return;
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 4) moved = true;
+      el.scrollLeft = startScroll - dx;
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!isDown) return;
+      isDown = false;
+      el.releasePointerCapture(e.pointerId);
+      el.classList.remove('is-dragging');
+      el.style.scrollBehavior = '';
+      if (moved) {
+        const stop = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
+        window.addEventListener('click', stop, { once: true, capture: true });
+      }
+    };
+
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+    };
   }, []);
 
   if (list.length === 0) {
@@ -425,25 +516,30 @@ function Filmstrip({
         })}
         </div>
 
-        {/* Edge fades (with click-to-scroll on desktop). pointer-events:auto only
-            when the fade is visible, so overflowing content stays interactive. */}
+        {/* Hairline edge nav — invisible idle, expands to 32px and reveals the
+            chevron when the wrapper is hovered or contains focus. data-disabled
+            removes the chevron at the corresponding edge of the scroll range. */}
         <button
           type="button"
           aria-label={t('scrollLeft')}
+          aria-hidden={!canScrollLeft}
           onClick={() => scrollByDirection(-1)}
-          className={`cc-fade cc-fade-left ${canScrollLeft ? 'cc-fade-on' : ''}`}
+          className="cc-fade cc-fade-left"
+          data-disabled={!canScrollLeft}
           tabIndex={canScrollLeft ? 0 : -1}
         >
-          <span className="cc-fade-arrow"><ChevronLeft size={14} strokeWidth={2} /></span>
+          <ChevronLeft size={14} strokeWidth={2} />
         </button>
         <button
           type="button"
           aria-label={t('scrollRight')}
+          aria-hidden={!canScrollRight}
           onClick={() => scrollByDirection(1)}
-          className={`cc-fade cc-fade-right ${canScrollRight ? 'cc-fade-on' : ''}`}
+          className="cc-fade cc-fade-right"
+          data-disabled={!canScrollRight}
           tabIndex={canScrollRight ? 0 : -1}
         >
-          <span className="cc-fade-arrow"><ChevronRight size={14} strokeWidth={2} /></span>
+          <ChevronRight size={14} strokeWidth={2} />
         </button>
       </div>
 
