@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { detectSheetType, isPeriodSheet, isTotalSheet, typeCodeFromColumnValue } from './sheets';
+import { detectSheetType, isPeriodSheet, isTotalSheet, typeCodeFromColumnValue, normalizeTypeCode } from './sheets';
 import { findHeaderRow, buildColumnMap, buildPlanFactMap } from './columns';
 import { ScreenRowSchema, type ParseResult, type ScreenRow, type ParseError, type ParseWarning, type CampaignData } from './schemas';
 
@@ -73,13 +73,16 @@ function parseScreenSheet(
     const firstCol = String(row[0] || '').trim().toLowerCase();
     if (firstCol.includes('итого') || firstCol.includes('total') || firstCol.includes('ledokol')) continue;
 
-    // For period sheets, derive type from the type column; otherwise use the fixed sheet type
+    // For period sheets, derive type from the type column; otherwise use the fixed sheet type.
+    // If the value doesn't match any alias, fall back to a normalised code so the
+    // confirm route can auto-create a ScreenTypeRef row.
+    const typeStrRaw = colMap.type !== undefined ? String(row[colMap.type] || '').trim() : '';
     let screenType: string | null = fixedType;
-    if (!screenType && colMap.type !== undefined) {
-      screenType = typeCodeFromColumnValue(String(row[colMap.type] || ''));
+    if (!screenType && typeStrRaw) {
+      screenType = typeCodeFromColumnValue(typeStrRaw) ?? normalizeTypeCode(typeStrRaw);
     }
     if (!screenType) {
-      // Skip rows where we can't determine type
+      // Skip rows where we can't determine type at all
       continue;
     }
 
@@ -90,6 +93,9 @@ function parseScreenSheet(
 
     const rawRow = {
       typeCode: screenType,
+      // Original free-form type text — only meaningful when it's a fallback code,
+      // but we always pass it so the confirm route can label new ref rows.
+      typeName: typeStrRaw || null,
       city: city || 'Ташкент',
       address: address || `${sheetName} — строка ${r + 1}`,
       size,

@@ -56,7 +56,10 @@ assert(labels.includes('Июнь 2025'));
   assert(r.errors.some(e => e.field === 'period' && /not found/i.test(e.message)), 'expected period-column-missing error');
 }
 
-// Unknown type value → type error, row skipped
+// Unrecognised type value → still passes through with a normalised fallback
+// code so the confirm route can auto-create a ScreenTypeRef. The original
+// free-form text travels along as typeName so the new ref row gets a useful
+// label.
 {
   const wb = buildWorkbook([
     HEADER_SUPER,
@@ -64,8 +67,22 @@ assert(labels.includes('Июнь 2025'));
     ['нечто непонятное', '', 'Ташкент', 'Адрес', '10x3', '01.06.2025 - 30.06.2025', 100, 50, 1000, 110, 55],
   ]);
   const r = parseMultiPeriod(wb);
+  assert.equal(r.errors.length, 0);
+  assert.equal(r.rows.length, 1);
+  assert.equal(r.rows[0].screen.typeCode, 'НЕЧТО_НЕПОНЯТНОЕ');
+  assert.equal(r.rows[0].screen.typeName, 'нечто непонятное');
+}
+
+// Empty type column → still an error (no useful code can be derived).
+{
+  const wb = buildWorkbook([
+    HEADER_SUPER,
+    HEADER_BASE,
+    ['', '', 'Ташкент', 'Адрес', '10x3', '01.06.2025 - 30.06.2025', 100, 50, 1000, 110, 55],
+  ]);
+  const r = parseMultiPeriod(wb);
   assert.equal(r.rows.length, 0);
-  assert(r.errors.some(e => e.field === 'type' && /Unknown type/.test(e.message)), 'expected unknown-type error');
+  assert(r.errors.some(e => e.field === 'type' && /empty/i.test(e.message)), 'expected empty-type error');
 }
 
 // Malformed period string → period error, row skipped

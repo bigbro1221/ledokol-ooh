@@ -6,6 +6,7 @@ import type { Prisma } from '@prisma/client';
 
 interface ScreenData {
   typeCode: string;
+  typeName?: string | null;
   city: string;
   address: string;
   size?: string | null;
@@ -42,6 +43,7 @@ interface PeriodMetrics {
 
 interface MultiPeriodScreenData {
   typeCode: string;
+  typeName?: string | null;
   city: string;
   address: string;
   size?: string | null;
@@ -95,6 +97,51 @@ function buildScreenWriteData(s: UpsertableScreen, typeIdByCode: Map<string, str
   } as const;
 }
 
+/**
+ * Resolve all typeCodes in the payload to ScreenTypeRef ids. Codes already in
+ * the table are reused; codes not yet there are auto-created using the row's
+ * typeName (the original free-form text from the file) for nameRu/En/Uz so the
+ * admin sees the original spelling and can rename/merge later. Category
+ * defaults to OTHER_CARRIERS, sortOrder to 999 — sorting them after the seeded
+ * canonical types in dropdowns.
+ */
+async function ensureScreenTypeIds(
+  tx: Prisma.TransactionClient,
+  rows: { typeCode: string; typeName?: string | null }[],
+): Promise<Map<string, string>> {
+  const codes = Array.from(new Set(rows.map(r => r.typeCode)));
+  if (codes.length === 0) return new Map();
+
+  const existing = await tx.screenTypeRef.findMany({ where: { code: { in: codes } } });
+  const byCode = new Map(existing.map(t => [t.code, t.id]));
+
+  const missing = codes.filter(c => !byCode.has(c));
+  if (missing.length > 0) {
+    // Pick the first non-empty typeName we see for each missing code.
+    const nameByCode = new Map<string, string>();
+    for (const r of rows) {
+      if (missing.includes(r.typeCode) && r.typeName && !nameByCode.has(r.typeCode)) {
+        nameByCode.set(r.typeCode, r.typeName);
+      }
+    }
+    for (const code of missing) {
+      const name = nameByCode.get(code) ?? code;
+      const created = await tx.screenTypeRef.create({
+        data: {
+          code,
+          nameRu: name,
+          nameEn: name,
+          nameUz: name,
+          category: 'OTHER_CARRIERS',
+          sortOrder: 999,
+        },
+      });
+      byCode.set(code, created.id);
+    }
+  }
+  return byCode;
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireAdmin();
   if (!authResult.ok) return authResult.response;
@@ -142,10 +189,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 async function handleScreensConfirm(campaignId: string, body: ScreensModeBody) {
   // Period existence is pre-checked in the main handler so it can return 404 cleanly.
   await prisma.$transaction(async (tx) => {
-    // Resolve typeCode → typeId once for all rows in this payload.
-    const codes = Array.from(new Set(body.screens.map((s) => s.typeCode)));
-    const types = await tx.screenTypeRef.findMany({ where: { code: { in: codes } } });
-    const typeIdByCode = new Map(types.map((t) => [t.code, t.id]));
+    // Resolve typeCode → typeId; auto-create ScreenTypeRef rows for unknowns.
+    const typeIdByCode = await ensureScreenTypeIds(tx, body.screens);
 
     // Delete existing metrics + pricing for this period slot before re-inserting.
     // Screens (physical) are preserved and reused across uploads.
@@ -230,10 +275,8 @@ async function handleScreensConfirm(campaignId: string, body: ScreensModeBody) {
 
 async function handleMultiPeriodConfirm(campaignId: string, body: MultiPeriodBody) {
   await prisma.$transaction(async (tx) => {
-    // 1. Resolve typeCodes once.
-    const codes = Array.from(new Set(body.screens.map((s) => s.typeCode)));
-    const types = await tx.screenTypeRef.findMany({ where: { code: { in: codes } } });
-    const typeIdByCode = new Map(types.map((t) => [t.code, t.id]));
+    // 1. Resolve typeCodes once; auto-create ScreenTypeRef rows for unknowns.
+    const typeIdByCode = await ensureScreenTypeIds(tx, body.screens);
 
     // 2. Wipe everything for this campaign — periods (with cascade), screens too.
     //    Multi-period uploads are full reseeds, not incremental.

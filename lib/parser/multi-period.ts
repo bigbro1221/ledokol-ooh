@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { findHeaderRow, buildColumnMap, buildPlanFactMap } from './columns';
 import { parsePeriodString, periodName } from './period';
 import { ScreenRowSchema, type MultiPeriodParseResult, type CampaignData, type ParseError, type ParseWarning } from './schemas';
-import { typeCodeFromColumnValue } from './sheets';
+import { typeCodeFromColumnValue, normalizeTypeCode } from './sheets';
 
 function parseNum(val: unknown): number | null {
   if (val === null || val === undefined || val === '') return null;
@@ -48,10 +48,18 @@ export function parseMultiPeriod(buffer: Buffer): MultiPeriodParseResult {
     const address = colMap.address !== undefined ? String(row[colMap.address] || '').trim() : '';
     if (!city && !address) continue;
 
-    const typeStr = colMap.type !== undefined ? String(row[colMap.type] || '') : '';
-    const typeCode = typeCodeFromColumnValue(typeStr);
+    const typeStr = (colMap.type !== undefined ? String(row[colMap.type] || '') : '').trim();
+    if (!typeStr) {
+      errors.push({ sheet: sheetName, row: r + 1, field: 'type', message: 'Type column is empty' });
+      continue;
+    }
+    // Try aliases first; fall back to a normalised code derived from the input.
+    // The confirm route auto-creates a ScreenTypeRef for any code not yet in the
+    // table, so unknown types no longer block the upload — they show up as new
+    // entries the admin can rename/merge later.
+    const typeCode = typeCodeFromColumnValue(typeStr) ?? normalizeTypeCode(typeStr);
     if (!typeCode) {
-      errors.push({ sheet: sheetName, row: r + 1, field: 'type', message: `Unknown type "${typeStr}"` });
+      errors.push({ sheet: sheetName, row: r + 1, field: 'type', message: `Could not derive a code from type "${typeStr}"` });
       continue;
     }
 
@@ -69,6 +77,7 @@ export function parseMultiPeriod(buffer: Buffer): MultiPeriodParseResult {
     // The legacy `Screen.type` enum has been removed; the parser only writes `typeCode`.
     const screen = {
       typeCode,
+      typeName: typeStr,
       city: city || 'Ташкент',
       address: address || `${sheetName} — строка ${r + 1}`,
       size,

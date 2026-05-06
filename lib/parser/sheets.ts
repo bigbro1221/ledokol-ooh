@@ -72,3 +72,19 @@ export function typeCodeFromColumnValue(s: string): string | null {
   }
   return null;
 }
+
+/**
+ * Normalize a free-form type value into a stable code. Used as a fallback
+ * when typeCodeFromColumnValue returns null — the confirm route auto-creates
+ * a new ScreenTypeRef row with this code so the upload doesn't block on typos
+ * or new media types we haven't aliased yet. Cyrillic + Latin letters and
+ * digits are kept; everything else collapses to a single underscore. Two
+ * inputs that differ only in casing/punctuation collide on purpose.
+ */
+export function normalizeTypeCode(s: string): string {
+  return s
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-ZА-ЯЁ0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}

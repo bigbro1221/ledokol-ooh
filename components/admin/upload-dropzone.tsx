@@ -18,6 +18,7 @@ interface ScreenGeoInfo {
 
 interface ScreenRow {
   typeCode: string;
+  typeName?: string | null;
   city: string;
   address: string;
   size?: string | null;
@@ -262,6 +263,7 @@ export function UploadDropzone({
           yandexMapUrl: preview.campaign.yandexMapUrl,
           screens: preview.screens.map(s => ({
             typeCode: s.typeCode,
+            typeName: s.typeName ?? null,
             city: s.city,
             address: s.address,
             size: s.size ?? null,
