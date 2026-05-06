@@ -241,12 +241,14 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
         }
         .cc-fade-left {
           left: 0;
-          justify-content: center;
+          justify-content: flex-start;
+          padding-left: 6px;
           background: linear-gradient(to right, var(--surface) 0%, var(--surface) 40%, transparent 100%);
         }
         .cc-fade-right {
           right: 0;
-          justify-content: center;
+          justify-content: flex-end;
+          padding-right: 6px;
           background: linear-gradient(to left, var(--surface) 0%, var(--surface) 40%, transparent 100%);
         }
         .cc-fade-arrow {
