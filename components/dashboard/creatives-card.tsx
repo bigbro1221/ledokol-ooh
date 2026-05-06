@@ -133,7 +133,7 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           scroll-snap-align: start;
         }
         .cc-filmstrip-embedded {
-          padding: 0;
+          padding: 5px 0 0 0;
           gap: 8px;
           scrollbar-width: none;
         }
