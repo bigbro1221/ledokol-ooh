@@ -66,6 +66,7 @@ interface Props {
   filters: { cities: string[]; types: string[] };
   heatmapEmbedUrl: string | null;
   reportsUrl: string | null;
+  hasYandexMap: boolean;
   periodsWithData: { id: string; name: string }[];
   selectedPeriods: string[];
   creatives: CreativeView[];
@@ -76,7 +77,7 @@ export function DashboardClient({
   budgetByType, totalBudgetFromScreens,
   planVsFactByCity, monthlyByCity, planVsFactByType,
   topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, availableTypes, filters,
-  heatmapEmbedUrl, reportsUrl, periodsWithData, selectedPeriods, creatives,
+  heatmapEmbedUrl, reportsUrl, hasYandexMap, periodsWithData, selectedPeriods, creatives,
 }: Props) {
   const isClient = userRole === 'CLIENT';
   const [monthlyExpanded, setMonthlyExpanded] = useState(false);
@@ -258,10 +259,12 @@ export function DashboardClient({
         </div>
       )}
 
-      {/* Map */}
-      <div className="mb-6">
-        <ScreenMap screens={mapScreens} />
-      </div>
+      {/* Map — only when a Yandex URL has been configured for the campaign */}
+      {hasYandexMap && (
+        <div className="mb-6">
+          <ScreenMap screens={mapScreens} />
+        </div>
+      )}
 
       {/* Heatmap (Foursquare Studio) */}
       {heatmapEmbedUrl && (

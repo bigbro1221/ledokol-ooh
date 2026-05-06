@@ -129,7 +129,7 @@ export default async function DashboardPage({
       select: {
         id: true, name: true, status: true, periodStart: true, periodEnd: true,
         splitByPeriods: true,
-        totalBudgetUzs: true, heatmapUrl: true, reportsUrl: true,
+        totalBudgetUzs: true, heatmapUrl: true, reportsUrl: true, yandexMapUrl: true,
         client: { select: { name: true } },
         totalFinal: true,
         periods: {
@@ -421,6 +421,7 @@ export default async function DashboardPage({
       filters={{ cities: cityValues, types: typeValues }}
       heatmapEmbedUrl={heatmapEmbedUrl}
       reportsUrl={campaign.reportsUrl}
+      hasYandexMap={!!campaign.yandexMapUrl}
       periodsWithData={periodsWithData.map(p => ({ id: p.id, name: p.name }))}
       selectedPeriods={selectedPeriodIds}
       creatives={creatives}
