@@ -223,7 +223,7 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           position: absolute;
           top: 0;
           bottom: 0;
-          width: 56px;
+          width: 44px;
           border: none;
           padding: 0;
           background: transparent;
@@ -243,26 +243,24 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           left: 0;
           justify-content: flex-start;
           padding-left: 6px;
-          background: linear-gradient(to right, var(--surface) 0%, var(--surface) 40%, transparent 100%);
+          background: linear-gradient(to right, rgba(0, 0, 0, 0.35), transparent);
         }
         .cc-fade-right {
           right: 0;
           justify-content: flex-end;
           padding-right: 6px;
-          background: linear-gradient(to left, var(--surface) 0%, var(--surface) 40%, transparent 100%);
+          background: linear-gradient(to left, rgba(0, 0, 0, 0.35), transparent);
         }
         .cc-fade-arrow {
           display: flex;
           align-items: center;
           justify-content: center;
           color: var(--text-3);
-          opacity: 0.45;
-          transition: color 120ms ease, opacity 120ms ease, transform 120ms ease;
+          transition: color 120ms ease, transform 120ms ease;
         }
         .cc-fade:hover .cc-fade-arrow {
-          color: var(--text-2);
-          opacity: 1;
-          transform: scale(1.1);
+          color: var(--text);
+          transform: scale(1.15);
         }
         .cc-fade:focus-visible {
           outline: 2px solid var(--brand-primary);
