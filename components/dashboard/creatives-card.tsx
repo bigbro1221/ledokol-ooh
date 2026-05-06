@@ -273,14 +273,10 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
         .cc-fade:focus-visible .cc-fade-arrow {
           box-shadow: var(--shadow-glow);
         }
-        /* On mobile we already have scroll-snap + dots; the fade still helps
-           but the chevron buttons would feel odd next to a thumb-driven swipe.
-           Hide the arrow chip but keep the gradient as a subtle hint. */
+        /* On mobile we already have scroll-snap + dots; thumb-swipe is the
+           native affordance, so hide both the gradient and the chevron chip. */
         @media (max-width: 640px) {
           .cc-fade {
-            width: 28px;
-          }
-          .cc-fade-arrow {
             display: none;
           }
         }
