@@ -270,6 +270,8 @@
     "avgOtsUnit": "per screen",
     "avgBudget": "Avg. budget",
     "avgBudgetUnit": "/ screen",
+    "cptFact": "CPT actual",
+    "cptFactUnit": "/ rating point",
     "avgImpressionsShort": "Avg. impressions/day",
     "impressionsPerDayUnit": "impressions per day"
   },

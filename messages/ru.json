@@ -270,6 +270,8 @@
     "avgOtsUnit": "на поверхность",
     "avgBudget": "Средн. бюджет",
     "avgBudgetUnit": "/ поверхность",
+    "cptFact": "CPT факт",
+    "cptFactUnit": "/ пункт рейтинга",
     "avgImpressionsShort": "Сред. показов/день",
     "impressionsPerDayUnit": "показов в день"
   },

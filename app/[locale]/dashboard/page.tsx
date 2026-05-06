@@ -128,7 +128,7 @@ export default async function DashboardPage({
       where: { id: selectedId },
       select: {
         id: true, name: true, status: true, periodStart: true, periodEnd: true,
-        splitByPeriods: true,
+        splitByPeriods: true, mediaType: true,
         totalBudgetUzs: true, heatmapUrl: true, reportsUrl: true, yandexMapUrl: true,
         client: { select: { name: true } },
         totalFinal: true,
@@ -144,7 +144,7 @@ export default async function DashboardPage({
             impressionsPerDay: true,
             screenType: { select: { code: true } },
             metrics: { select: { periodId: true, otsPlan: true, ratingPlan: true, otsFact: true, ratingFact: true } },
-            pricing: { select: { periodId: true, priceUnit: true, priceDiscounted: true, priceTotal: true } },
+            pricing: { select: { periodId: true, priceUnit: true, priceDiscounted: true, priceTotal: true, agencyFeeAmt: true } },
           },
         },
       },
@@ -235,6 +235,9 @@ export default async function DashboardPage({
     s + filterMetrics(sc.metrics).reduce((ms, m) => ms + (m.otsPlan || 0), 0), 0);
   const totalOtsFact = campaign.screens.reduce((s, sc) =>
     s + filterMetrics(sc.metrics).reduce((ms, m) => ms + (m.otsFact || 0), 0), 0);
+  // Sum of fact ratings across filtered metrics — denominator of CPT факт.
+  const totalRatingFact = campaign.screens.reduce((s, sc) =>
+    s + filterMetrics(sc.metrics).reduce((ms, m) => ms + (m.ratingFact ? Number(m.ratingFact) : 0), 0), 0);
 
   // Budget resolution — sum only periods within selected range (or all if no filter)
   const periodsBudgetSum = campaign.splitByPeriods
@@ -262,6 +265,24 @@ export default async function DashboardPage({
     ? totalScreens / totalCampaignScreens
     : 1;
   const manualBudget = manualBudgetUnscaled * screenFilterRatio;
+
+  // CPT factor: amount-without-VAT ÷ Σ ratingFact. Source of "amount without
+  // VAT" depends on the campaign type:
+  //   - OTHER_CARRIERS: campaign.totalBudgetUzs is already "without VAT"
+  //     by the new form contract (see /admin/campaigns form rename).
+  //   - SCREENS: per-screen ScreenPricing has priceTotal (без АК и НДС) and
+  //     agencyFeeAmt; their sum across filtered pricing rows = without VAT.
+  let totalBudgetWithoutVat = 0;
+  if (campaign.mediaType === 'OTHER_CARRIERS') {
+    totalBudgetWithoutVat = campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) * screenFilterRatio : 0;
+  } else {
+    totalBudgetWithoutVat = campaign.screens.reduce((s, sc) =>
+      s + filterPricing(sc.pricing).reduce((ps, p) => {
+        const base = p.priceTotal ? Number(p.priceTotal) : 0;
+        const ak = p.agencyFeeAmt ? Number(p.agencyFeeAmt) : 0;
+        return ps + base + ak;
+      }, 0), 0);
+  }
   const cities = new Set(campaign.screens.map(s => s.city.trim()));
 
   const screenTotalPrice = (s: { pricing: { periodId: string | null; priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[] }): number => {
@@ -419,7 +440,7 @@ export default async function DashboardPage({
         periodEnd: displayPeriodEnd ? displayPeriodEnd.toISOString() : campaign.periodEnd.toISOString(),
         status: campaign.status,
       }}
-      kpis={{ totalOtsPlan: totalOts, totalOtsFact, totalScreens, cities: cities.size, totalBudget, formatBudget: fmt(totalBudget) }}
+      kpis={{ totalOtsPlan: totalOts, totalOtsFact, totalRatingFact, totalScreens, cities: cities.size, totalBudget, totalBudgetWithoutVat, formatBudget: fmt(totalBudget) }}
       budgetByType={budgetByType}
       totalBudgetFromScreens={totalBudgetFromScreens}
       planVsFactByCity={planVsFactByCity}

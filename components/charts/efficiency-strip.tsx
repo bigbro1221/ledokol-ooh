@@ -40,8 +40,12 @@ function computeAvgImpressionsPerDay(
 
 interface Props {
   totalBudget: number;
+  // Same number minus VAT — used by the CPT факт cell only. CPM/avg-budget
+  // continue to use totalBudget for backward consistency.
+  totalBudgetWithoutVat: number;
   totalOtsPlan: number;
   totalOtsFact: number;
+  totalRatingFact: number;
   totalScreens: number;
   periodStart: string;
   periodEnd: string;
@@ -67,7 +71,8 @@ function GradientText({ children, gradient }: { children: ReactNode; gradient: G
 }
 
 export function EfficiencyStrip({
-  totalBudget, totalOtsPlan, totalOtsFact, totalScreens,
+  totalBudget, totalBudgetWithoutVat,
+  totalOtsPlan, totalOtsFact, totalRatingFact, totalScreens,
   periodStart, periodEnd, status,
   currency = 'UZS',
 }: Props) {
@@ -81,8 +86,9 @@ export function EfficiencyStrip({
   const avgOtsPerScreen = totalScreens > 0 && totalOtsPlan > 0
     ? totalOtsPlan / totalScreens
     : null;
-  const avgBudgetPerScreen = totalScreens > 0 && totalBudget > 0
-    ? totalBudget / totalScreens
+  // CPT факт = amount without VAT ÷ Σ ratingFact. Hides when either side is 0.
+  const cptFact = totalBudgetWithoutVat > 0 && totalRatingFact > 0
+    ? totalBudgetWithoutVat / totalRatingFact
     : null;
   const avgImpressions = computeAvgImpressionsPerDay(
     totalOtsFact, totalOtsPlan, periodStart, periodEnd, status,
@@ -108,11 +114,11 @@ export function EfficiencyStrip({
     gradient: 'warm',
     sub: t('avgOtsUnit'),
   });
-  if (avgBudgetPerScreen !== null) cells.push({
-    label: t('avgBudget'),
-    value: shortNumber(avgBudgetPerScreen),
+  if (cptFact !== null) cells.push({
+    label: t('cptFact'),
+    value: shortNumber(cptFact),
     gradient: 'default',
-    sub: `${currency} ${t('avgBudgetUnit')}`,
+    sub: `${currency} ${t('cptFactUnit')}`,
   });
   if (avgImpressions !== null) cells.push({
     label: t('avgImpressionsShort'),

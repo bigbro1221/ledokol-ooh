@@ -270,6 +270,8 @@
     "avgOtsUnit": "ekranga",
     "avgBudget": "O'rt. byudjet",
     "avgBudgetUnit": "/ ekran",
+    "cptFact": "CPT fakt",
+    "cptFactUnit": "/ reyting nuqtasi",
     "avgImpressionsShort": "O'rt. ko'rsatish/kun",
     "impressionsPerDayUnit": "kunlik ko'rsatish"
   },
