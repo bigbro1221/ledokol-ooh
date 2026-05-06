@@ -242,7 +242,12 @@ export default async function DashboardPage({
   const campaignBudget = campaign.totalFinal
     ? Number(campaign.totalFinal)
     : campaign.totalBudgetUzs ? Number(campaign.totalBudgetUzs) : 0;
-  const manualBudget = campaign.splitByPeriods ? periodsBudgetSum : campaignBudget;
+  // Prefer per-period sum when splitByPeriods AND any period has a budget; otherwise
+  // fall back to the campaign-level total (covers OTHER_CARRIERS, where pricing lives
+  // on the Campaign entity rather than each period).
+  const manualBudget = campaign.splitByPeriods && periodsBudgetSum > 0
+    ? periodsBudgetSum
+    : campaignBudget;
   const cities = new Set(campaign.screens.map(s => s.city.trim()));
 
   const screenTotalPrice = (s: { pricing: { periodId: string | null; priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[] }): number => {
