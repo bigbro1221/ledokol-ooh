@@ -420,6 +420,8 @@
     "kb": "КБ",
     "confirmDelete": "Удалить креатив?",
     "openCreative": "Открыть креатив {i} из {total}",
+    "scrollLeft": "Назад",
+    "scrollRight": "Вперёд",
     "lightboxLabel": "Просмотр креатива",
     "lightboxClose": "Закрыть"
   },

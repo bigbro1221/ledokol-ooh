@@ -420,6 +420,8 @@
     "kb": "KB",
     "confirmDelete": "Kreativni o'chirasizmi?",
     "openCreative": "{i}/{total} kreativni ochish",
+    "scrollLeft": "Oldingi",
+    "scrollRight": "Keyingi",
     "lightboxLabel": "Kreativni ko'rish",
     "lightboxClose": "Yopish"
   },

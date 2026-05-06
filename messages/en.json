@@ -420,6 +420,8 @@
     "kb": "KB",
     "confirmDelete": "Delete creative?",
     "openCreative": "Open creative {i} of {total}",
+    "scrollLeft": "Previous",
+    "scrollRight": "Next",
     "lightboxLabel": "Creative preview",
     "lightboxClose": "Close"
   },

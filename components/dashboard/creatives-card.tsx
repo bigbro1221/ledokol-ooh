@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronUp, ChevronDown, Film, ImageIcon } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Film, ImageIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export interface CreativeView {
@@ -211,6 +211,79 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           background: var(--brand-primary);
           width: 18px;
         }
+
+        /* Edge fade affordances — wraps the strip and overlays a gradient on
+           each edge when more content exists in that direction. The button
+           is ignored when its kind is "off" (no overflow); when on, clicking
+           it scrolls the strip by ~one viewport width. */
+        .cc-strip-wrap {
+          position: relative;
+        }
+        .cc-fade {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 56px;
+          border: none;
+          padding: 0;
+          background: transparent;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 180ms ease;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          z-index: 2;
+        }
+        .cc-fade-on {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .cc-fade-left {
+          left: 0;
+          justify-content: flex-start;
+          padding-left: 8px;
+          background: linear-gradient(to right, var(--surface) 0%, var(--surface) 30%, transparent 100%);
+        }
+        .cc-fade-right {
+          right: 0;
+          justify-content: flex-end;
+          padding-right: 8px;
+          background: linear-gradient(to left, var(--surface) 0%, var(--surface) 30%, transparent 100%);
+        }
+        .cc-fade-arrow {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 999px;
+          background: var(--surface-2);
+          color: var(--text-2);
+          box-shadow: var(--shadow-sm);
+          transition: transform 120ms ease, color 120ms ease;
+        }
+        .cc-fade:hover .cc-fade-arrow {
+          color: var(--text);
+          transform: scale(1.05);
+        }
+        .cc-fade:focus-visible {
+          outline: none;
+        }
+        .cc-fade:focus-visible .cc-fade-arrow {
+          box-shadow: var(--shadow-glow);
+        }
+        /* On mobile we already have scroll-snap + dots; the fade still helps
+           but the chevron buttons would feel odd next to a thumb-driven swipe.
+           Hide the arrow chip but keep the gradient as a subtle hint. */
+        @media (max-width: 640px) {
+          .cc-fade {
+            width: 28px;
+          }
+          .cc-fade-arrow {
+            display: none;
+          }
+        }
       `}</style>
     </div>
   );
@@ -228,6 +301,8 @@ function Filmstrip({
   const t = useTranslations('creatives');
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [activeDot, setActiveDot] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const stripRef = useRef<HTMLDivElement | null>(null);
 
@@ -241,13 +316,33 @@ function Filmstrip({
     });
   }, []);
 
-  function onStripScroll() {
+  // Update the active dot + edge-fade visibility when the strip is scrolled.
+  // Fade visibility is also recomputed on mount and on resize so the right
+  // fade appears on initial render whenever the content overflows.
+  const updateScrollState = useCallback(() => {
     const el = stripRef.current;
-    if (!el || list.length === 0) return;
+    if (!el) return;
     const tileStride = el.clientWidth - 32 + 10;
     const idx = tileStride > 0 ? Math.round(el.scrollLeft / tileStride) : 0;
-    setActiveDot(Math.max(0, Math.min(idx, list.length - 1)));
-  }
+    setActiveDot(Math.max(0, Math.min(idx, Math.max(list.length - 1, 0))));
+    // 1px tolerance — sub-pixel scroll positions on retina screens
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, [list.length]);
+
+  useEffect(() => {
+    updateScrollState();
+    const onResize = () => updateScrollState();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [updateScrollState]);
+
+  // Click an edge fade → smooth-scroll one viewport-width in that direction.
+  const scrollByDirection = useCallback((dir: 1 | -1) => {
+    const el = stripRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * (el.clientWidth - 64), behavior: 'smooth' });
+  }, []);
 
   if (list.length === 0) {
     return (
@@ -259,7 +354,8 @@ function Filmstrip({
 
   return (
     <>
-      <div ref={stripRef} onScroll={onStripScroll} className={embedded ? 'cc-filmstrip cc-filmstrip-embedded' : 'cc-filmstrip'}>
+      <div className="cc-strip-wrap">
+        <div ref={stripRef} onScroll={updateScrollState} className={embedded ? 'cc-filmstrip cc-filmstrip-embedded' : 'cc-filmstrip'}>
         {list.map((c, i) => {
           const img = isImage(c.mimeType);
           const tileSrc = c.thumbnailUrl ?? (img ? c.url : null);
@@ -318,6 +414,28 @@ function Filmstrip({
             </button>
           );
         })}
+        </div>
+
+        {/* Edge fades (with click-to-scroll on desktop). pointer-events:auto only
+            when the fade is visible, so overflowing content stays interactive. */}
+        <button
+          type="button"
+          aria-label={t('scrollLeft')}
+          onClick={() => scrollByDirection(-1)}
+          className={`cc-fade cc-fade-left ${canScrollLeft ? 'cc-fade-on' : ''}`}
+          tabIndex={canScrollLeft ? 0 : -1}
+        >
+          <span className="cc-fade-arrow"><ChevronLeft size={14} strokeWidth={2} /></span>
+        </button>
+        <button
+          type="button"
+          aria-label={t('scrollRight')}
+          onClick={() => scrollByDirection(1)}
+          className={`cc-fade cc-fade-right ${canScrollRight ? 'cc-fade-on' : ''}`}
+          tabIndex={canScrollRight ? 0 : -1}
+        >
+          <span className="cc-fade-arrow"><ChevronRight size={14} strokeWidth={2} /></span>
+        </button>
       </div>
 
       {list.length > 1 && (
