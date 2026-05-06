@@ -31,17 +31,21 @@ function isImage(mime: string): boolean {
 export function CreativesCard({ creatives, embedded = false }: { creatives: CreativeView[]; embedded?: boolean }) {
   const t = useTranslations('creatives');
   const [collapsed, setCollapsed] = useState(false);
-  const [activeKind, setActiveKind] = useState<'CREATIVE' | 'REPORT'>('CREATIVE');
 
   const { creativesOnly, reportsOnly } = useMemo(() => ({
     creativesOnly: creatives.filter(c => c.kind === 'CREATIVE'),
     reportsOnly: creatives.filter(c => c.kind === 'REPORT'),
   }), [creatives]);
 
+  // Default to whichever tab actually has content. If both are empty, fall
+  // back to CREATIVE (the empty-creatives message shows).
+  const [activeKind, setActiveKind] = useState<'CREATIVE' | 'REPORT'>(
+    () => (creativesOnly.length === 0 && reportsOnly.length > 0 ? 'REPORT' : 'CREATIVE'),
+  );
+
   const hasReports = reportsOnly.length > 0;
-  const visibleList = hasReports
-    ? (activeKind === 'CREATIVE' ? creativesOnly : reportsOnly)
-    : creativesOnly;
+  const hasCreatives = creativesOnly.length > 0;
+  const visibleList = activeKind === 'CREATIVE' ? creativesOnly : reportsOnly;
 
   const containerClass = embedded
     ? 'overflow-hidden'
@@ -61,7 +65,10 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
         </div>
       )}
 
-      {hasReports && (
+      {/* Render tabs only when both kinds have content — single-kind cases just show
+          their filmstrip. Both-empty also skips the strip; the empty message tells
+          the user which kind is "selected" (defaults to CREATIVE). */}
+      {hasCreatives && hasReports && (
         <div className={`flex border-b border-[var(--border)] ${embedded ? '' : 'px-5'}`}>
           {(['CREATIVE', 'REPORT'] as const).map(k => {
             const count = k === 'CREATIVE' ? creativesOnly.length : reportsOnly.length;
@@ -88,9 +95,7 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
         <Filmstrip
           list={visibleList}
           embedded={embedded}
-          emptyLabel={hasReports
-            ? (activeKind === 'CREATIVE' ? t('emptyCreatives') : t('emptyReports'))
-            : t('empty')}
+          emptyLabel={activeKind === 'REPORT' ? t('emptyReports') : t('emptyCreatives')}
         />
       )}
 
