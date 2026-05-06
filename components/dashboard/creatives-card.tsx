@@ -65,26 +65,31 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
         </div>
       )}
 
-      {/* Render tabs only when both kinds have content — single-kind cases just show
-          their filmstrip. Both-empty also skips the strip; the empty message tells
-          the user which kind is "selected" (defaults to CREATIVE). */}
-      {hasCreatives && hasReports && (
+      {/* Always show the tab strip when the card has any content — the labels
+          tell the user which kind is currently displayed. Tabs for empty kinds
+          are still shown but disabled (greyed-out, no underline on hover). */}
+      {(hasCreatives || hasReports) && (
         <div className={`flex border-b border-[var(--border)] ${embedded ? '' : 'px-5'}`}>
           {(['CREATIVE', 'REPORT'] as const).map(k => {
             const count = k === 'CREATIVE' ? creativesOnly.length : reportsOnly.length;
+            const isEmpty = count === 0;
+            const isActive = activeKind === k;
             return (
               <button
                 key={k}
                 type="button"
-                onClick={() => setActiveKind(k)}
+                onClick={() => !isEmpty && setActiveKind(k)}
+                disabled={isEmpty}
                 className={`px-3 py-2 text-[13px] font-medium transition-colors ${
-                  activeKind === k
+                  isActive
                     ? 'border-b-2 border-[var(--brand-primary)] text-[var(--text)]'
-                    : 'text-[var(--text-3)] hover:text-[var(--text)]'
+                    : isEmpty
+                      ? 'text-[var(--text-4)] cursor-not-allowed'
+                      : 'text-[var(--text-3)] hover:text-[var(--text)]'
                 }`}
               >
                 {t(k === 'CREATIVE' ? 'tabCreatives' : 'tabReports')}
-                <span className="ml-1.5 text-[11px] text-[var(--text-3)]">({count})</span>
+                <span className="ml-1.5 text-[11px] text-[var(--text-4)]">({count})</span>
               </button>
             );
           })}
