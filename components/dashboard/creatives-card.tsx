@@ -65,34 +65,32 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
         </div>
       )}
 
-      {/* Always show the tab strip when the card has any content — the labels
-          tell the user which kind is currently displayed. Tabs for empty kinds
-          are still shown but disabled (greyed-out, no underline on hover). */}
+      {/* Render only the tabs that have content. With one populated kind a
+          single tab acts as a label ("Отчёты (4)") so the user knows what
+          they're looking at; with both populated they get a real switcher. */}
       {(hasCreatives || hasReports) && (
         <div className={`flex border-b border-[var(--border)] ${embedded ? '' : 'px-5'}`}>
-          {(['CREATIVE', 'REPORT'] as const).map(k => {
-            const count = k === 'CREATIVE' ? creativesOnly.length : reportsOnly.length;
-            const isEmpty = count === 0;
-            const isActive = activeKind === k;
-            return (
-              <button
-                key={k}
-                type="button"
-                onClick={() => !isEmpty && setActiveKind(k)}
-                disabled={isEmpty}
-                className={`px-3 py-2 text-[13px] font-medium transition-colors ${
-                  isActive
-                    ? 'border-b-2 border-[var(--brand-primary)] text-[var(--text)]'
-                    : isEmpty
-                      ? 'text-[var(--text-4)] cursor-not-allowed'
+          {(['CREATIVE', 'REPORT'] as const)
+            .filter(k => (k === 'CREATIVE' ? creativesOnly.length : reportsOnly.length) > 0)
+            .map(k => {
+              const count = k === 'CREATIVE' ? creativesOnly.length : reportsOnly.length;
+              const isActive = activeKind === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setActiveKind(k)}
+                  className={`px-3 py-2 text-[13px] font-medium transition-colors ${
+                    isActive
+                      ? 'border-b-2 border-[var(--brand-primary)] text-[var(--text)]'
                       : 'text-[var(--text-3)] hover:text-[var(--text)]'
-                }`}
-              >
-                {t(k === 'CREATIVE' ? 'tabCreatives' : 'tabReports')}
-                <span className="ml-1.5 text-[11px] text-[var(--text-4)]">({count})</span>
-              </button>
-            );
-          })}
+                  }`}
+                >
+                  {t(k === 'CREATIVE' ? 'tabCreatives' : 'tabReports')}
+                  <span className="ml-1.5 text-[11px] text-[var(--text-4)]">({count})</span>
+                </button>
+              );
+            })}
         </div>
       )}
 
