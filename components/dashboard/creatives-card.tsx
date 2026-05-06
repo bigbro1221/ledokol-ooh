@@ -242,7 +242,12 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           border: none;
           padding: 0;
           color: var(--text);
-          transition: width 220ms ease, background 220ms ease, opacity 180ms ease;
+          /* All cc-fade-related transitions share the same duration + easing
+             so the slide, the fade, and the column-width change move in
+             lockstep — both on enter and on exit. */
+          transition: width 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                      background 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                      opacity 180ms ease;
         }
         .cc-fade-left {
           left: 0;
@@ -253,10 +258,13 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           background: linear-gradient(to left, rgba(0, 0, 0, 0.55), transparent);
         }
         /* Slide-in reveal — start the arrow off-edge and translate it in
-           together with the opacity fade when the wrapper is hovered. */
+           together with the opacity fade when the wrapper is hovered.
+           Same duration + easing on opacity and transform → on hover-out
+           the icon slides back out instead of fading in place. */
         .cc-fade svg {
           opacity: 0;
-          transition: opacity 220ms ease, transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+          transition: opacity 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                      transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .cc-fade-left svg  { transform: translateX(-12px); }
         .cc-fade-right svg { transform: translateX(12px); }
