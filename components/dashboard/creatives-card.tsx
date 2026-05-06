@@ -256,11 +256,13 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           align-items: center;
           justify-content: center;
           color: var(--text-3);
-          transition: color 120ms ease, transform 120ms ease;
+          opacity: 0.45;
+          transition: color 120ms ease, opacity 120ms ease, transform 120ms ease;
         }
         .cc-fade:hover .cc-fade-arrow {
-          color: var(--text);
-          transform: scale(1.15);
+          color: var(--text-2);
+          opacity: 1;
+          transform: scale(1.1);
         }
         .cc-fade:focus-visible {
           outline: 2px solid var(--brand-primary);
