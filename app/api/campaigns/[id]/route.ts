@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { MediaType } from '@prisma/client';
 import { requireAdmin } from '@/lib/api-auth';
 import { serializeCampaign } from '@/lib/serializers';
+import { getVatRateAt } from '@/lib/vat';
 
 const UpdateCampaignSchema = z.object({
   name: z.string().min(1).optional(),
@@ -50,39 +51,64 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (parsed.data.mediaType) {
-    const existing = await prisma.campaign.findUnique({
-      where: { id },
-      select: {
-        mediaType: true,
-        totalBudgetUzs: true,
-        productionCost: true,
-        totalFinal: true,
-        additionalAmount: true,
-        _count: { select: { periods: true } },
-      },
-    });
-    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  // Always need the existing row — both for the mediaType lock check AND the
+  // OTHER_CARRIERS auto-recompute path (which has to know the campaign's
+  // current totalBudgetUzs / periodStart when those fields aren't in the body).
+  const existing = await prisma.campaign.findUnique({
+    where: { id },
+    select: {
+      mediaType: true,
+      periodStart: true,
+      totalBudgetUzs: true,
+      productionCost: true,
+      totalFinal: true,
+      additionalAmount: true,
+      _count: { select: { periods: true } },
+    },
+  });
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    if (parsed.data.mediaType !== existing.mediaType) {
-      const hasFinancials =
-        existing.totalBudgetUzs != null ||
-        existing.productionCost != null ||
-        existing.totalFinal != null ||
-        existing.additionalAmount != null;
-      if (existing._count.periods > 0 || hasFinancials) {
-        return NextResponse.json(
-          {
-            error: 'mediaType_locked',
-            message: 'Очистите периоды и финансовые данные перед сменой типа кампании',
-          },
-          { status: 409 },
-        );
-      }
+  if (parsed.data.mediaType && parsed.data.mediaType !== existing.mediaType) {
+    const hasFinancials =
+      existing.totalBudgetUzs != null ||
+      existing.productionCost != null ||
+      existing.totalFinal != null ||
+      existing.additionalAmount != null;
+    if (existing._count.periods > 0 || hasFinancials) {
+      return NextResponse.json(
+        {
+          error: 'mediaType_locked',
+          message: 'Очистите периоды и финансовые данные перед сменой типа кампании',
+        },
+        { status: 409 },
+      );
     }
   }
 
   const { totalBudgetUzs, productionCost, totalFinal, acRate, additionalAmount, ...rest } = parsed.data;
+
+  // OTHER_CARRIERS: totalFinal is auto-derived from totalBudgetUzs and the
+  // VAT rate active at periodStart. Lazy migration — every save brings the
+  // campaign to a consistent state. SCREENS: totalFinal flows from the body.
+  const effectiveMediaType = parsed.data.mediaType ?? existing.mediaType;
+  let totalFinalForUpdate: bigint | null | undefined;
+  if (effectiveMediaType === 'OTHER_CARRIERS') {
+    const effectivePeriodStart = parsed.data.periodStart ?? existing.periodStart;
+    const effectiveBudget = totalBudgetUzs !== undefined
+      ? totalBudgetUzs
+      : (existing.totalBudgetUzs != null ? Number(existing.totalBudgetUzs) : null);
+    if (effectiveBudget == null) {
+      totalFinalForUpdate = null;
+    } else {
+      const vat = (await getVatRateAt(effectivePeriodStart)) ?? 0;
+      totalFinalForUpdate = BigInt(Math.round(effectiveBudget * (1 + vat)));
+    }
+  } else {
+    // SCREENS — only update when client explicitly set the field
+    totalFinalForUpdate = totalFinal !== undefined
+      ? (totalFinal != null ? BigInt(Math.round(totalFinal)) : null)
+      : undefined;
+  }
 
   const campaign = await prisma.campaign.update({
     where: { id },
@@ -91,7 +117,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       ...(acRate !== undefined && { acRate }),
       ...(totalBudgetUzs !== undefined && { totalBudgetUzs: totalBudgetUzs ? BigInt(Math.round(totalBudgetUzs)) : null }),
       ...(productionCost !== undefined && { productionCost: productionCost ? BigInt(Math.round(productionCost)) : null }),
-      ...(totalFinal !== undefined && { totalFinal: totalFinal ? BigInt(Math.round(totalFinal)) : null }),
+      ...(totalFinalForUpdate !== undefined && { totalFinal: totalFinalForUpdate }),
       ...(additionalAmount !== undefined && { additionalAmount: additionalAmount != null ? BigInt(Math.round(additionalAmount)) : null }),
     },
   });

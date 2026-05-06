@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { MediaType } from '@prisma/client';
 import { requireAdmin } from '@/lib/api-auth';
 import { serializeCampaign } from '@/lib/serializers';
+import { getVatRateAt } from '@/lib/vat';
 
 const CreateCampaignSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -18,6 +19,11 @@ const CreateCampaignSchema = z.object({
   mediaType: z.nativeEnum(MediaType).optional().default('SCREENS'),
   additionalCurrencyId: z.string().uuid().nullable().optional(),
   additionalAmount: z.number().nullable().optional(),
+  totalBudgetUzs: z.number().nullable().optional(),
+  productionCost: z.number().nullable().optional(),
+  // totalFinal accepted for SCREENS-mode legacy callers; OTHER_CARRIERS overrides
+  // it server-side from totalBudgetUzs × (1 + VAT@periodStart).
+  totalFinal: z.number().nullable().optional(),
 });
 
 export async function GET() {
@@ -45,10 +51,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { additionalAmount, ...rest } = parsed.data;
+    const { additionalAmount, totalBudgetUzs, productionCost, totalFinal, ...rest } = parsed.data;
+
+    // OTHER_CARRIERS: totalFinal is auto-computed from totalBudgetUzs and the
+    // VAT rate active at periodStart. Any client-supplied totalFinal is
+    // ignored. SCREENS: totalFinal is whatever the client sent (legacy path).
+    let resolvedTotalFinal: number | null | undefined = totalFinal ?? undefined;
+    if (rest.mediaType === 'OTHER_CARRIERS') {
+      if (totalBudgetUzs != null) {
+        const vat = (await getVatRateAt(rest.periodStart)) ?? 0;
+        resolvedTotalFinal = Math.round(totalBudgetUzs * (1 + vat));
+      } else {
+        resolvedTotalFinal = null;
+      }
+    }
+
     const campaign = await prisma.campaign.create({
       data: {
         ...rest,
+        ...(totalBudgetUzs != null && { totalBudgetUzs: BigInt(Math.round(totalBudgetUzs)) }),
+        ...(productionCost != null && { productionCost: BigInt(Math.round(productionCost)) }),
+        ...(resolvedTotalFinal != null && { totalFinal: BigInt(Math.round(resolvedTotalFinal)) }),
         ...(additionalAmount != null && { additionalAmount: BigInt(Math.round(additionalAmount)) }),
       },
     });
