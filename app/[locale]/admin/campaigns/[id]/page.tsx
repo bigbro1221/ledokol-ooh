@@ -44,6 +44,11 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   const totalScreens = campaign.screens.length;
 
+  // OTHER_CARRIERS auto-creates periods from the file on confirm — no manual
+  // period management. The "Upload XLSX" button stays available regardless of
+  // splitByPeriods, and PeriodManager is hidden for this media type.
+  const isOtherCarriers = campaign.mediaType === 'OTHER_CARRIERS';
+
   // Serialise periods (BigInt → number)
   const periods = campaign.periods.map(p => ({
     id: p.id,
@@ -88,7 +93,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           >
             <Pencil size={13} strokeWidth={1.5} /> {tCommon('edit')}
           </Link>
-          {!campaign.splitByPeriods && (
+          {(!campaign.splitByPeriods || isOtherCarriers) && (
             <Link
               href={`/${locale}/admin/campaigns/${id}/upload`}
               className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
@@ -110,7 +115,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           >
             <Film size={13} strokeWidth={1.5} /> {tCreatives('button')}
           </Link>
-          {totalScreens > 0 && !campaign.splitByPeriods && (
+          {totalScreens > 0 && (!campaign.splitByPeriods || isOtherCarriers) && (
             <ClearScreensButton campaignId={id} />
           )}
           {campaign.yandexMapUrl && totalScreens > 0 && (
@@ -158,8 +163,10 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         )}
       </div>
 
-      {/* Periods section */}
-      {campaign.splitByPeriods ? (
+      {/* Periods section — only the manual SCREENS flow uses PeriodManager.
+          OTHER_CARRIERS derives periods from the uploaded file, so the screen
+          breakdown + financials editor are shown instead (same as mono mode). */}
+      {campaign.splitByPeriods && !isOtherCarriers ? (
         <div className="mb-8">
           <h2 className="mb-3 text-[15px] font-semibold">{tAdmin('monthsTitle')}</h2>
           <PeriodManager
