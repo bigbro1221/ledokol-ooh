@@ -241,21 +241,25 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           cursor: pointer;
           border: none;
           padding: 0;
-          color: var(--text-2);
-          transition: width 200ms ease, background 200ms ease, opacity 180ms ease;
+          color: var(--text);
+          transition: width 220ms ease, background 220ms ease, opacity 180ms ease;
         }
         .cc-fade-left {
           left: 0;
-          background: linear-gradient(to right, rgba(0, 0, 0, 0.4), transparent);
+          background: linear-gradient(to right, rgba(0, 0, 0, 0.55), transparent);
         }
         .cc-fade-right {
           right: 0;
-          background: linear-gradient(to left, rgba(0, 0, 0, 0.4), transparent);
+          background: linear-gradient(to left, rgba(0, 0, 0, 0.55), transparent);
         }
+        /* Slide-in reveal — start the arrow off-edge and translate it in
+           together with the opacity fade when the wrapper is hovered. */
         .cc-fade svg {
           opacity: 0;
-          transition: opacity 200ms ease;
+          transition: opacity 220ms ease, transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
         }
+        .cc-fade-left svg  { transform: translateX(-12px); }
+        .cc-fade-right svg { transform: translateX(12px); }
         /* Reveal on parent hover or keyboard focus inside the wrapper. */
         .cc-strip-wrap:hover > .cc-fade,
         .cc-strip-wrap:focus-within > .cc-fade {
@@ -264,14 +268,14 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
         .cc-strip-wrap:hover > .cc-fade svg,
         .cc-strip-wrap:focus-within > .cc-fade svg {
           opacity: 1;
+          transform: translateX(0);
         }
         /* Stronger contrast on direct chevron hover. */
         .cc-fade:hover {
-          background: linear-gradient(to right, rgba(0, 0, 0, 0.7), transparent);
-          color: var(--text);
+          background: linear-gradient(to right, rgba(0, 0, 0, 0.8), transparent);
         }
         .cc-fade-right:hover {
-          background: linear-gradient(to left, rgba(0, 0, 0, 0.7), transparent);
+          background: linear-gradient(to left, rgba(0, 0, 0, 0.8), transparent);
         }
         /* Hide chevron at the edge it can't scroll toward. */
         .cc-fade[data-disabled="true"] {
@@ -301,6 +305,8 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
           .cc-strip-wrap:hover > .cc-fade svg {
             opacity: 0;
           }
+          .cc-strip-wrap:hover > .cc-fade-left svg  { transform: translateX(-12px); }
+          .cc-strip-wrap:hover > .cc-fade-right svg { transform: translateX(12px); }
         }
         /* Reduced motion — drop transitions. */
         @media (prefers-reduced-motion: reduce) {
