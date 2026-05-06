@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
 import { auth, isGoogleLinked } from '@/lib/auth';
 import Link from 'next/link';
-import { Upload, FileSpreadsheet, Layers, Pencil, Table2, Film, Eye, ArrowLeft, Download } from 'lucide-react';
+import { Upload, FileSpreadsheet, Pencil, Table2, Film, Eye, ArrowLeft, Download } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { StatusToggle } from '@/components/admin/status-toggle';
 import { PeriodManager } from '@/components/admin/period-manager';
@@ -11,6 +11,7 @@ import { ClearScreensButton } from '@/components/admin/clear-screens-button';
 import { CampaignFinancials } from '@/components/admin/campaign-financials';
 import { RegeocodeButton } from '@/components/admin/regeocodebutton';
 import { ScreensCard, type PeriodSummary } from '@/components/admin/screens-card';
+import { PeriodsCard } from '@/components/admin/periods-card';
 import { getVatRateAt } from '@/lib/vat';
 
 export default async function CampaignDetailPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
@@ -193,13 +194,11 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         />
 
         {campaign.splitByPeriods ? (
-          <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-            <div className="text-xs text-[var(--text-3)]">{tAdmin('monthsCount')}</div>
-            <div className="mt-1 flex items-center gap-2">
-              <Layers size={18} className="text-[var(--brand-primary)]" strokeWidth={1.5} />
-              <span className="text-2xl font-semibold">{campaign.periods.length}</span>
-            </div>
-          </div>
+          <PeriodsCard
+            periodCount={campaign.periods.length}
+            periodSummaries={periodSummaries}
+            label={tAdmin('monthsCount')}
+          />
         ) : (
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
             <div className="text-xs text-[var(--text-3)]">{tAdmin('budgetTotal')}</div>

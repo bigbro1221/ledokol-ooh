@@ -1,22 +1,22 @@
 'use client';
 
 import { useState } from 'react';
+import { Layers } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { PeriodSummariesModal, type PeriodSummary } from './period-summaries-modal';
 
-export type { PeriodSummary };
-
 interface Props {
-  totalScreens: number;
+  periodCount: number;
   periodSummaries: PeriodSummary[];
   label: string;
 }
 
 /**
- * Surfaces KPI card on the campaign detail page. Click → period drill-down
- * modal (shared with the periods card).
+ * Periods KPI card on the campaign detail page. Click → period drill-down
+ * modal (same modal the Surfaces card opens). Shown when the campaign is
+ * splitByPeriods.
  */
-export function ScreensCard({ totalScreens, periodSummaries, label }: Props) {
+export function PeriodsCard({ periodCount, periodSummaries, label }: Props) {
   const t = useTranslations('admin');
   const [open, setOpen] = useState(false);
   const hasPeriodData = periodSummaries.length > 0;
@@ -33,7 +33,10 @@ export function ScreensCard({ totalScreens, periodSummaries, label }: Props) {
         }`}
       >
         <div className="text-xs text-[var(--text-3)]">{label}</div>
-        <div className="mt-1 text-2xl font-semibold">{totalScreens}</div>
+        <div className="mt-1 flex items-center gap-2">
+          <Layers size={18} className="text-[var(--brand-primary)]" strokeWidth={1.5} />
+          <span className="text-2xl font-semibold">{periodCount}</span>
+        </div>
       </button>
 
       <PeriodSummariesModal
