@@ -476,7 +476,11 @@
     "STOP": "Stops",
     "STOPLed": "LED stops",
     "AIRPORT": "Airport",
-    "BUS": "Transport"
+    "BUS": "Transport",
+    "ROOF": "Rooftop structures",
+    "BRANDMAUER": "Brandmauers",
+    "CINEMA": "Cinemas",
+    "METRO": "Metro"
   },
   "meta": {
     "title": "OOH Dashboard — Ledokol Group",

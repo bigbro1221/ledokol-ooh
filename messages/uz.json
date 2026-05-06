@@ -476,7 +476,11 @@
     "STOP": "To'xtash joylari",
     "STOPLed": "LED to'xtash joylari",
     "AIRPORT": "Aeroport",
-    "BUS": "Transport"
+    "BUS": "Transport",
+    "ROOF": "Tom konstruksiyalari",
+    "BRANDMAUER": "Brendmauerlar",
+    "CINEMA": "Kinoteatrlar",
+    "METRO": "Metro"
   },
   "meta": {
     "title": "OOH Dashboard — Ledokol Group",

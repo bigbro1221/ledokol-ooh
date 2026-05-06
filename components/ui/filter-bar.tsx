@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { MultiSelectDropdown } from '@/components/ui/multi-select-dropdown';
 
-const TYPE_VALUES = ['LED', 'STATIC', 'STOP', 'AIRPORT', 'BUS'] as const;
+const TYPE_VALUES = ['LED', 'STATIC', 'STOP', 'AIRPORT', 'BUS', 'ROOF', 'BRANDMAUER', 'CINEMA', 'METRO'] as const;
 
 interface Period {
   id: string;
