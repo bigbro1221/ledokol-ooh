@@ -241,37 +241,29 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
         }
         .cc-fade-left {
           left: 0;
-          justify-content: flex-start;
-          padding-left: 8px;
-          background: linear-gradient(to right, var(--surface) 0%, var(--surface) 30%, transparent 100%);
+          justify-content: center;
+          background: linear-gradient(to right, var(--surface) 0%, var(--surface) 40%, transparent 100%);
         }
         .cc-fade-right {
           right: 0;
-          justify-content: flex-end;
-          padding-right: 8px;
-          background: linear-gradient(to left, var(--surface) 0%, var(--surface) 30%, transparent 100%);
+          justify-content: center;
+          background: linear-gradient(to left, var(--surface) 0%, var(--surface) 40%, transparent 100%);
         }
         .cc-fade-arrow {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 28px;
-          height: 28px;
-          border-radius: 999px;
-          background: var(--surface-2);
-          color: var(--text-2);
-          box-shadow: var(--shadow-sm);
-          transition: transform 120ms ease, color 120ms ease;
+          color: var(--text-3);
+          transition: color 120ms ease, transform 120ms ease;
         }
         .cc-fade:hover .cc-fade-arrow {
           color: var(--text);
-          transform: scale(1.05);
+          transform: scale(1.15);
         }
         .cc-fade:focus-visible {
-          outline: none;
-        }
-        .cc-fade:focus-visible .cc-fade-arrow {
-          box-shadow: var(--shadow-glow);
+          outline: 2px solid var(--brand-primary);
+          outline-offset: -4px;
+          border-radius: 6px;
         }
         /* On mobile we already have scroll-snap + dots; thumb-swipe is the
            native affordance, so hide both the gradient and the chevron chip. */
