@@ -57,13 +57,37 @@ Do all of this yourself — do not ask the user to run these commands.
   - `sheets.ts` — sheet routing (type-named, period, total)
   - `columns.ts` — column alias map + plan/fact super-header detection
   - `schemas.ts` — Zod schemas for parsed rows
-  - `index.ts` — orchestration
+  - `index.ts` — orchestration (SCREENS branch)
+  - `multi-period.ts` — orchestration (OTHER_CARRIERS branch, single-sheet, period-per-row)
+  - `period.ts` — `dd.mm.yyyy - dd.mm.yyyy` parser used by the multi-period branch
   - `matcher.ts` — Yandex pin → screen address geocoding
   - `yandex.ts` — Yandex map widget HTML scraping
 - `app/api/upload/route.ts` — parse + geocode (does NOT write to DB)
 - `app/api/upload/[id]/confirm/route.ts` — write parsed screens to DB
-- `public/templates/mediaplan-template.xlsx` — downloadable template
+- `public/templates/mediaplan-template.xlsx` — SCREENS template
+- `public/templates/other-carriers-template.xlsx` — OTHER_CARRIERS template (built by `scripts/build-other-carriers-template.ts`)
 - `docs/samples/` — sample files used to develop/test the parser
+
+## Media types
+
+A campaign has `mediaType: SCREENS | OTHER_CARRIERS` (Prisma enum).
+
+- `SCREENS` — multi-sheet workbook, one row per screen, prices in the file.
+  Parser entry: `lib/parser/index.ts:parseMediaPlan`.
+- `OTHER_CARRIERS` — single sheet `Медиаплан`, one row per `(screen × period)`.
+  Periods are auto-created from column F (`dd.mm.yyyy - dd.mm.yyyy`) via
+  `lib/parser/period.ts`. Pricing is entered in the campaign form, not the
+  file. Parser entry: `lib/parser/multi-period.ts:parseMultiPeriod`.
+
+The `mediaType` toggle on the campaign form is locked once any
+`CampaignPeriod` rows exist OR any of (`totalBudgetUzs`, `productionCost`,
+`totalFinal`, `additionalAmount`) is set. Server-side enforcement: the PUT
+handler in `app/api/campaigns/[id]/route.ts` returns
+`409 { error: "mediaType_locked" }` when the change is blocked.
+
+Screen types are not an enum — they live in the `ScreenTypeRef` reference
+table (9 codes: LED, STATIC, STOP, AIRPORT, BUS, ROOF, BRANDMAUER, CINEMA,
+METRO). `Screen.typeId` is the FK; new code reads `screen.screenType.code`.
 
 ## Final template column layout (Медиаплан sheet)
 
