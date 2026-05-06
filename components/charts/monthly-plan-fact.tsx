@@ -24,9 +24,105 @@ const MONTH_SHORT: Record<string, string> = {
   сентябрь: 'Сен', октябрь: 'Окт', ноябрь: 'Ноя', декабрь: 'Дек',
 };
 
-function shortLabel(name: string): string {
+const MONTH_BY_INDEX = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+
+const MONTH_FULL_BY_INDEX = [
+  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+];
+
+const MONTH_NAME_TO_INDEX: Record<string, number> = {
+  январь: 0, февраль: 1, март: 2, апрель: 3, май: 4, июнь: 5,
+  июль: 6, август: 7, сентябрь: 8, октябрь: 9, ноябрь: 10, декабрь: 11,
+};
+
+function labelMonthKey(label: string): string | null {
+  const trimmed = label.trim();
+  const monthNameMatch = trimmed.toLowerCase().match(/^(\S+)\s+(\d{4})/);
+  if (monthNameMatch && MONTH_NAME_TO_INDEX[monthNameMatch[1]] !== undefined) {
+    return `${monthNameMatch[2]}-${MONTH_NAME_TO_INDEX[monthNameMatch[1]]}`;
+  }
+  const dateMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (dateMatch) {
+    return `${dateMatch[3]}-${Number(dateMatch[2]) - 1}`;
+  }
+  return null;
+}
+
+function formatDateRange(name: string): string {
+  const m = name.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s*[-–—]\s*(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (!m) return name;
+  const [, sd, sm, , ed, em] = m;
+  const startDay = Number(sd);
+  const startMonth = Number(sm);
+  const endDay = Number(ed);
+  const endMonth = Number(em);
+  const startMonthName = MONTH_BY_INDEX[startMonth - 1] ?? sm;
+  const endMonthName = MONTH_BY_INDEX[endMonth - 1] ?? em;
+  if (startMonth === endMonth) {
+    return `${startDay}–${endDay} ${startMonthName}`;
+  }
+  return `${startDay} ${startMonthName} – ${endDay} ${endMonthName}`;
+}
+
+/**
+ * Build a "this month appears in multiple years" lookup. Used to decide
+ * whether the X-axis tick can collapse to just "Май" or needs the year
+ * suffix ("Май '25" / "Май '26") to keep ticks unique — otherwise recharts'
+ * label-based tooltip lookup grabs the first matching bar.
+ */
+function buildYearSuffixSet(allLabels: string[]): Set<number> {
+  const monthYears = new Map<number, Set<number>>();
+  for (const label of allLabels) {
+    const key = labelMonthKey(label);
+    if (!key) continue;
+    const [yearStr, monthIdxStr] = key.split('-');
+    const monthIdx = Number(monthIdxStr);
+    const year = Number(yearStr);
+    if (!monthYears.has(monthIdx)) monthYears.set(monthIdx, new Set());
+    monthYears.get(monthIdx)!.add(year);
+  }
+  const needsYear = new Set<number>();
+  monthYears.forEach((years, monthIdx) => {
+    if (years.size > 1) needsYear.add(monthIdx);
+  });
+  return needsYear;
+}
+
+function shortLabel(name: string, monthCounts: Map<string, number>, monthsNeedingYear: Set<number>): string {
+  const trimmed = name.trim();
+  const fullMatch = trimmed.toLowerCase().match(/^(\S+)\s+(\d{4})/);
+  if (fullMatch && MONTH_NAME_TO_INDEX[fullMatch[1]] !== undefined) {
+    const monthIdx = MONTH_NAME_TO_INDEX[fullMatch[1]];
+    const short = MONTH_BY_INDEX[monthIdx];
+    if (monthsNeedingYear.has(monthIdx)) {
+      return `${short} '${fullMatch[2].slice(2)}`;
+    }
+    return short;
+  }
+  const key = labelMonthKey(name);
+  if (key && monthCounts.get(key) === 1) {
+    const [yearStr, monthIdxStr] = key.split('-');
+    const monthIdx = Number(monthIdxStr);
+    const short = MONTH_BY_INDEX[monthIdx] ?? name.slice(0, 3);
+    if (monthsNeedingYear.has(monthIdx)) {
+      return `${short} '${yearStr.slice(2)}`;
+    }
+    return short;
+  }
+  return formatDateRange(name);
+}
+
+function fullLabelFor(name: string, monthCounts: Map<string, number>): string {
   const first = name.trim().toLowerCase().split(' ')[0];
-  return MONTH_SHORT[first] ?? name.slice(0, 3);
+  if (MONTH_NAME_TO_INDEX[first] !== undefined) return name;
+  const key = labelMonthKey(name);
+  if (key && monthCounts.get(key) === 1) {
+    const [year, monthIdx] = key.split('-');
+    const monthName = MONTH_FULL_BY_INDEX[Number(monthIdx)];
+    if (monthName) return `${monthName} ${year}`;
+  }
+  return name;
 }
 
 function fmtTick(v: number): string {
@@ -51,6 +147,13 @@ export function MonthlyPlanFact({ data }: Props) {
   // All unique period labels in their original order (first city's order is canonical)
   const allLabels = data[0]?.months.map(m => m.label) ?? [];
 
+  const monthCounts = new Map<string, number>();
+  for (const label of allLabels) {
+    const key = labelMonthKey(label);
+    if (key) monthCounts.set(key, (monthCounts.get(key) ?? 0) + 1);
+  }
+  const monthsNeedingYear = buildYearSuffixSet(allLabels);
+
   // Chart data: aggregate all cities or just selected
   const chartData = allLabels.map(label => {
     const sources = selectedCity
@@ -58,7 +161,7 @@ export function MonthlyPlanFact({ data }: Props) {
       : data;
     const plan = sources.reduce((s, d) => s + (d.months.find(m => m.label === label)?.plan ?? 0), 0);
     const fact = sources.reduce((s, d) => s + (d.months.find(m => m.label === label)?.fact ?? 0), 0);
-    return { label: shortLabel(label), fullLabel: label, plan, fact };
+    return { label: shortLabel(label, monthCounts, monthsNeedingYear), fullLabel: fullLabelFor(label, monthCounts), plan, fact };
   });
 
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) => {
