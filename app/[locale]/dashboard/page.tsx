@@ -159,15 +159,17 @@ export default async function DashboardPage({
   const creativeRows = await prisma.creative.findMany({
     where: { campaignId: selectedId },
     orderBy: { createdAt: 'asc' },
-    select: { id: true, name: true, fileKey: true, thumbnailKey: true, mimeType: true, width: true, height: true, sizeBytes: true },
+    select: { id: true, name: true, fileKey: true, thumbnailKey: true, mimeType: true, kind: true, width: true, height: true, sizeBytes: true, durationSec: true },
   });
   const creatives = await Promise.all(creativeRows.map(async c => ({
     id: c.id,
     name: c.name,
     mimeType: c.mimeType,
+    kind: c.kind,
     width: c.width,
     height: c.height,
     sizeBytes: Number(c.sizeBytes),
+    durationSec: c.durationSec,
     url: await getFileUrl(c.fileKey),
     thumbnailUrl: c.thumbnailKey ? await getFileUrl(c.thumbnailKey) : null,
   })));

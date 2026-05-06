@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronUp, ChevronDown, Film } from 'lucide-react';
+import { ChevronUp, ChevronDown, Film, ImageIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export interface CreativeView {
@@ -14,6 +14,7 @@ export interface CreativeView {
   height: number | null;
   sizeBytes: number;
   mimeType: string;
+  kind: 'CREATIVE' | 'REPORT';
   durationSec?: number | null;
 }
 
@@ -23,32 +24,24 @@ function formatDuration(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function isImage(mime: string): boolean {
+  return mime.startsWith('image/');
+}
+
 export function CreativesCard({ creatives, embedded = false }: { creatives: CreativeView[]; embedded?: boolean }) {
   const t = useTranslations('creatives');
   const [collapsed, setCollapsed] = useState(false);
-  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
-  const [activeDot, setActiveDot] = useState(0);
-  const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const stripRef = useRef<HTMLDivElement | null>(null);
+  const [activeKind, setActiveKind] = useState<'CREATIVE' | 'REPORT'>('CREATIVE');
 
-  const open = useCallback((i: number) => setPlayingIdx(i), []);
-  const close = useCallback(() => {
-    setPlayingIdx(prev => {
-      if (prev != null) {
-        queueMicrotask(() => tileRefs.current[prev]?.focus());
-      }
-      return null;
-    });
-  }, []);
+  const { creativesOnly, reportsOnly } = useMemo(() => ({
+    creativesOnly: creatives.filter(c => c.kind === 'CREATIVE'),
+    reportsOnly: creatives.filter(c => c.kind === 'REPORT'),
+  }), [creatives]);
 
-  function onStripScroll() {
-    const el = stripRef.current;
-    if (!el || creatives.length === 0) return;
-    // Mobile: tile width = clientWidth - 32, gap = 10. Index = round(scrollLeft / (tileWidth + gap)).
-    const tileStride = el.clientWidth - 32 + 10;
-    const idx = tileStride > 0 ? Math.round(el.scrollLeft / tileStride) : 0;
-    setActiveDot(Math.max(0, Math.min(idx, creatives.length - 1)));
-  }
+  const hasReports = reportsOnly.length > 0;
+  const visibleList = hasReports
+    ? (activeKind === 'CREATIVE' ? creativesOnly : reportsOnly)
+    : creativesOnly;
 
   const containerClass = embedded
     ? 'overflow-hidden'
@@ -63,77 +56,42 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
             <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('subtitle')}</p>
           </div>
           <span className="text-xs text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>
-            {creatives.length}
+            {visibleList.length}
           </span>
         </div>
       )}
 
-      {!collapsed && (
-        creatives.length === 0
-          ? (
-            <div className={embedded ? 'py-6 text-center' : 'px-5 py-10 text-center'}>
-              <p className="text-sm italic text-[var(--text-3)]">{t('empty')}</p>
-            </div>
-          )
-          : (
-            <>
-              <div ref={stripRef} onScroll={onStripScroll} className={embedded ? 'cc-filmstrip cc-filmstrip-embedded' : 'cc-filmstrip'}>
-                {creatives.map((c, i) => (
-                  <button
-                    key={c.id}
-                    ref={el => { tileRefs.current[i] = el; }}
-                    type="button"
-                    onClick={() => open(i)}
-                    aria-label={t('openCreative', { i: i + 1, total: creatives.length })}
-                    className="cc-tile group relative bg-[var(--surface-2)] transition-all duration-[180ms] hover:scale-[1.015] hover:shadow-[var(--shadow-md)]"
-                  >
-                    {c.thumbnailUrl ? (
-                      <Image
-                        src={c.thumbnailUrl}
-                        alt=""
-                        fill
-                        sizes="(max-width: 640px) 100vw, 280px"
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <Film
-                        className="absolute inset-0 m-auto text-[var(--text-4)]"
-                        size={28}
-                        strokeWidth={1.25}
-                        aria-hidden="true"
-                      />
-                    )}
-                    {/* Play affordance */}
-                    <span className="play-wrap pointer-events-none absolute inset-0 flex items-center justify-center">
-                      <span className="cc-play-pill flex items-center justify-center rounded-full border border-white/20 backdrop-blur-md transition-colors group-hover:bg-black/70">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                          <polygon points="6 4 20 12 6 20" />
-                        </svg>
-                      </span>
-                    </span>
-                    {/* Duration chip */}
-                    {c.durationSec != null && c.durationSec > 0 && (
-                      <span
-                        className="absolute bottom-2 right-2 rounded-[3px] px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm"
-                        style={{ background: 'rgba(0,0,0,0.55)', fontVariantNumeric: 'tabular-nums' }}
-                      >
-                        {formatDuration(c.durationSec)}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+      {hasReports && (
+        <div className={`flex border-b border-[var(--border)] ${embedded ? '' : 'px-5'}`}>
+          {(['CREATIVE', 'REPORT'] as const).map(k => {
+            const count = k === 'CREATIVE' ? creativesOnly.length : reportsOnly.length;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setActiveKind(k)}
+                className={`px-3 py-2 text-[13px] font-medium transition-colors ${
+                  activeKind === k
+                    ? 'border-b-2 border-[var(--brand-primary)] text-[var(--text)]'
+                    : 'text-[var(--text-3)] hover:text-[var(--text)]'
+                }`}
+              >
+                {t(k === 'CREATIVE' ? 'tabCreatives' : 'tabReports')}
+                <span className="ml-1.5 text-[11px] text-[var(--text-3)]">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-              {creatives.length > 1 && (
-                <div className="cc-dots" aria-hidden="true">
-                  {creatives.map((_, i) => (
-                    <span key={i} className={i === activeDot ? 'cc-dot cc-dot-active' : 'cc-dot'} />
-                  ))}
-                </div>
-              )}
-            </>
-          )
+      {!collapsed && (
+        <Filmstrip
+          list={visibleList}
+          embedded={embedded}
+          emptyLabel={hasReports
+            ? (activeKind === 'CREATIVE' ? t('emptyCreatives') : t('emptyReports'))
+            : t('empty')}
+        />
       )}
 
       {!embedded && (
@@ -146,15 +104,6 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
             ? <><ChevronDown size={15} strokeWidth={1.5} /> {t('showAll')}</>
             : <><ChevronUp size={15} strokeWidth={1.5} /> {t('hideAll')}</>}
         </button>
-      )}
-
-      {playingIdx != null && (
-        <Lightbox
-          creatives={creatives}
-          index={playingIdx}
-          onIndexChange={setPlayingIdx}
-          onClose={close}
-        />
       )}
 
       <style jsx global>{`
@@ -257,6 +206,130 @@ export function CreativesCard({ creatives, embedded = false }: { creatives: Crea
   );
 }
 
+function Filmstrip({
+  list,
+  embedded,
+  emptyLabel,
+}: {
+  list: CreativeView[];
+  embedded: boolean;
+  emptyLabel: string;
+}) {
+  const t = useTranslations('creatives');
+  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
+  const [activeDot, setActiveDot] = useState(0);
+  const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const stripRef = useRef<HTMLDivElement | null>(null);
+
+  const open = useCallback((i: number) => setPlayingIdx(i), []);
+  const close = useCallback(() => {
+    setPlayingIdx(prev => {
+      if (prev != null) {
+        queueMicrotask(() => tileRefs.current[prev]?.focus());
+      }
+      return null;
+    });
+  }, []);
+
+  function onStripScroll() {
+    const el = stripRef.current;
+    if (!el || list.length === 0) return;
+    const tileStride = el.clientWidth - 32 + 10;
+    const idx = tileStride > 0 ? Math.round(el.scrollLeft / tileStride) : 0;
+    setActiveDot(Math.max(0, Math.min(idx, list.length - 1)));
+  }
+
+  if (list.length === 0) {
+    return (
+      <div className={embedded ? 'py-6 text-center' : 'px-5 py-10 text-center'}>
+        <p className="text-sm italic text-[var(--text-3)]">{emptyLabel}</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div ref={stripRef} onScroll={onStripScroll} className={embedded ? 'cc-filmstrip cc-filmstrip-embedded' : 'cc-filmstrip'}>
+        {list.map((c, i) => {
+          const img = isImage(c.mimeType);
+          const tileSrc = c.thumbnailUrl ?? (img ? c.url : null);
+          return (
+            <button
+              key={c.id}
+              ref={el => { tileRefs.current[i] = el; }}
+              type="button"
+              onClick={() => open(i)}
+              aria-label={t('openCreative', { i: i + 1, total: list.length })}
+              className="cc-tile group relative bg-[var(--surface-2)] transition-all duration-[180ms] hover:scale-[1.015] hover:shadow-[var(--shadow-md)]"
+            >
+              {tileSrc ? (
+                <Image
+                  src={tileSrc}
+                  alt=""
+                  fill
+                  sizes="(max-width: 640px) 100vw, 280px"
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : img ? (
+                <ImageIcon
+                  className="absolute inset-0 m-auto text-[var(--text-4)]"
+                  size={28}
+                  strokeWidth={1.25}
+                  aria-hidden="true"
+                />
+              ) : (
+                <Film
+                  className="absolute inset-0 m-auto text-[var(--text-4)]"
+                  size={28}
+                  strokeWidth={1.25}
+                  aria-hidden="true"
+                />
+              )}
+              {/* Play affordance — videos only */}
+              {!img && (
+                <span className="play-wrap pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <span className="cc-play-pill flex items-center justify-center rounded-full border border-white/20 backdrop-blur-md transition-colors group-hover:bg-black/70">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                      <polygon points="6 4 20 12 6 20" />
+                    </svg>
+                  </span>
+                </span>
+              )}
+              {/* Duration chip */}
+              {c.durationSec != null && c.durationSec > 0 && (
+                <span
+                  className="absolute bottom-2 right-2 rounded-[3px] px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm"
+                  style={{ background: 'rgba(0,0,0,0.55)', fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {formatDuration(c.durationSec)}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {list.length > 1 && (
+        <div className="cc-dots" aria-hidden="true">
+          {list.map((_, i) => (
+            <span key={i} className={i === activeDot ? 'cc-dot cc-dot-active' : 'cc-dot'} />
+          ))}
+        </div>
+      )}
+
+      {playingIdx != null && (
+        <Lightbox
+          creatives={list}
+          index={playingIdx}
+          onIndexChange={setPlayingIdx}
+          onClose={close}
+        />
+      )}
+    </>
+  );
+}
+
 function Lightbox({
   creatives,
   index,
@@ -272,6 +345,7 @@ function Lightbox({
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const current = creatives[index];
+  const img = isImage(current.mimeType);
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
@@ -333,18 +407,29 @@ function Lightbox({
       onClick={onClose}
       className="lightbox"
     >
-      <video
-        ref={videoRef}
-        key={current.id}
-        src={current.url}
-        poster={current.thumbnailUrl ?? undefined}
-        preload="metadata"
-        controls
-        autoPlay
-        playsInline
-        onClick={e => e.stopPropagation()}
-        className="lightbox-video bg-black"
-      />
+      {img ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={current.id}
+          src={current.url}
+          alt={current.name}
+          onClick={e => e.stopPropagation()}
+          className="lightbox-video bg-black"
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          key={current.id}
+          src={current.url}
+          poster={current.thumbnailUrl ?? undefined}
+          preload="metadata"
+          controls
+          autoPlay
+          playsInline
+          onClick={e => e.stopPropagation()}
+          className="lightbox-video bg-black"
+        />
+      )}
       <button
         ref={closeBtnRef}
         type="button"

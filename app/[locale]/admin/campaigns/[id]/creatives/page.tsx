@@ -36,6 +36,7 @@ export default async function CreativesPage({
     id: c.id,
     name: c.name,
     mimeType: c.mimeType,
+    kind: c.kind,
     width: c.width,
     height: c.height,
     sizeBytes: Number(c.sizeBytes),

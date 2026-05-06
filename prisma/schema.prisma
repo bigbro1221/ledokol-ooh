@@ -49,6 +49,11 @@ enum MediaType {
   OTHER_CARRIERS
 }
 
+enum CreativeKind {
+  CREATIVE
+  REPORT
+}
+
 model User {
   id               String             @id @default(uuid())
   email            String             @unique
@@ -144,9 +149,10 @@ model Campaign {
 }
 
 model Creative {
-  id           String   @id @default(uuid())
+  id           String       @id @default(uuid())
   campaignId   String
-  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaign     Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  kind         CreativeKind @default(CREATIVE)
   name         String
   fileKey      String
   thumbnailKey String?
@@ -155,8 +161,8 @@ model Creative {
   height       Int?
   sizeBytes    BigInt
   durationSec  Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@index([campaignId])
 }

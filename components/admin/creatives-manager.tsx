@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Trash2, Upload, Plus, Film } from 'lucide-react';
+import { Trash2, Upload, Plus, Film, Image as ImageIcon } from 'lucide-react';
 
 export interface CreativeRow {
   id: string;
   name: string;
   mimeType: string;
+  kind: 'CREATIVE' | 'REPORT';
   width: number | null;
   height: number | null;
   sizeBytes: number;
@@ -28,17 +29,23 @@ interface UploadState {
   error?: string;
 }
 
-interface VideoMeta {
+interface MediaMeta {
   width: number;
   height: number;
   durationSec: number;
   thumbnail: Blob | null;
 }
 
-// Load video metadata + capture a frame as JPEG. Used both on upload (to
-// store width/height/duration on the DB row and generate a real thumbnail
-// so the dashboard can render an <img> instead of <video>).
-function readVideoMetaAndThumbnail(file: File): Promise<VideoMeta | null> {
+function isImage(mime: string): boolean {
+  return mime.startsWith('image/');
+}
+
+function isVideo(mime: string): boolean {
+  return mime.startsWith('video/');
+}
+
+// Load video metadata + capture a frame as JPEG.
+function readVideoMetaAndThumbnail(file: File): Promise<MediaMeta | null> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
@@ -52,7 +59,6 @@ function readVideoMetaAndThumbnail(file: File): Promise<VideoMeta | null> {
     const timeoutId = window.setTimeout(() => { cleanup(); resolve(null); }, 15000);
 
     video.onloadedmetadata = () => {
-      // Seek to ~1s (or 10% if the video is shorter) so we skip initial black frames.
       const target = Math.min(1, (video.duration || 0) * 0.1);
       video.currentTime = target > 0 ? target : 0;
     };
@@ -91,6 +97,37 @@ function readVideoMetaAndThumbnail(file: File): Promise<VideoMeta | null> {
   });
 }
 
+// Read image dimensions; image itself becomes its own preview (no separate
+// thumbnail upload — the dashboard falls back to the file URL when there is
+// no thumbnailKey).
+function readImageMeta(file: File): Promise<MediaMeta | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new window.Image();
+    const cleanup = () => URL.revokeObjectURL(url);
+    const timeoutId = window.setTimeout(() => { cleanup(); resolve(null); }, 15000);
+
+    img.onload = () => {
+      window.clearTimeout(timeoutId);
+      cleanup();
+      resolve({
+        width: img.naturalWidth || 0,
+        height: img.naturalHeight || 0,
+        durationSec: 0,
+        thumbnail: null,
+      });
+    };
+    img.onerror = () => { window.clearTimeout(timeoutId); cleanup(); resolve(null); };
+    img.src = url;
+  });
+}
+
+async function readMetaAndThumbnail(file: File): Promise<MediaMeta | null> {
+  if (isVideo(file.type)) return readVideoMetaAndThumbnail(file);
+  if (isImage(file.type)) return readImageMeta(file);
+  return null;
+}
+
 function formatSize(bytes: number, tMb: string, tKb: string): string {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} ${tMb}`;
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} ${tKb}`;
@@ -105,6 +142,17 @@ export function CreativesManager({ campaignId, creatives }: Props) {
   const [uploads, setUploads] = useState<UploadState[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [playing, setPlaying] = useState<CreativeRow | null>(null);
+  const [activeKind, setActiveKind] = useState<'CREATIVE' | 'REPORT'>('CREATIVE');
+
+  const visible = useMemo(
+    () => creatives.filter(c => c.kind === activeKind),
+    [creatives, activeKind],
+  );
+
+  const counts = useMemo(() => ({
+    CREATIVE: creatives.filter(c => c.kind === 'CREATIVE').length,
+    REPORT: creatives.filter(c => c.kind === 'REPORT').length,
+  }), [creatives]);
 
   const doUpload = useCallback(async (files: File[]) => {
     const queue: UploadState[] = files.map(f => ({ file: f, progress: 'queued' }));
@@ -114,14 +162,15 @@ export function CreativesManager({ campaignId, creatives }: Props) {
       const item = queue[i];
       setUploads(prev => prev.map((p, idx) => idx === i ? { ...p, progress: 'uploading' } : p));
 
-      const meta = await readVideoMetaAndThumbnail(item.file);
+      const meta = await readMetaAndThumbnail(item.file);
       const fd = new FormData();
       fd.append('file', item.file);
       fd.append('name', item.file.name.replace(/\.[^.]+$/, ''));
+      fd.append('kind', activeKind);
       if (meta) {
         fd.append('width', String(meta.width));
         fd.append('height', String(meta.height));
-        fd.append('durationSec', String(meta.durationSec));
+        if (meta.durationSec > 0) fd.append('durationSec', String(meta.durationSec));
         if (meta.thumbnail) fd.append('thumbnail', meta.thumbnail, 'thumb.jpg');
       }
 
@@ -140,7 +189,7 @@ export function CreativesManager({ campaignId, creatives }: Props) {
 
     router.refresh();
     setTimeout(() => setUploads([]), 2000);
-  }, [campaignId, router, t]);
+  }, [campaignId, router, t, activeKind]);
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -151,7 +200,9 @@ export function CreativesManager({ campaignId, creatives }: Props) {
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const files = Array.from(e.dataTransfer.files ?? []).filter(f => f.type.startsWith('video/'));
+    const files = Array.from(e.dataTransfer.files ?? []).filter(
+      f => f.type.startsWith('video/') || f.type.startsWith('image/'),
+    );
     if (files.length > 0) doUpload(files);
   };
 
@@ -177,6 +228,25 @@ export function CreativesManager({ campaignId, creatives }: Props) {
 
   return (
     <div>
+      {/* Tabs */}
+      <div className="mb-4 flex border-b border-[var(--border)]">
+        {(['CREATIVE', 'REPORT'] as const).map(k => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setActiveKind(k)}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeKind === k
+                ? 'border-b-2 border-[var(--brand-primary)] text-[var(--text)]'
+                : 'text-[var(--text-3)] hover:text-[var(--text)]'
+            }`}
+          >
+            {t(k === 'CREATIVE' ? 'tabCreatives' : 'tabReports')}
+            <span className="ml-2 text-xs text-[var(--text-3)]">{counts[k]}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Upload zone */}
       <div
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
@@ -202,7 +272,7 @@ export function CreativesManager({ campaignId, creatives }: Props) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="video/*"
+          accept="image/*,video/*"
           multiple
           className="hidden"
           onChange={onPick}
@@ -240,72 +310,80 @@ export function CreativesManager({ campaignId, creatives }: Props) {
             </tr>
           </thead>
           <tbody>
-            {creatives.map(c => (
-              <tr key={c.id} className="hover:bg-[var(--surface-2)]">
-                <td className="border-b border-[var(--border)] px-4 py-2">
-                  <button
-                    type="button"
-                    onClick={() => setPlaying(c)}
-                    className="group relative block h-[56px] w-[100px] overflow-hidden rounded-[var(--radius-sm)] bg-black"
-                    aria-label={c.name}
-                  >
-                    {c.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <Film size={20} className="absolute inset-0 m-auto text-[var(--text-4)]" strokeWidth={1.5} />
-                    )}
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                        <polygon points="6,4 20,12 6,20" />
-                      </svg>
-                    </span>
-                  </button>
-                </td>
-                <td className="border-b border-[var(--border)] px-4 py-3 text-sm">
-                  {renamingId === c.id ? (
-                    <input
-                      autoFocus
-                      value={renameValue}
-                      onChange={e => setRenameValue(e.target.value)}
-                      onBlur={() => onRenameSubmit(c.id)}
-                      onKeyDown={e => { if (e.key === 'Enter') onRenameSubmit(c.id); if (e.key === 'Escape') setRenamingId(null); }}
-                      className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm focus:border-[var(--border-em)] focus:outline-none"
-                    />
-                  ) : (
+            {visible.map(c => {
+              const img = isImage(c.mimeType);
+              const tileSrc = c.thumbnailUrl ?? (img ? c.url : null);
+              return (
+                <tr key={c.id} className="hover:bg-[var(--surface-2)]">
+                  <td className="border-b border-[var(--border)] px-4 py-2">
                     <button
-                      onClick={() => { setRenamingId(c.id); setRenameValue(c.name); }}
-                      className="text-left hover:text-[var(--brand-primary)]"
-                      title={t('rename')}
+                      type="button"
+                      onClick={() => setPlaying(c)}
+                      className="group relative block h-[56px] w-[100px] overflow-hidden rounded-[var(--radius-sm)] bg-black"
+                      aria-label={c.name}
                     >
-                      {c.name}
+                      {tileSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={tileSrc} alt="" className="h-full w-full object-cover" />
+                      ) : img ? (
+                        <ImageIcon size={20} className="absolute inset-0 m-auto text-[var(--text-4)]" strokeWidth={1.5} />
+                      ) : (
+                        <Film size={20} className="absolute inset-0 m-auto text-[var(--text-4)]" strokeWidth={1.5} />
+                      )}
+                      {!img && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                            <polygon points="6,4 20,12 6,20" />
+                          </svg>
+                        </span>
+                      )}
                     </button>
-                  )}
-                </td>
-                <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-2)]">
-                  {t('typeVideo')}
-                </td>
-                <td className="border-b border-[var(--border)] px-4 py-3 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
-                  {c.width && c.height ? `${c.width}x${c.height}` : '—'}
-                </td>
-                <td className="border-b border-[var(--border)] px-4 py-3 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
-                  {formatSize(c.sizeBytes, t('mb'), t('kb'))}
-                </td>
-                <td className="border-b border-[var(--border)] px-2 py-3 text-right">
-                  <button
-                    onClick={() => onDelete(c.id)}
-                    aria-label={tc('delete')}
-                    className="rounded-[var(--radius-sm)] border border-[var(--border)] p-1.5 text-[var(--text-3)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
-                  >
-                    <Trash2 size={13} strokeWidth={1.5} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {creatives.length === 0 && (
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-sm">
+                    {renamingId === c.id ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={e => setRenameValue(e.target.value)}
+                        onBlur={() => onRenameSubmit(c.id)}
+                        onKeyDown={e => { if (e.key === 'Enter') onRenameSubmit(c.id); if (e.key === 'Escape') setRenamingId(null); }}
+                        className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm focus:border-[var(--border-em)] focus:outline-none"
+                      />
+                    ) : (
+                      <button
+                        onClick={() => { setRenamingId(c.id); setRenameValue(c.name); }}
+                        className="text-left hover:text-[var(--brand-primary)]"
+                        title={t('rename')}
+                      >
+                        {c.name}
+                      </button>
+                    )}
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-2)]">
+                    {img ? t('typeImage') : t('typeVideo')}
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
+                    {c.width && c.height ? `${c.width}x${c.height}` : '—'}
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-sm" style={{ fontFamily: 'var(--font-mono)' }}>
+                    {formatSize(c.sizeBytes, t('mb'), t('kb'))}
+                  </td>
+                  <td className="border-b border-[var(--border)] px-2 py-3 text-right">
+                    <button
+                      onClick={() => onDelete(c.id)}
+                      aria-label={tc('delete')}
+                      className="rounded-[var(--radius-sm)] border border-[var(--border)] p-1.5 text-[var(--text-3)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                    >
+                      <Trash2 size={13} strokeWidth={1.5} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            {visible.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
-                  {t('empty')}
+                  {activeKind === 'CREATIVE' ? t('emptyCreatives') : t('emptyReports')}
                 </td>
               </tr>
             )}
@@ -313,12 +391,13 @@ export function CreativesManager({ campaignId, creatives }: Props) {
         </table>
       </div>
 
-      {playing && <VideoModal creative={playing} onClose={() => setPlaying(null)} />}
+      {playing && <PreviewModal creative={playing} onClose={() => setPlaying(null)} />}
     </div>
   );
 }
 
-function VideoModal({ creative, onClose }: { creative: CreativeRow; onClose: () => void }) {
+function PreviewModal({ creative, onClose }: { creative: CreativeRow; onClose: () => void }) {
+  const img = isImage(creative.mimeType);
   return (
     <div
       onClick={onClose}
@@ -328,14 +407,24 @@ function VideoModal({ creative, onClose }: { creative: CreativeRow; onClose: () 
         onClick={e => e.stopPropagation()}
         className="relative w-full max-w-4xl overflow-hidden rounded-[var(--radius-lg)] bg-black"
       >
-        <video
-          src={creative.url}
-          controls
-          autoPlay
-          playsInline
-          className="block w-full"
-          style={{ aspectRatio: creative.width && creative.height ? `${creative.width} / ${creative.height}` : '16 / 9' }}
-        />
+        {img ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={creative.url}
+            alt={creative.name}
+            className="block w-full"
+            style={{ aspectRatio: creative.width && creative.height ? `${creative.width} / ${creative.height}` : undefined }}
+          />
+        ) : (
+          <video
+            src={creative.url}
+            controls
+            autoPlay
+            playsInline
+            className="block w-full"
+            style={{ aspectRatio: creative.width && creative.height ? `${creative.width} / ${creative.height}` : '16 / 9' }}
+          />
+        )}
         <button
           type="button"
           onClick={onClose}
