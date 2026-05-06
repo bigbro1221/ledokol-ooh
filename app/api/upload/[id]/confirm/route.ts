@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api-auth';
+import { serializeCampaign } from '@/lib/serializers';
 import type { Prisma } from '@prisma/client';
 
 interface ScreenData {
@@ -127,12 +128,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     return NextResponse.json({
       ok: true,
-      campaign: updated
-        ? {
-            ...updated,
-            totalBudgetUzs: updated.totalBudgetUzs ? Number(updated.totalBudgetUzs) : null,
-          }
-        : null,
+      campaign: updated ? serializeCampaign(updated) : null,
     });
   } catch (err) {
     console.error('Upload confirm failed:', err);
