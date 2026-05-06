@@ -239,13 +239,19 @@ export default async function DashboardPage({
   const totalRatingFact = campaign.screens.reduce((s, sc) =>
     s + filterMetrics(sc.metrics).reduce((ms, m) => ms + (m.ratingFact ? Number(m.ratingFact) : 0), 0), 0);
 
-  // Σ screen.impressionsPerDay across filtered screens — drives the
-  // "Сред. показов/день" cell. Only meaningful for SCREENS campaigns
-  // (XLSX has the "Прогнозное кол-во выходов в сутки" column per screen);
-  // OTHER_CARRIERS leaves this null and the cell hides.
-  const totalImpressionsPerDay = campaign.mediaType === 'OTHER_CARRIERS'
-    ? null
-    : campaign.screens.reduce((s, sc) => s + (sc.impressionsPerDay ?? 0), 0);
+  // "Сред. показов/день" cell — average daily plays per screen, computed as
+  // (Σ Screen.impressionsPerDay) / (count of filtered screens with a value).
+  // Only meaningful for SCREENS campaigns (XLSX has the "Прогнозное кол-во
+  // выходов в сутки" column per screen); OTHER_CARRIERS leaves this null
+  // and the cell hides.
+  let avgImpressionsPerDay: number | null = null;
+  if (campaign.mediaType !== 'OTHER_CARRIERS') {
+    const screensWithImpressions = campaign.screens.filter(sc => sc.impressionsPerDay != null && sc.impressionsPerDay > 0);
+    if (screensWithImpressions.length > 0) {
+      const sum = screensWithImpressions.reduce((s, sc) => s + (sc.impressionsPerDay ?? 0), 0);
+      avgImpressionsPerDay = Math.round(sum / screensWithImpressions.length);
+    }
+  }
 
   // Budget resolution — sum only periods within selected range (or all if no filter)
   const periodsBudgetSum = campaign.splitByPeriods
@@ -448,7 +454,7 @@ export default async function DashboardPage({
         periodEnd: displayPeriodEnd ? displayPeriodEnd.toISOString() : campaign.periodEnd.toISOString(),
         status: campaign.status,
       }}
-      kpis={{ totalOtsPlan: totalOts, totalOtsFact, totalRatingFact, totalImpressionsPerDay, totalScreens, cities: cities.size, totalBudget, totalBudgetWithoutVat, formatBudget: fmt(totalBudget) }}
+      kpis={{ totalOtsPlan: totalOts, totalOtsFact, totalRatingFact, avgImpressionsPerDay, totalScreens, cities: cities.size, totalBudget, totalBudgetWithoutVat, formatBudget: fmt(totalBudget) }}
       budgetByType={budgetByType}
       totalBudgetFromScreens={totalBudgetFromScreens}
       planVsFactByCity={planVsFactByCity}

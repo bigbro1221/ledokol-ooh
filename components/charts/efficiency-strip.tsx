@@ -21,10 +21,10 @@ interface Props {
   totalOtsPlan: number;
   totalOtsFact: number;
   totalRatingFact: number;
-  // Σ Screen.impressionsPerDay across filtered screens — drives the
-  // "Сред. показов/день" cell. Null for OTHER_CARRIERS campaigns (no
-  // per-screen impressions data); the cell hides.
-  totalImpressionsPerDay: number | null;
+  // Average daily plays per screen — (Σ Screen.impressionsPerDay) divided
+  // by the count of filtered screens with a non-zero value. Null for
+  // OTHER_CARRIERS (no per-screen impressions data); the cell hides.
+  avgImpressionsPerDay: number | null;
   totalScreens: number;
   locale?: string;
   currency?: string;
@@ -48,7 +48,7 @@ function GradientText({ children, gradient }: { children: ReactNode; gradient: G
 
 export function EfficiencyStrip({
   totalBudget, totalBudgetWithoutVat,
-  totalOtsPlan, totalOtsFact, totalRatingFact, totalImpressionsPerDay, totalScreens,
+  totalOtsPlan, totalOtsFact, totalRatingFact, avgImpressionsPerDay, totalScreens,
   currency = 'UZS',
 }: Props) {
   const t = useTranslations('charts');
@@ -65,10 +65,10 @@ export function EfficiencyStrip({
   const cptFact = totalBudgetWithoutVat > 0 && totalRatingFact > 0
     ? totalBudgetWithoutVat / totalRatingFact
     : null;
-  // Sum of "Прогнозное кол-во выходов в сутки" across filtered screens.
-  // OTHER_CARRIERS sends null → cell hidden.
-  const avgImpressions = totalImpressionsPerDay && totalImpressionsPerDay > 0
-    ? totalImpressionsPerDay
+  // Average "Прогнозное кол-во выходов в сутки" per screen. OTHER_CARRIERS
+  // sends null → cell hidden.
+  const avgImpressions = avgImpressionsPerDay && avgImpressionsPerDay > 0
+    ? avgImpressionsPerDay
     : null;
 
   type Cell = { label: string; value: string; gradient: Gradient; sub?: string };
