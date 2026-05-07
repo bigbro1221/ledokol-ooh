@@ -143,6 +143,7 @@ model Campaign {
   screens        Screen[]
   periods        CampaignPeriod[]
   creatives      Creative[]
+  reachEntries   ReachEntry[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -324,6 +325,20 @@ model ScreenMetrics {
 
   @@index([screenId])
   @@index([periodId])
+}
+
+model ReachEntry {
+  id         String   @id @default(uuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  n          Int
+  plan       Float?
+  fact       Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([campaignId, n])
+  @@index([campaignId])
 }
 
 model Impression {
