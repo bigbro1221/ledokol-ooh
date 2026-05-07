@@ -92,12 +92,21 @@ export function DashboardClient({
   // Budget source: use screen-level sum if no explicit campaign total; else prefer campaign total
   const budgetForWidgets = kpis.totalBudget > 0 ? kpis.totalBudget : totalBudgetFromScreens;
 
+  // The selector now shows only siblings of the current campaign within the
+  // same project. If the current campaign isn't in a project (or has no
+  // siblings), the selector is hidden entirely.
+  const currentCampaign = campaigns.find(c => c.id === selectedCampaignId);
+  const projectSiblings = currentCampaign?.groupId
+    ? campaigns.filter(c => c.groupId === currentCampaign.groupId)
+    : [];
+  const showSelector = !isClient && projectSiblings.length > 1;
+
   return (
     <>
       <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-      {/* Top row: back-to-list link (CLIENT) or campaign selector (ADMIN) + reports button */}
-      {(isClient || campaigns.length > 1 || reportsUrl) && (
+      {/* Top row: back-to-list link (CLIENT) or project-sibling selector (ADMIN) + reports button */}
+      {(isClient || showSelector || reportsUrl) && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {isClient ? (
@@ -109,8 +118,8 @@ export function DashboardClient({
                 {td('allCampaigns')}
               </Link>
             ) : (
-              campaigns.length > 1 && (
-                <CampaignSelector campaigns={campaigns} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
+              showSelector && (
+                <CampaignSelector campaigns={projectSiblings} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
               )
             )}
           </div>
