@@ -71,7 +71,8 @@ interface Props {
   periodsWithData: { id: string; name: string }[];
   selectedPeriods: string[];
   creatives: CreativeView[];
-  reachEntries: { id: string; n: number; plan: number | null; fact: number | null }[];
+  reachEntries: { id: string; n: number; plan: number | null; fact: number | null; pinned: boolean }[];
+  reachAudience: string | null;
 }
 
 export function DashboardClient({
@@ -80,7 +81,7 @@ export function DashboardClient({
   planVsFactByCity, monthlyByCity, planVsFactByType,
   topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, availableTypes, filters,
   heatmapEmbedUrl, reportsUrl, hasYandexMap, periodsWithData, selectedPeriods, creatives,
-  reachEntries,
+  reachEntries, reachAudience,
 }: Props) {
   const isClient = userRole === 'CLIENT';
   const [monthlyExpanded, setMonthlyExpanded] = useState(false);
@@ -203,7 +204,7 @@ export function DashboardClient({
           totalRatingFact={kpis.totalRatingFact}
           avgImpressionsPerDay={kpis.avgImpressionsPerDay}
           totalScreens={kpis.totalScreens}
-          leading={<ReachCard campaignId={selectedCampaignId} rows={reachEntries} />}
+          leading={<ReachCard campaignId={selectedCampaignId} rows={reachEntries} audience={reachAudience} />}
         />
       </div>
 

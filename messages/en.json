@@ -125,7 +125,13 @@
     "reachSave": "Save",
     "reachCancel": "Cancel",
     "reachMaxRows": "Max 30 rows",
-    "reachDuplicateN": "Already added"
+    "reachDuplicateN": "Already added",
+    "reachAudienceLabel": "Target audience",
+    "reachAudiencePlaceholder": "e.g. 25-40 All",
+    "reachPinnedHeader": "Dash.",
+    "reachPinnedHint": "Show on the dashboard",
+    "reachPinLimit": "At most 5 rows can be pinned",
+    "reachPinFooter": "Pinned to dashboard: {count} of {max}"
   },
   "userStatus": {
     "INVITED": "Invited",
@@ -245,7 +251,13 @@
     "reachCardTitle": "Reach",
     "reachModalClose": "Close",
     "reachPlanLabel": "Plan",
-    "reachFactLabel": "Fact"
+    "reachFactLabel": "Fact",
+    "reachAudienceLabel": "Target audience",
+    "reachCompletionMeta": "% complete",
+    "reachAboveLabel": "above plan by",
+    "reachBelowLabel": "below plan by",
+    "reachOnPlanLabel": "on plan",
+    "reachEmpty": "No reach data yet"
   },
   "filters": {
     "allCities": "All cities",
@@ -268,6 +280,7 @@
     "planCitiesSubtitle": "Plan fulfillment by city",
     "plan": "Plan",
     "fact": "Fact",
+    "surfaces": "Surfaces",
     "delta": "Delta",
     "total": "Total",
     "ots": "OTS",

@@ -136,6 +136,7 @@ export default async function DashboardPage({
         id: true, name: true, status: true, periodStart: true, periodEnd: true,
         splitByPeriods: true, mediaType: true,
         totalBudgetUzs: true, heatmapUrl: true, reportsUrl: true, yandexMapUrl: true,
+        targetAudience: true,
         client: { select: { name: true } },
         totalFinal: true,
         periods: {
@@ -143,7 +144,7 @@ export default async function DashboardPage({
           orderBy: { periodStart: 'asc' as const },
         },
         reachEntries: {
-          select: { id: true, n: true, plan: true, fact: true },
+          select: { id: true, n: true, plan: true, fact: true, pinned: true },
           orderBy: { n: 'asc' },
         },
         screens: {
@@ -373,23 +374,29 @@ export default async function DashboardPage({
     .sort((a, b) => b.plan - a.plan);
 
   // Monthly breakdown always uses all metrics regardless of period filter
-  const monthlyByCity: { city: string; months: { label: string; plan: number; fact: number }[] }[] = [];
+  const monthlyByCity: { city: string; months: { label: string; plan: number; fact: number; screens: number }[] }[] = [];
   if (campaign.splitByPeriods && campaign.periods.length > 0) {
-    const map: Record<string, Record<string, { plan: number; fact: number }>> = {};
+    const map: Record<string, Record<string, { plan: number; fact: number; screenIds: Set<string> }>> = {};
     for (const s of campaign.screens) {
       const city = s.city.trim();
       for (const m of s.metrics) {
         if (!m.periodId) continue;
         if (!map[city]) map[city] = {};
-        if (!map[city][m.periodId]) map[city][m.periodId] = { plan: 0, fact: 0 };
+        if (!map[city][m.periodId]) map[city][m.periodId] = { plan: 0, fact: 0, screenIds: new Set() };
         map[city][m.periodId].plan += m.otsPlan || 0;
         map[city][m.periodId].fact += m.otsFact || 0;
+        map[city][m.periodId].screenIds.add(s.id);
       }
     }
     for (const [city, periodData] of Object.entries(map)) {
       const months = campaign.periods
         .filter(p => periodData[p.id] && (periodData[p.id].plan > 0 || periodData[p.id].fact > 0))
-        .map(p => ({ label: p.name, plan: periodData[p.id].plan, fact: periodData[p.id].fact }));
+        .map(p => ({
+          label: p.name,
+          plan: periodData[p.id].plan,
+          fact: periodData[p.id].fact,
+          screens: periodData[p.id].screenIds.size,
+        }));
       if (months.length > 0) monthlyByCity.push({ city, months });
     }
     monthlyByCity.sort((a, b) =>
@@ -514,6 +521,7 @@ export default async function DashboardPage({
       selectedPeriods={selectedPeriodIds}
       creatives={creatives}
       reachEntries={campaign.reachEntries}
+      reachAudience={campaign.targetAudience}
     />
   );
 }

@@ -125,7 +125,13 @@
     "reachSave": "Сохранить",
     "reachCancel": "Отмена",
     "reachMaxRows": "Максимум 30 строк",
-    "reachDuplicateN": "Это значение уже добавлено"
+    "reachDuplicateN": "Это значение уже добавлено",
+    "reachAudienceLabel": "Целевая аудитория",
+    "reachAudiencePlaceholder": "например, 25-40 All",
+    "reachPinnedHeader": "Дашб.",
+    "reachPinnedHint": "Показывать на дашборде",
+    "reachPinLimit": "Можно отметить не больше 5",
+    "reachPinFooter": "Отмечено для дашборда: {count} из {max}"
   },
   "userStatus": {
     "INVITED": "Приглашён",
@@ -245,7 +251,13 @@
     "reachCardTitle": "Охват",
     "reachModalClose": "Закрыть",
     "reachPlanLabel": "План",
-    "reachFactLabel": "Факт"
+    "reachFactLabel": "Факт",
+    "reachAudienceLabel": "Целевая аудитория",
+    "reachCompletionMeta": "% выполнения",
+    "reachAboveLabel": "выше плана на",
+    "reachBelowLabel": "ниже плана на",
+    "reachOnPlanLabel": "по плану",
+    "reachEmpty": "Нет данных по охвату"
   },
   "filters": {
     "allCities": "Все города",
@@ -268,6 +280,7 @@
     "planCitiesSubtitle": "Выполнение плана в разрезе городов",
     "plan": "План",
     "fact": "Факт",
+    "surfaces": "Поверхности",
     "delta": "Дельта",
     "total": "Всего",
     "ots": "OTS",

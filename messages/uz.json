@@ -125,7 +125,13 @@
     "reachSave": "Saqlash",
     "reachCancel": "Bekor qilish",
     "reachMaxRows": "Maksimum 30 qator",
-    "reachDuplicateN": "Bu qiymat allaqachon qo'shilgan"
+    "reachDuplicateN": "Bu qiymat allaqachon qo'shilgan",
+    "reachAudienceLabel": "Maqsadli auditoriya",
+    "reachAudiencePlaceholder": "masalan, 25-40 All",
+    "reachPinnedHeader": "Dash.",
+    "reachPinnedHint": "Dashboardda ko'rsatish",
+    "reachPinLimit": "Faqat 5 tagacha belgilash mumkin",
+    "reachPinFooter": "Dashboardga belgilangan: {count} / {max}"
   },
   "userStatus": {
     "INVITED": "Taklif qilingan",
@@ -245,7 +251,13 @@
     "reachCardTitle": "Qamrov",
     "reachModalClose": "Yopish",
     "reachPlanLabel": "Reja",
-    "reachFactLabel": "Fakt"
+    "reachFactLabel": "Fakt",
+    "reachAudienceLabel": "Maqsadli auditoriya",
+    "reachCompletionMeta": "% bajarilganlik",
+    "reachAboveLabel": "rejadan yuqori",
+    "reachBelowLabel": "rejadan past",
+    "reachOnPlanLabel": "rejada",
+    "reachEmpty": "Qamrov ma'lumotlari yo'q"
   },
   "filters": {
     "allCities": "Barcha shaharlar",
@@ -268,6 +280,7 @@
     "planCitiesSubtitle": "Shaharlar kesimida reja bajarilishi",
     "plan": "Reja",
     "fact": "Fakt",
+    "surfaces": "Yuzalar",
     "delta": "Farq",
     "total": "Jami",
     "ots": "OTS",

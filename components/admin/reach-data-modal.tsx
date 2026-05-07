@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { Eye, EyeOff, Trash2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface DraftRow {
@@ -9,6 +9,7 @@ interface DraftRow {
   n: string;         // input value, validated to int
   plan: string;      // input value (optional float)
   fact: string;      // input value (optional float)
+  pinned: boolean;   // appears on the dashboard reach card when true
 }
 
 interface ServerRow {
@@ -16,6 +17,12 @@ interface ServerRow {
   n: number;
   plan: number | null;
   fact: number | null;
+  pinned: boolean;
+}
+
+interface ServerPayload {
+  targetAudience: string | null;
+  entries: ServerRow[];
 }
 
 interface Props {
@@ -25,6 +32,7 @@ interface Props {
 }
 
 const MAX_ROWS = 30;
+const MAX_PINNED = 5;
 
 function newKey(): string {
   return `r${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -36,12 +44,14 @@ function rowFromServer(s: ServerRow): DraftRow {
     n: String(s.n),
     plan: s.plan != null ? String(s.plan) : '',
     fact: s.fact != null ? String(s.fact) : '',
+    pinned: s.pinned,
   };
 }
 
 export function ReachDataModal({ campaignId, open, onClose }: Props) {
   const t = useTranslations('admin');
   const [rows, setRows] = useState<DraftRow[]>([]);
+  const [audience, setAudience] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +76,10 @@ export function ReachDataModal({ campaignId, open, onClose }: Props) {
     setError(null);
     fetch(`/api/campaigns/${campaignId}/reach`)
       .then(r => (r.ok ? r.json() : Promise.reject(`Error ${r.status}`)))
-      .then((data: ServerRow[]) => setRows(data.map(rowFromServer)))
+      .then((data: ServerPayload) => {
+        setRows(data.entries.map(rowFromServer));
+        setAudience(data.targetAudience ?? '');
+      })
       .catch(err => setError(typeof err === 'string' ? err : 'Network error'))
       .finally(() => setLoading(false));
   }, [open, campaignId]);
@@ -93,8 +106,19 @@ export function ReachDataModal({ campaignId, open, onClose }: Props) {
     return true;
   };
   const allValid = rows.every(isRowValid);
+  const pinnedCount = rows.filter(r => r.pinned).length;
+  const pinLimitReached = pinnedCount >= MAX_PINNED;
   const canAdd = rows.length < MAX_ROWS;
   const canSave = !saving && !loading && allValid;
+
+  function togglePin(key: string) {
+    setRows(prev => prev.map(r => {
+      if (r.key !== key) return r;
+      // Allow uncheck unconditionally; only block check when at the cap.
+      if (!r.pinned && pinLimitReached) return r;
+      return { ...r, pinned: !r.pinned };
+    }));
+  }
 
   function addRow() {
     const maxN = rows.reduce((max, r) => {
@@ -102,7 +126,7 @@ export function ReachDataModal({ campaignId, open, onClose }: Props) {
       return Number.isInteger(v) && v > max ? v : max;
     }, 0);
     const nextN = Math.min(99, maxN + 1);
-    setRows(prev => [...prev, { key: newKey(), n: String(nextN), plan: '', fact: '' }]);
+    setRows(prev => [...prev, { key: newKey(), n: String(nextN), plan: '', fact: '', pinned: false }]);
   }
 
   function updateRow(key: string, patch: Partial<DraftRow>) {
@@ -118,10 +142,12 @@ export function ReachDataModal({ campaignId, open, onClose }: Props) {
     setError(null);
     try {
       const payload = {
+        targetAudience: audience.trim() || null,
         entries: rows.map(r => ({
           n: Number.parseInt(r.n, 10),
           plan: r.plan ? Number(r.plan) : null,
           fact: r.fact ? Number(r.fact) : null,
+          pinned: r.pinned,
         })),
       };
       const res = await fetch(`/api/campaigns/${campaignId}/reach`, {
@@ -170,8 +196,24 @@ export function ReachDataModal({ campaignId, open, onClose }: Props) {
             <p className="py-6 text-center text-sm text-[var(--text-3)]">…</p>
           ) : (
             <>
+              {/* Campaign-wide audience */}
+              <div className="mb-5">
+                <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
+                  {t('reachAudienceLabel')}
+                </label>
+                <input
+                  type="text"
+                  value={audience}
+                  maxLength={120}
+                  onChange={e => setAudience(e.target.value)}
+                  placeholder={t('reachAudiencePlaceholder')}
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-sm"
+                />
+              </div>
+
               {/* Header */}
-              <div className="mb-2 grid grid-cols-[64px_1fr_1fr_36px] gap-2 px-1 text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
+              <div className="mb-2 grid grid-cols-[36px_64px_1fr_1fr_36px] gap-2 px-1 text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
+                <div className="text-center" title={t('reachPinnedHint')}>{t('reachPinnedHeader')}</div>
                 <div>{t('reachColumnReach')}</div>
                 <div>{t('reachColumnPlan')}</div>
                 <div>{t('reachColumnFact')}</div>
@@ -181,8 +223,20 @@ export function ReachDataModal({ campaignId, open, onClose }: Props) {
                 {rows.map(r => {
                   const nVal = Number.parseInt(r.n, 10);
                   const isDup = Number.isInteger(nVal) && dupN.has(nVal);
+                  const pinDisabled = !r.pinned && pinLimitReached;
                   return (
-                    <div key={r.key} className="grid grid-cols-[64px_1fr_1fr_36px] items-center gap-2">
+                    <div key={r.key} className="grid grid-cols-[36px_64px_1fr_1fr_36px] items-center gap-2">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={r.pinned}
+                        disabled={pinDisabled}
+                        title={pinDisabled ? t('reachPinLimit') : t('reachPinnedHint')}
+                        onClick={() => togglePin(r.key)}
+                        className={`flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] transition-colors disabled:cursor-not-allowed ${r.pinned ? 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]' : 'text-[var(--text-3)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'} ${pinDisabled ? 'opacity-30' : ''}`}
+                      >
+                        {r.pinned ? <Eye size={14} strokeWidth={1.75} /> : <EyeOff size={14} strokeWidth={1.5} />}
+                      </button>
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
@@ -223,6 +277,9 @@ export function ReachDataModal({ campaignId, open, onClose }: Props) {
                   );
                 })}
               </div>
+              <p className="mt-2 text-[11px] text-[var(--text-3)]">
+                {t('reachPinFooter', { count: pinnedCount, max: MAX_PINNED })}
+              </p>
               {dupN.size > 0 && (
                 <p className="mt-3 text-[12px] text-[var(--danger)]">{t('reachDuplicateN')}</p>
               )}

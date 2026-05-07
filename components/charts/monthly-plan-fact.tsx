@@ -11,6 +11,7 @@ export interface MonthData {
   label: string;
   plan: number;
   fact: number;
+  screens: number;
 }
 
 export interface CityMonthlyData {
@@ -154,14 +155,31 @@ export function MonthlyPlanFact({ data }: Props) {
   }
   const monthsNeedingYear = buildYearSuffixSet(allLabels);
 
-  // Chart data: aggregate all cities or just selected
+  // Chart data: aggregate all cities or just selected. For screens we count
+  // distinct surface IDs across the source rows — but the upstream `months`
+  // shape already pre-deduplicates per city, so summing across cities
+  // double-counts only when the same surface lives in two cities (unusual).
   const chartData = allLabels.map(label => {
     const sources = selectedCity
       ? data.filter(d => d.city === selectedCity)
       : data;
-    const plan = sources.reduce((s, d) => s + (d.months.find(m => m.label === label)?.plan ?? 0), 0);
-    const fact = sources.reduce((s, d) => s + (d.months.find(m => m.label === label)?.fact ?? 0), 0);
-    return { label: shortLabel(label, monthCounts, monthsNeedingYear), fullLabel: fullLabelFor(label, monthCounts), plan, fact };
+    let plan = 0;
+    let fact = 0;
+    let screens = 0;
+    for (const d of sources) {
+      const m = d.months.find(m => m.label === label);
+      if (!m) continue;
+      plan += m.plan;
+      fact += m.fact;
+      screens += m.screens;
+    }
+    return {
+      label: shortLabel(label, monthCounts, monthsNeedingYear),
+      fullLabel: fullLabelFor(label, monthCounts),
+      plan,
+      fact,
+      screens,
+    };
   });
 
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) => {
@@ -177,6 +195,13 @@ export function MonthlyPlanFact({ data }: Props) {
             <span className="font-medium text-[var(--text)]" style={{ fontFamily: 'var(--font-mono)' }}>{fmtFull(p.value)}</span>
           </div>
         ))}
+        {entry && entry.screens > 0 && (
+          <div className="mt-1 flex items-center gap-2 border-t border-[var(--border)] pt-1.5">
+            <span className="h-2 w-2 rounded-full bg-transparent" />
+            <span className="text-[var(--text-2)]">{tc('surfaces')}:</span>
+            <span className="font-medium text-[var(--text)]" style={{ fontFamily: 'var(--font-mono)' }}>{entry.screens}</span>
+          </div>
+        )}
       </div>
     );
   };
