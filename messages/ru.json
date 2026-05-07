@@ -531,6 +531,9 @@
     "colBudget": "Бюджет",
     "colScreens": "Поверхности",
     "colOts": "OTS план",
-    "projectTileLabel": "КАМПАНИИ"
+    "projectTileLabel": "КАМПАНИИ",
+    "projectModalClose": "Закрыть",
+    "projectEmpty": "В этом проекте пока нет кампаний",
+    "projectChildCount": "{count, plural, =0 {нет кампаний} =1 {1 кампания} few {# кампании} other {# кампаний}}"
   }
 }

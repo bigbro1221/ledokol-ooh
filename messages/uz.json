@@ -531,6 +531,9 @@
     "colBudget": "Byudjet",
     "colScreens": "Yuzalar",
     "colOts": "OTS reja",
-    "projectTileLabel": "KAMPANIYALAR"
+    "projectTileLabel": "KAMPANIYALAR",
+    "projectModalClose": "Yopish",
+    "projectEmpty": "Ushbu loyihada hali kampaniyalar yo'q",
+    "projectChildCount": "{count, plural, =0 {kampaniya yo'q} =1 {1 ta kampaniya} other {# ta kampaniya}}"
   }
 }
