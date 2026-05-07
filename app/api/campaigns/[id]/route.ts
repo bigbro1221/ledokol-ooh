@@ -22,6 +22,7 @@ const UpdateCampaignSchema = z.object({
   mediaType: z.nativeEnum(MediaType).optional(),
   additionalCurrencyId: z.string().uuid().nullable().optional(),
   additionalAmount: z.number().nullable().optional(),
+  groupId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -57,6 +58,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const existing = await prisma.campaign.findUnique({
     where: { id },
     select: {
+      clientId: true,
       mediaType: true,
       periodStart: true,
       totalBudgetUzs: true,
@@ -81,6 +83,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           message: 'Очистите периоды и финансовые данные перед сменой типа кампании',
         },
         { status: 409 },
+      );
+    }
+  }
+
+  if (parsed.data.groupId !== undefined && parsed.data.groupId !== null) {
+    const grp = await prisma.campaignGroup.findUnique({
+      where: { id: parsed.data.groupId },
+      select: { clientId: true },
+    });
+    if (!grp || grp.clientId !== existing.clientId) {
+      return NextResponse.json(
+        { error: 'group_client_mismatch' },
+        { status: 400 },
       );
     }
   }

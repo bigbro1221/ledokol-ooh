@@ -24,6 +24,7 @@ const CreateCampaignSchema = z.object({
   // totalFinal accepted for SCREENS-mode legacy callers; OTHER_CARRIERS overrides
   // it server-side from totalBudgetUzs × (1 + VAT@periodStart).
   totalFinal: z.number().nullable().optional(),
+  groupId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET() {
@@ -49,6 +50,19 @@ export async function POST(request: Request) {
     const parsed = CreateCampaignSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ errors: parsed.error.flatten() }, { status: 400 });
+    }
+
+    if (parsed.data.groupId != null) {
+      const grp = await prisma.campaignGroup.findUnique({
+        where: { id: parsed.data.groupId },
+        select: { clientId: true },
+      });
+      if (!grp || grp.clientId !== parsed.data.clientId) {
+        return NextResponse.json(
+          { error: 'group_client_mismatch' },
+          { status: 400 },
+        );
+      }
     }
 
     const { additionalAmount, totalBudgetUzs, productionCost, totalFinal, ...rest } = parsed.data;
