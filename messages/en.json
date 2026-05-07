@@ -530,6 +530,7 @@
     "colStatus": "Status",
     "colBudget": "Budget",
     "colScreens": "Screens",
-    "colOts": "OTS plan"
+    "colOts": "OTS plan",
+    "projectTileLabel": "CAMPAIGNS"
   }
 }

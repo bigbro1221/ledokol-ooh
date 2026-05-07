@@ -530,6 +530,7 @@
     "colStatus": "Holat",
     "colBudget": "Byudjet",
     "colScreens": "Yuzalar",
-    "colOts": "OTS reja"
+    "colOts": "OTS reja",
+    "projectTileLabel": "KAMPANIYALAR"
   }
 }

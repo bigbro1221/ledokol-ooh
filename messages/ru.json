@@ -530,6 +530,7 @@
     "colStatus": "Статус",
     "colBudget": "Бюджет",
     "colScreens": "Поверхности",
-    "colOts": "OTS план"
+    "colOts": "OTS план",
+    "projectTileLabel": "КАМПАНИИ"
   }
 }
