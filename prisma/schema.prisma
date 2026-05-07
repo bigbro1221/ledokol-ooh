@@ -144,6 +144,10 @@ model Campaign {
   periods        CampaignPeriod[]
   creatives      Creative[]
   reachEntries   ReachEntry[]
+  // Campaign-wide audience descriptor (e.g. "25-40 All"). Surfaced only on
+  // the reach form + the dashboard reach card subtitle. Free-text — no
+  // structured age/gender parsing.
+  targetAudience String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -334,6 +338,10 @@ model ReachEntry {
   n          Int
   plan       Float?
   fact       Float?
+  // When true, this row renders on the dashboard's reach card.
+  // Capped at 5 visible rows per campaign — enforced by the API and the
+  // admin modal (additional toggles disable when 5 are already on).
+  pinned     Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
