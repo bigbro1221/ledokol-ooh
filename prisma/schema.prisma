@@ -161,7 +161,6 @@ model CampaignGroup {
   updatedAt DateTime   @updatedAt
 
   @@unique([clientId, name])
-  @@index([clientId])
 }
 
 model Creative {
