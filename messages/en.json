@@ -114,7 +114,18 @@
     "templateXlsx": "XLSX template",
     "newClientTitle": "New client",
     "newCampaignTitle": "New campaign",
-    "newUserTitle": "New user"
+    "newUserTitle": "New user",
+    "reachButton": "Reach",
+    "reachModalTitle": "Reach data",
+    "reachColumnReach": "Reach",
+    "reachColumnPlan": "Plan",
+    "reachColumnFact": "Fact",
+    "reachAddRow": "+ Add row",
+    "reachDeleteRow": "Delete",
+    "reachSave": "Save",
+    "reachCancel": "Cancel",
+    "reachMaxRows": "Max 30 rows",
+    "reachDuplicateN": "Already added"
   },
   "userStatus": {
     "INVITED": "Invited",
@@ -230,7 +241,11 @@
     "campaignEyebrow": "Advertising campaign",
     "filterLabel": "Filter",
     "showAllSummary": "all",
-    "selectorUngrouped": "No project"
+    "selectorUngrouped": "No project",
+    "reachCardTitle": "Reach",
+    "reachModalClose": "Close",
+    "reachPlanLabel": "Plan",
+    "reachFactLabel": "Fact"
   },
   "filters": {
     "allCities": "All cities",

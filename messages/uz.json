@@ -114,7 +114,18 @@
     "templateXlsx": "XLSX shablon",
     "newClientTitle": "Yangi mijoz",
     "newCampaignTitle": "Yangi kampaniya",
-    "newUserTitle": "Yangi foydalanuvchi"
+    "newUserTitle": "Yangi foydalanuvchi",
+    "reachButton": "Qamrov",
+    "reachModalTitle": "Qamrov ma'lumotlari",
+    "reachColumnReach": "Qamrov",
+    "reachColumnPlan": "Reja",
+    "reachColumnFact": "Fakt",
+    "reachAddRow": "+ Qator qo'shish",
+    "reachDeleteRow": "O'chirish",
+    "reachSave": "Saqlash",
+    "reachCancel": "Bekor qilish",
+    "reachMaxRows": "Maksimum 30 qator",
+    "reachDuplicateN": "Bu qiymat allaqachon qo'shilgan"
   },
   "userStatus": {
     "INVITED": "Taklif qilingan",
@@ -230,7 +241,11 @@
     "campaignEyebrow": "Reklama kampaniyasi",
     "filterLabel": "Filtr",
     "showAllSummary": "barchasi",
-    "selectorUngrouped": "Loyihasiz"
+    "selectorUngrouped": "Loyihasiz",
+    "reachCardTitle": "Qamrov",
+    "reachModalClose": "Yopish",
+    "reachPlanLabel": "Reja",
+    "reachFactLabel": "Fakt"
   },
   "filters": {
     "allCities": "Barcha shaharlar",

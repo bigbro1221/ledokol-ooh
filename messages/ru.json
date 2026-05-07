@@ -114,7 +114,18 @@
     "templateXlsx": "Шаблон XLSX",
     "newClientTitle": "Новый клиент",
     "newCampaignTitle": "Новая кампания",
-    "newUserTitle": "Новый пользователь"
+    "newUserTitle": "Новый пользователь",
+    "reachButton": "Охват",
+    "reachModalTitle": "Данные охвата",
+    "reachColumnReach": "Охват",
+    "reachColumnPlan": "План",
+    "reachColumnFact": "Факт",
+    "reachAddRow": "+ Добавить строку",
+    "reachDeleteRow": "Удалить",
+    "reachSave": "Сохранить",
+    "reachCancel": "Отмена",
+    "reachMaxRows": "Максимум 30 строк",
+    "reachDuplicateN": "Это значение уже добавлено"
   },
   "userStatus": {
     "INVITED": "Приглашён",
@@ -230,7 +241,11 @@
     "campaignEyebrow": "Рекламная кампания",
     "filterLabel": "Фильтр",
     "showAllSummary": "все",
-    "selectorUngrouped": "Без проекта"
+    "selectorUngrouped": "Без проекта",
+    "reachCardTitle": "Охват",
+    "reachModalClose": "Закрыть",
+    "reachPlanLabel": "План",
+    "reachFactLabel": "Факт"
   },
   "filters": {
     "allCities": "Все города",
