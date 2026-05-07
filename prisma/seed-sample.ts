@@ -154,7 +154,6 @@ async function main() {
     data: {
       clientId: client.id,
       name: 'Размещение наружной рекламы в Узбекистане — Т-банк 2026',
-      project: 'Т-банк OOH 2026',
       periodStart: new Date('2026-01-09'),
       periodEnd: new Date('2026-03-08'),
       status: 'ACTIVE',
