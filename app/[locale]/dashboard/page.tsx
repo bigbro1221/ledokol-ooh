@@ -68,6 +68,9 @@ export default async function DashboardPage({
         status: true,
         periodStart: true,
         periodEnd: true,
+        createdAt: true,
+        groupId: true,
+        group: { select: { id: true, name: true } },
         totalFinal: true,
         totalBudgetUzs: true,
         splitByPeriods: true,
@@ -104,6 +107,9 @@ export default async function DashboardPage({
         budget,
         screensCount: c._count.screens,
         otsPlan,
+        groupId: c.groupId,
+        groupName: c.group?.name ?? null,
+        createdAt: c.createdAt,
       };
     });
     return <CampaignsListView rows={rows} locale={locale} dateFormat={listDateFormat} />;

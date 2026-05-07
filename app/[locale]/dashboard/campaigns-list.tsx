@@ -2,16 +2,10 @@ import { getTranslations } from 'next-intl/server';
 import { LayoutGrid, Banknote, Eye, MapPin } from 'lucide-react';
 import { KPICard } from '@/components/charts/kpi-card';
 import { type DateFormat } from '@/lib/format-period';
-import { CampaignTile } from '@/components/dashboard/campaign-tile';
+import { TileGrid, type TileGridRow } from './tile-grid';
 
-interface Row {
-  id: string;
-  name: string;
-  status: string;
-  periodStart: Date;
-  periodEnd: Date;
+interface Row extends TileGridRow {
   budget: number;
-  screensCount: number;
   otsPlan: number;
 }
 
@@ -32,7 +26,6 @@ export async function CampaignsListView({
   dateFormat: DateFormat;
 }) {
   const tc = await getTranslations({ locale, namespace: 'campaignsPage' });
-  const tStatus = await getTranslations({ locale, namespace: 'campaignStatus' });
 
   if (rows.length === 0) {
     return (
@@ -64,26 +57,7 @@ export async function CampaignsListView({
         <KPICard label={tc('kpiActiveCampaigns')} value={activeCount.toLocaleString('ru-RU')} unit={tc('kpiActiveUnit')} icon={<MapPin size={16} strokeWidth={1.5} />} gradient="default" />
       </div>
 
-      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-        {rows.map(r => (
-          <CampaignTile
-            key={r.id}
-            campaign={{
-              id: r.id,
-              name: r.name,
-              status: r.status,
-              periodStart: r.periodStart,
-              periodEnd: r.periodEnd,
-              screensCount: r.screensCount,
-            }}
-            href={`/${locale}/dashboard?campaign=${r.id}`}
-            locale={locale}
-            dateFormat={dateFormat}
-            statusLabel={tStatus(r.status)}
-            screensLabel={tc('colScreens')}
-          />
-        ))}
-      </div>
+      <TileGrid rows={rows} locale={locale} dateFormat={dateFormat} />
     </div>
   );
 }
