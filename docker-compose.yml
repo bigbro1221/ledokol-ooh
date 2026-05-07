@@ -21,6 +21,7 @@ services:
 
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     ports:
       - "${POSTGRES_PORT:-5433}:5432"
     environment:
@@ -37,6 +38,7 @@ services:
 
   minio:
     image: minio/minio
+    restart: unless-stopped
     ports:
       - "9000:9000"
       - "9001:9001"
