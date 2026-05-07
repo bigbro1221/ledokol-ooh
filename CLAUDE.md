@@ -1,5 +1,12 @@
 # Claude working notes — ledokol/ooh
 
+## Plan execution
+
+Always use **subagent-driven execution** for implementation plans
+(`superpowers:subagent-driven-development`), not inline execution. Don't
+prompt the user to choose between approaches when handing off from
+writing-plans — go straight to subagent-driven.
+
 ## Prisma schema changes
 
 ### Workflow (mandatory)
