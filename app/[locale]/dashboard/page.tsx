@@ -142,6 +142,10 @@ export default async function DashboardPage({
           select: { id: true, name: true, totalBudgetUzs: true, totalFinal: true, periodStart: true, periodEnd: true },
           orderBy: { periodStart: 'asc' as const },
         },
+        reachEntries: {
+          select: { id: true, n: true, plan: true, fact: true },
+          orderBy: { n: 'asc' },
+        },
         screens: {
           where: Object.keys(screenWhere).length > 0 ? screenWhere : undefined,
           select: {
@@ -509,6 +513,7 @@ export default async function DashboardPage({
       periodsWithData={periodsWithData.map(p => ({ id: p.id, name: p.name }))}
       selectedPeriods={selectedPeriodIds}
       creatives={creatives}
+      reachEntries={campaign.reachEntries}
     />
   );
 }

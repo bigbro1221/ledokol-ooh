@@ -70,6 +70,7 @@ interface Props {
   periodsWithData: { id: string; name: string }[];
   selectedPeriods: string[];
   creatives: CreativeView[];
+  reachEntries: { id: string; n: number; plan: number | null; fact: number | null }[];
 }
 
 export function DashboardClient({
@@ -78,6 +79,7 @@ export function DashboardClient({
   planVsFactByCity, monthlyByCity, planVsFactByType,
   topScreens, tableScreens, campaignPeriods, mapScreens, cityBreakdown, allCities, availableTypes, filters,
   heatmapEmbedUrl, reportsUrl, hasYandexMap, periodsWithData, selectedPeriods, creatives,
+  reachEntries,
 }: Props) {
   const isClient = userRole === 'CLIENT';
   const [monthlyExpanded, setMonthlyExpanded] = useState(false);
@@ -88,9 +90,6 @@ export function DashboardClient({
 
   // TODO: disabled per product decision 2026-04-20; restore if re-enabled
   // const donutTotal = donutData.reduce((s, d) => s + d.value, 0);
-
-  // Budget source: use screen-level sum if no explicit campaign total; else prefer campaign total
-  const budgetForWidgets = kpis.totalBudget > 0 ? kpis.totalBudget : totalBudgetFromScreens;
 
   // The selector now shows only siblings of the current campaign within the
   // same project. If the current campaign isn't in a project (or has no
@@ -195,17 +194,14 @@ export function DashboardClient({
         );
       })()}
 
-      {/* Efficiency strip — accented metrics row (CPM, avg OTS, CPT факт, avg impressions/day) */}
+      {/* Efficiency strip — accented metrics row (avg OTS, CPT факт, avg impressions/day) */}
       <div className="mb-6">
         <EfficiencyStrip
-          totalBudget={budgetForWidgets}
           totalBudgetWithoutVat={kpis.totalBudgetWithoutVat}
           totalOtsPlan={kpis.totalOtsPlan}
-          totalOtsFact={kpis.totalOtsFact}
           totalRatingFact={kpis.totalRatingFact}
           avgImpressionsPerDay={kpis.avgImpressionsPerDay}
           totalScreens={kpis.totalScreens}
-          locale={locale}
         />
       </div>
 
