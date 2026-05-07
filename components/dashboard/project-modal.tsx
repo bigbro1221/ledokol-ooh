@@ -10,7 +10,7 @@ import { type DateFormat } from '@/lib/format-period';
 interface Props {
   projectId: string;
   projectName: string;
-  children: CampaignTileData[];
+  campaigns: CampaignTileData[];
   locale: string;
   dateFormat: DateFormat;
   statusLabelFor: (status: string) => string;
@@ -21,7 +21,7 @@ interface Props {
 const morphTransition = { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const };
 
 export function ProjectModal({
-  projectId, projectName, children, locale, dateFormat,
+  projectId, projectName, campaigns, locale, dateFormat,
   statusLabelFor, screensLabel, onClose,
 }: Props) {
   const tc = useTranslations('campaignsPage');
@@ -107,15 +107,15 @@ export function ProjectModal({
             {projectName}
           </h2>
           <p className="mt-1 text-sm text-[var(--text-3)]">
-            {tc('projectChildCount', { count: children.length })}
+            {tc('projectChildCount', { count: campaigns.length })}
           </p>
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {children.length === 0 ? (
+            {campaigns.length === 0 ? (
               <p className="col-span-full py-8 text-center text-sm text-[var(--text-3)]">
                 {tc('projectEmpty')}
               </p>
             ) : (
-              children.map(c => (
+              campaigns.map(c => (
                 <CampaignTile
                   key={c.id}
                   campaign={c}

@@ -86,7 +86,7 @@ export function TileGrid({ rows, locale, dateFormat }: Props) {
             key={openProject.id}
             projectId={openProject.id}
             projectName={openProject.name}
-            children={openProject.children}
+            campaigns={openProject.children}
             locale={locale}
             dateFormat={dateFormat}
             statusLabelFor={s => tStatus(s)}
