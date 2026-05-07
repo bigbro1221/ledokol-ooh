@@ -110,7 +110,7 @@ export function EfficiencyStrip({
             border: '1px solid var(--es-card-border)',
           }}
         >
-          <div className="text-[13px] font-normal" style={{ color: 'var(--es-label)' }}>
+          <div className="text-[18px] font-semibold tracking-tight" style={{ color: 'var(--es-label)' }}>
             {c.label}
           </div>
           <div

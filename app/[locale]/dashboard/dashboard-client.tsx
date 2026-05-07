@@ -287,7 +287,7 @@ export function DashboardClient({
         <div className="mb-2 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)]">
           <div className="flex items-center justify-between px-6 py-4">
             <div>
-              <h3 className="text-[15px] font-semibold tracking-tight">{td('heatmapTitle')}</h3>
+              <h3 className="text-[18px] font-semibold tracking-tight">{td('heatmapTitle')}</h3>
               <p className="mt-0.5 text-xs text-[var(--text-3)]">Foursquare Studio</p>
             </div>
             <a
