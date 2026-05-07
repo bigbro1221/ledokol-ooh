@@ -164,8 +164,6 @@ export function DashboardClient({
         creativesSubtitle={tCreatives('subtitle')}
       />
 
-      <ReachCard campaignId={selectedCampaignId} rows={reachEntries} />
-
       {/* Filter row — sits under the hero and contains period, type, city dropdowns */}
       <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="text-[13px] font-medium text-[var(--text-3)]">
@@ -197,7 +195,7 @@ export function DashboardClient({
         );
       })()}
 
-      {/* Efficiency strip — accented metrics row (avg OTS, CPT факт, avg impressions/day) */}
+      {/* Efficiency strip — Reach (Охват) leading + accented metrics row (avg OTS, CPT факт, avg impressions/day) */}
       <div className="mb-6">
         <EfficiencyStrip
           totalBudgetWithoutVat={kpis.totalBudgetWithoutVat}
@@ -205,6 +203,7 @@ export function DashboardClient({
           totalRatingFact={kpis.totalRatingFact}
           avgImpressionsPerDay={kpis.avgImpressionsPerDay}
           totalScreens={kpis.totalScreens}
+          leading={<ReachCard campaignId={selectedCampaignId} rows={reachEntries} />}
         />
       </div>
 

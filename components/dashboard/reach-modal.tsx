@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReachRow } from '@/lib/reach';
+import { ReachRowDisplay } from './reach-row-display';
 
 interface Props {
   campaignId: string;
@@ -13,11 +14,6 @@ interface Props {
 }
 
 const morphTransition = { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const };
-
-function fmt(v: number | null): string {
-  if (v == null) return '—';
-  return v.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
-}
 
 export function ReachModal({ campaignId, rows, onClose }: Props) {
   const td = useTranslations('dashboard');
@@ -54,13 +50,17 @@ export function ReachModal({ campaignId, rows, onClose }: Props) {
         aria-label={td('reachCardTitle')}
         layoutId={`reach-${campaignId}`}
         transition={morphTransition}
-        className="relative max-h-[85vh] w-[min(90vw,520px)] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
+        style={{
+          background: 'var(--es-card-bg)',
+          border: '1px solid var(--es-card-border)',
+        }}
+        className="relative max-h-[85vh] w-[min(90vw,640px)] overflow-hidden rounded-[14px] shadow-2xl"
       >
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1, transition: { delay: 0.12, duration: 0.22 } }}
           exit={{ opacity: 0, transition: { duration: 0.12 } }}
-          className="max-h-[85vh] overflow-y-auto p-6"
+          className="max-h-[85vh] overflow-y-auto p-6 sm:p-7"
         >
           <button
             type="button"
@@ -71,31 +71,18 @@ export function ReachModal({ campaignId, rows, onClose }: Props) {
           >
             <X size={16} strokeWidth={1.75} />
           </button>
-          <h2 className="text-[22px] font-medium tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+          <div className="text-[13px] font-normal" style={{ color: 'var(--es-label)' }}>
             {td('reachCardTitle')}
-          </h2>
-          <div className="mt-5 space-y-1.5">
-            {sorted.map(r => (
-              <div
+          </div>
+          <div className="mt-3">
+            {sorted.map((r, i) => (
+              <ReachRowDisplay
                 key={r.id}
-                className="grid grid-cols-[60px_1fr_1fr] items-baseline gap-3 rounded-[var(--radius-sm)] py-2"
-              >
-                <div className="text-[14px] font-semibold tabular-nums" style={{ fontFamily: 'var(--font-mono)' }}>
-                  {r.n}+
-                </div>
-                <div className="text-[13px]">
-                  <span className="mr-1.5 text-[10px] uppercase tracking-[0.06em] text-[var(--text-3)]">
-                    {td('reachPlanLabel')}
-                  </span>
-                  <span className="tabular-nums" style={{ fontFamily: 'var(--font-mono)' }}>{fmt(r.plan)}</span>
-                </div>
-                <div className="text-[13px]">
-                  <span className="mr-1.5 text-[10px] uppercase tracking-[0.06em] text-[var(--text-3)]">
-                    {td('reachFactLabel')}
-                  </span>
-                  <span className="tabular-nums" style={{ fontFamily: 'var(--font-mono)' }}>{fmt(r.fact)}</span>
-                </div>
-              </div>
+                row={r}
+                planLabel={td('reachPlanLabel')}
+                factLabel={td('reachFactLabel')}
+                withTopBorder={i > 0}
+              />
             ))}
           </div>
         </motion.div>

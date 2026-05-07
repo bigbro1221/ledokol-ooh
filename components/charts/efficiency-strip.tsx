@@ -3,6 +3,11 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
+// Optional leading slot — used to drop the Reach (Охват) card into the
+// strip's grid as the first cell so it shares chrome and column sizing
+// with the metric cards.
+type LeadingSlot = ReactNode;
+
 type Gradient = 'default' | 'warm' | 'cyan' | 'blue' | 'orange' | 'green';
 
 function shortNumber(n: number): string {
@@ -14,20 +19,20 @@ function shortNumber(n: number): string {
 }
 
 interface Props {
-  totalBudget: number;
-  // Same number minus VAT — used by the CPT факт cell only. CPM/avg-budget
-  // continue to use totalBudget for backward consistency.
+  // Used by the CPT факт cell.
   totalBudgetWithoutVat: number;
   totalOtsPlan: number;
-  totalOtsFact: number;
   totalRatingFact: number;
   // Average daily plays per screen — (Σ Screen.impressionsPerDay) divided
   // by the count of filtered screens with a non-zero value. Null for
   // OTHER_CARRIERS (no per-screen impressions data); the cell hides.
   avgImpressionsPerDay: number | null;
   totalScreens: number;
-  locale?: string;
   currency?: string;
+  // Optional leading cell rendered at the start of the strip grid. Caller
+  // is responsible for providing strip-style chrome on the node (typically
+  // a `<ReachCard>`).
+  leading?: LeadingSlot;
 }
 
 function GradientText({ children, gradient }: { children: ReactNode; gradient: Gradient }) {
@@ -47,17 +52,12 @@ function GradientText({ children, gradient }: { children: ReactNode; gradient: G
 }
 
 export function EfficiencyStrip({
-  totalBudget, totalBudgetWithoutVat,
-  totalOtsPlan, totalOtsFact, totalRatingFact, avgImpressionsPerDay, totalScreens,
+  totalBudgetWithoutVat,
+  totalOtsPlan, totalRatingFact, avgImpressionsPerDay, totalScreens,
   currency = 'UZS',
+  leading,
 }: Props) {
   const t = useTranslations('charts');
-  const cpmPlan = totalBudget > 0 && totalOtsPlan > 0
-    ? totalBudget / (totalOtsPlan / 1000)
-    : null;
-  const cpmFact = totalBudget > 0 && totalOtsFact > 0
-    ? totalBudget / (totalOtsFact / 1000)
-    : null;
   const avgOtsPerScreen = totalScreens > 0 && totalOtsPlan > 0
     ? totalOtsPlan / totalScreens
     : null;
@@ -73,18 +73,6 @@ export function EfficiencyStrip({
 
   type Cell = { label: string; value: string; gradient: Gradient; sub?: string };
   const cells: Cell[] = [];
-  if (cpmPlan !== null) cells.push({
-    label: t('cpmPlan'),
-    value: shortNumber(cpmPlan),
-    gradient: 'default',
-    sub: `${currency} ${t('cpmPlanUnit')}`,
-  });
-  if (cpmFact !== null) cells.push({
-    label: t('cpmFact'),
-    value: shortNumber(cpmFact),
-    gradient: 'default',
-    sub: `${currency} ${t('cpmFactUnit')}`,
-  });
   if (avgOtsPerScreen !== null) cells.push({
     label: t('avgOts'),
     value: shortNumber(avgOtsPerScreen),
@@ -104,16 +92,18 @@ export function EfficiencyStrip({
     sub: t('impressionsPerDayUnit'),
   });
 
-  if (cells.length === 0) return null;
+  const totalCells = cells.length + (leading ? 1 : 0);
+  if (totalCells === 0) return null;
 
-  const colClass = cells.length <= 3
+  const colClass = totalCells <= 3
     ? 'grid-cols-2 sm:grid-cols-3'
-    : cells.length === 4
+    : totalCells === 4
     ? 'grid-cols-2 sm:grid-cols-4'
     : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5';
 
   return (
     <div className={`grid gap-2 ${colClass}`}>
+      {leading}
       {cells.map((c, i) => (
         // Label and sub render plain white; only the numeric value gets the
         // metric's gradient (warm on the middle Avg OTS card, blue elsewhere).
