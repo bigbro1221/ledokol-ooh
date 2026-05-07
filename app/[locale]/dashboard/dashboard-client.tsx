@@ -109,7 +109,10 @@ export function DashboardClient({
       {/* Top row: back-to-list link (CLIENT) or project-sibling selector (ADMIN) + reports button */}
       {(isClient || showSelector || reportsUrl) && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          {/* Wrapper is full-width on small mobile so the selector can claim
+              the whole row. On sm+ it shrinks to content and sits left of
+              the reports button as before. */}
+          <div className="flex w-full items-center gap-2 [@media(min-width:500px)]:w-auto">
             {isClient ? (
               <Link
                 href={`/${locale}/dashboard`}
