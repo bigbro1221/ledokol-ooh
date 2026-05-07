@@ -30,6 +30,7 @@ interface CampaignFormProps {
     productionCost?: number | string | null;
     totalFinal?: number | string | null;
     canChangeMediaType?: boolean;
+    groupId?: string | null;
   };
 }
 
@@ -44,6 +45,8 @@ interface DraftState {
   reportsUrl: string;
   acRate: string;
   mediaType: 'SCREENS' | 'OTHER_CARRIERS';
+  belongsToProject: boolean;
+  groupId: string;
   totalBudgetUzs: string;
   productionCost: string;
   totalFinal: string;
@@ -105,6 +108,16 @@ export function CampaignForm({ locale, clients, currencies, vatRate, initial }: 
     initial?.additionalAmount != null ? String(initial.additionalAmount) : ''
   );
 
+  const [belongsToProject, setBelongsToProject] = useState<boolean>(
+    !!initial?.groupId,
+  );
+  const [groupId, setGroupId] = useState<string>(initial?.groupId ?? '');
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [projectSaveError, setProjectSaveError] = useState<string | null>(null);
+  const [projectSaving, setProjectSaving] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -153,15 +166,45 @@ export function CampaignForm({ locale, clients, currencies, vatRate, initial }: 
     saveDraft({
       name, clientId, periodStart, periodEnd, splitByPeriods,
       heatmapUrl, yandexMapUrl, reportsUrl, acRate,
-      mediaType, totalBudgetUzs, productionCost, totalFinal,
+      mediaType, belongsToProject, groupId,
+      totalBudgetUzs, productionCost, totalFinal,
       additionalCurrencyId, additionalAmount,
     });
   }, [
     isEdit, name, clientId, periodStart, periodEnd, splitByPeriods,
     heatmapUrl, yandexMapUrl, reportsUrl, acRate,
-    mediaType, totalBudgetUzs, productionCost, totalFinal,
+    mediaType, belongsToProject, groupId,
+    totalBudgetUzs, productionCost, totalFinal,
     additionalCurrencyId, additionalAmount,
   ]);
+
+  useEffect(() => {
+    if (!clientId) {
+      setProjects([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/clients/${clientId}/projects`)
+      .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((data: { id: string; name: string }[]) => {
+        if (!cancelled) setProjects(data);
+      })
+      .catch(() => { if (!cancelled) setProjects([]); });
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  // For NEW campaigns only: switching client invalidates a stale project
+  // selection. For edits, the FK was already validated by the API; we leave
+  // it alone (the project list re-fetches above and the dropdown will show
+  // the FK selected if it matches an entry in the new list).
+  useEffect(() => {
+    if (!initial && clientId) {
+      setBelongsToProject(false);
+      setGroupId('');
+      setCreatingProject(false);
+      setNewProjectName('');
+    }
+  }, [clientId, initial]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -185,6 +228,7 @@ export function CampaignForm({ locale, clients, currencies, vatRate, initial }: 
       reportsUrl: reportsUrl.trim() || null,
       acRate: !isNaN(acRatePct) && acRatePct > 0 ? acRatePct / 100 : 0,
       mediaType,
+      groupId: belongsToProject && groupId ? groupId : null,
       ...(mediaType === 'OTHER_CARRIERS' && {
         totalBudgetUzs: num(totalBudgetUzs),
         productionCost: num(productionCost),
@@ -272,6 +316,121 @@ export function CampaignForm({ locale, clients, currencies, vatRate, initial }: 
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+      </div>
+
+      {/* Project (CampaignGroup) */}
+      <div>
+        <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+          <input
+            type="checkbox"
+            disabled={!clientId}
+            checked={belongsToProject}
+            onChange={e => {
+              const on = e.target.checked;
+              setBelongsToProject(on);
+              if (!on) {
+                setGroupId('');
+                setCreatingProject(false);
+                setNewProjectName('');
+                setProjectSaveError(null);
+              }
+            }}
+          />
+          {tf('belongsToProject')}
+        </label>
+
+        {belongsToProject && !creatingProject && (
+          <div className="mt-2">
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+              {tf('projectLabel')}
+            </label>
+            <select
+              required
+              value={groupId}
+              onChange={e => {
+                if (e.target.value === '__create__') {
+                  setCreatingProject(true);
+                  setProjectSaveError(null);
+                } else {
+                  setGroupId(e.target.value);
+                }
+              }}
+              className={inputCls}
+            >
+              <option value="">{tf('projectPlaceholder')}</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+              <option value="__create__">{tf('projectCreateNew')}</option>
+            </select>
+          </div>
+        )}
+
+        {belongsToProject && creatingProject && (
+          <div className="mt-2 space-y-2">
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+              {tf('projectNewName')}
+            </label>
+            <input
+              autoFocus
+              value={newProjectName}
+              onChange={e => setNewProjectName(e.target.value)}
+              className={inputCls}
+              placeholder={tf('projectNewName')}
+            />
+            {projectSaveError && (
+              <p className="text-[11px] text-[var(--danger)]">{projectSaveError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={projectSaving || newProjectName.trim().length === 0}
+                onClick={async () => {
+                  setProjectSaving(true);
+                  setProjectSaveError(null);
+                  try {
+                    const res = await fetch('/api/projects', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ clientId, name: newProjectName.trim() }),
+                    });
+                    if (res.status === 409) {
+                      setProjectSaveError(tf('projectExists'));
+                      return;
+                    }
+                    if (!res.ok) {
+                      setProjectSaveError(`Error ${res.status}`);
+                      return;
+                    }
+                    const created = await res.json() as { id: string; name: string };
+                    setProjects(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+                    setGroupId(created.id);
+                    setCreatingProject(false);
+                    setNewProjectName('');
+                  } catch {
+                    setProjectSaveError('Network error');
+                  } finally {
+                    setProjectSaving(false);
+                  }
+                }}
+                className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50"
+              >
+                {tf('projectSaveNew')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingProject(false);
+                  setNewProjectName('');
+                  setProjectSaveError(null);
+                }}
+                className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-1.5 text-[12px]"
+              >
+                {tf('projectCancelNew')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Media type */}

@@ -174,7 +174,15 @@
     "additionalCurrency": "Доп. валюта",
     "additionalCurrencyPlaceholder": "RUB / USD / EUR",
     "additionalAmount": "Сумма в доп. валюте",
-    "mediaTypeLocked": "Очистите периоды и финансовые данные перед сменой типа кампании"
+    "mediaTypeLocked": "Очистите периоды и финансовые данные перед сменой типа кампании",
+    "belongsToProject": "Принадлежит проекту",
+    "projectLabel": "Проект",
+    "projectPlaceholder": "Выберите проект…",
+    "projectCreateNew": "+ Создать новый",
+    "projectNewName": "Название проекта",
+    "projectSaveNew": "Сохранить",
+    "projectCancelNew": "Отмена",
+    "projectExists": "Проект с таким именем уже существует"
   },
   "profile": {
     "cardTitle": "Профиль",

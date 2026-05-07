@@ -174,7 +174,15 @@
     "additionalCurrency": "Qo'shimcha valyuta",
     "additionalCurrencyPlaceholder": "RUB / USD / EUR",
     "additionalAmount": "Qo'shimcha summa",
-    "mediaTypeLocked": "Kampaniya turini o'zgartirishdan oldin davrlarni va moliyaviy ma'lumotlarni tozalang"
+    "mediaTypeLocked": "Kampaniya turini o'zgartirishdan oldin davrlarni va moliyaviy ma'lumotlarni tozalang",
+    "belongsToProject": "Loyihaga tegishli",
+    "projectLabel": "Loyiha",
+    "projectPlaceholder": "Loyihani tanlang…",
+    "projectCreateNew": "+ Yangi yaratish",
+    "projectNewName": "Loyiha nomi",
+    "projectSaveNew": "Saqlash",
+    "projectCancelNew": "Bekor qilish",
+    "projectExists": "Bunday nomli loyiha allaqachon mavjud"
   },
   "profile": {
     "cardTitle": "Profil",

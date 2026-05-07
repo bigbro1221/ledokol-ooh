@@ -36,6 +36,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
         totalBudgetUzs: true,
         productionCost: true,
         totalFinal: true,
+        groupId: true,
         _count: { select: { periods: true } },
       },
     }),
@@ -99,6 +100,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
           productionCost: campaign.productionCost != null ? Number(campaign.productionCost) : null,
           totalFinal: campaign.totalFinal != null ? Number(campaign.totalFinal) : null,
           canChangeMediaType,
+          groupId: campaign.groupId,
         }}
       />
     </div>
