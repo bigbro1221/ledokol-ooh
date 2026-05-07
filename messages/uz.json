@@ -228,7 +228,8 @@
     "allCampaigns": "Barcha kampaniyalar",
     "campaignEyebrow": "Reklama kampaniyasi",
     "filterLabel": "Filtr",
-    "showAllSummary": "barchasi"
+    "showAllSummary": "barchasi",
+    "selectorUngrouped": "Loyihasiz"
   },
   "filters": {
     "allCities": "Barcha shaharlar",

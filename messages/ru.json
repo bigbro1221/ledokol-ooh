@@ -228,7 +228,8 @@
     "allCampaigns": "Все кампании",
     "campaignEyebrow": "Рекламная кампания",
     "filterLabel": "Фильтр",
-    "showAllSummary": "все"
+    "showAllSummary": "все",
+    "selectorUngrouped": "Без проекта"
   },
   "filters": {
     "allCities": "Все города",

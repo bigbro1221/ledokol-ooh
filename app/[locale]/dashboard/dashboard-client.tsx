@@ -18,7 +18,7 @@ import { BudgetByType } from '@/components/charts/budget-by-type';
 import { EfficiencyStrip } from '@/components/charts/efficiency-strip';
 import { CampaignSelector } from '@/components/ui/campaign-selector';
 import { FilterBar } from '@/components/ui/filter-bar';
-import { type DateFormat, formatCampaignPeriod } from '@/lib/format-period';
+import { type DateFormat } from '@/lib/format-period';
 import { useTranslations } from 'next-intl';
 import { type CreativeView } from '@/components/dashboard/creatives-card';
 import { CampaignHero } from '@/components/dashboard/campaign-hero';
@@ -44,7 +44,7 @@ interface Props {
   locale: string;
   userRole: string;
   initialDateFormat: DateFormat;
-  campaigns: { id: string; name: string; status: string; clientName: string; periodStart: string; periodEnd: string }[];
+  campaigns: { id: string; name: string; status: string; periodStart: string; periodEnd: string; groupId: string | null; groupName: string | null }[];
   selectedCampaignId: string;
   campaign: { name: string; clientName: string; periodStart: string; periodEnd: string; status: string };
   kpis: { totalOtsPlan: number; totalOtsFact: number; totalRatingFact: number; avgImpressionsPerDay: number | null; totalScreens: number; cities: number; totalBudget: number; totalBudgetWithoutVat: number; formatBudget: string };
@@ -85,13 +85,6 @@ export function DashboardClient({
   const tStatus = useTranslations('campaignStatus');
   const tc = useTranslations('charts');
   const tCreatives = useTranslations('creatives');
-
-  const formattedPeriod = formatCampaignPeriod(
-    new Date(campaign.periodStart),
-    new Date(campaign.periodEnd),
-    locale,
-    initialDateFormat,
-  );
 
   // TODO: disabled per product decision 2026-04-20; restore if re-enabled
   // const donutTotal = donutData.reduce((s, d) => s + d.value, 0);
@@ -139,7 +132,7 @@ export function DashboardClient({
       {/* Campaign Hero — title, status, inline stats, creatives */}
       <CampaignHero
         eyebrow={td('campaignEyebrow')}
-        title={`${campaign.name}. ${formattedPeriod}`}
+        title={campaign.name}
         status={campaign.status}
         statusLabel={tStatus(campaign.status)}
         stats={[

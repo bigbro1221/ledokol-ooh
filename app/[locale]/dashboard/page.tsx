@@ -52,7 +52,7 @@ export default async function DashboardPage({
 
   const allCampaigns = await prisma.campaign.findMany({
     where: { ...clientFilter, status: { not: 'DRAFT' } },
-    select: { id: true, name: true, status: true, periodStart: true, periodEnd: true, client: { select: { name: true } } },
+    select: { id: true, name: true, status: true, periodStart: true, periodEnd: true, client: { select: { name: true } }, groupId: true, group: { select: { id: true, name: true } } },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -475,9 +475,10 @@ export default async function DashboardPage({
         id: c.id,
         name: c.name,
         status: c.status,
-        clientName: c.client.name,
         periodStart: c.periodStart.toISOString(),
         periodEnd: c.periodEnd.toISOString(),
+        groupId: c.groupId,
+        groupName: c.group?.name ?? null,
       }))}
       selectedCampaignId={selectedId}
       initialDateFormat={initialDateFormat}
