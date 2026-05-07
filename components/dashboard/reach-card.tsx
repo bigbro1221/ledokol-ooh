@@ -1,6 +1,5 @@
 'use client';
 
-import type { CSSProperties } from 'react';
 import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Expand } from 'lucide-react';
@@ -18,10 +17,10 @@ const FACT_BG: Record<Status, string> = {
   under: 'linear-gradient(90deg, #C77F00 0%, #F59E0B 100%)',
 };
 
-const PILL_STYLE: Record<Status, CSSProperties> = {
-  on:    { background: 'rgba(79, 163, 255, 0.13)', color: '#4FA3FF' },
-  over:  { background: 'rgba(52, 211, 153, 0.13)', color: '#34D399' },
-  under: { background: 'rgba(245, 158, 11, 0.13)', color: '#F59E0B' },
+const STATUS_TEXT: Record<Status, string> = {
+  on:    '#4FA3FF',
+  over:  '#34D399',
+  under: '#F59E0B',
 };
 
 function statusFor(plan: number, fact: number): Status {
@@ -48,16 +47,21 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
   const [cardWidth, setCardWidth] = useState<number | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  function handleOpen() {
-    const w = buttonRef.current?.getBoundingClientRect().width;
-    if (w && w > 0) setCardWidth(Math.round(w));
-    setOpen(true);
-  }
-
   // Only pinned rows render on the dashboard. If none are pinned the whole
   // card is suppressed — even with an audience set.
   const pinnedRows = rows.filter(r => r.pinned);
   if (pinnedRows.length === 0) return null;
+
+  // The modal shows ALL rows. If every row is already pinned the modal would
+  // mirror the card 1:1 — skip the click + hide the affordances.
+  const canExpand = rows.length > pinnedRows.length;
+
+  function handleOpen() {
+    if (!canExpand) return;
+    const w = buttonRef.current?.getBoundingClientRect().width;
+    if (w && w > 0) setCardWidth(Math.round(w));
+    setOpen(true);
+  }
 
   const tiers = [...pinnedRows]
     .sort((a, b) => a.n - b.n)
@@ -88,7 +92,7 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
           visibility: open ? 'hidden' : 'visible',
           background: 'var(--es-card-bg)',
         }}
-        className="block w-full rounded-[14px] border border-[var(--es-card-border)] p-5 text-left transition-colors duration-200 hover:border-[var(--border-hi)] sm:p-6"
+        className={`block w-full rounded-[14px] border border-[var(--es-card-border)] p-5 text-left transition-colors duration-200 sm:p-6 ${canExpand ? 'cursor-pointer hover:border-[var(--border-hi)]' : 'cursor-default'}`}
       >
         <div className="mb-3.5 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -113,23 +117,15 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {tiers.length > 0 && (
-              <span
-                className="whitespace-nowrap text-[9.5px] uppercase tracking-[0.06em]"
-                style={{ color: 'var(--es-label)', fontFamily: 'var(--font-mono)' }}
-              >
-                {td('reachCompletionMeta')}
-              </span>
-            )}
-            {/* Click affordance — kept at title brightness so the corner reads as a unit. */}
+          {/* Click affordance — only when the modal would actually show extra rows. */}
+          {canExpand && (
             <Expand
               size={13}
               strokeWidth={2}
               style={{ color: 'var(--es-label)' }}
               aria-hidden="true"
             />
-          </div>
+          )}
         </div>
 
         {tiers.length === 0 ? (
@@ -140,78 +136,96 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
             {td('reachEmpty')}
           </div>
         ) : (
-          <ul className="m-0 flex flex-col gap-2.5 p-0" style={{ listStyle: 'none' }}>
-            {tiers.map(t => {
-              const status = statusFor(t.plan, t.fact);
-              const planPct = (t.plan / max) * 100;
-              const factPct = (t.fact / max) * 100;
-              // % выполнения: how much of plan the fact covers (200% for 20/10, 10% for 1/10).
-              const completionPct = t.plan > 0 ? Math.round((t.fact / t.plan) * 100) : 0;
-              const srStatus = status === 'over'
-                ? td('reachAboveLabel')
-                : status === 'under'
-                ? td('reachBelowLabel')
-                : td('reachOnPlanLabel');
+          <>
+            <ul className="m-0 flex flex-col gap-2.5 p-0" style={{ listStyle: 'none' }}>
+              {tiers.map(t => {
+                const status = statusFor(t.plan, t.fact);
+                const planPct = (t.plan / max) * 100;
+                const factPct = (t.fact / max) * 100;
+                const completionPct = t.plan > 0 ? Math.round((t.fact / t.plan) * 100) : null;
 
-              return (
-                <li
-                  key={t.frequency}
-                  className="grid items-center gap-2.5"
-                  style={{ gridTemplateColumns: '32px 1fr auto auto' }}
-                >
-                  <span
-                    className="rounded-[5px] px-1.5 py-1 text-center text-[12px] font-semibold tabular-nums"
-                    style={{
-                      background: 'var(--es-card-trough)',
-                      color: 'var(--es-text)',
-                      fontFamily: 'var(--font-mono)',
-                    }}
+                return (
+                  <li
+                    key={t.frequency}
+                    className="grid items-center gap-2.5"
+                    style={{ gridTemplateColumns: '32px 1fr auto' }}
                   >
-                    {t.frequency}+
-                  </span>
-
-                  <div
-                    className="relative h-[26px] overflow-hidden rounded-[6px]"
-                    style={{ background: 'var(--es-card-trough)' }}
-                    role="img"
-                    aria-label={`${t.frequency}+ план ${fmtNumber(t.plan)}, факт ${fmtNumber(t.fact)}`}
-                  >
-                    <div
-                      className="absolute inset-y-0 left-0"
+                    <span
+                      className="rounded-[5px] px-1.5 py-1 text-center text-[12px] font-semibold tabular-nums"
                       style={{
-                        width: `${planPct}%`,
-                        background:
-                          'repeating-linear-gradient(45deg, var(--es-card-stripe) 0 5px, var(--es-card-edge) 5px 6px)',
-                        borderRight: '1px dashed var(--es-text-3)',
+                        background: 'var(--es-card-trough)',
+                        color: 'var(--es-text)',
+                        fontFamily: 'var(--font-mono)',
                       }}
-                    />
+                    >
+                      {t.frequency}+
+                    </span>
+
                     <div
-                      className="absolute inset-y-0 left-0 rounded-[6px]"
-                      style={{
-                        width: `${factPct}%`,
-                        background: FACT_BG[status],
-                      }}
-                    />
-                  </div>
+                      className="relative h-[26px] overflow-hidden rounded-[6px]"
+                      style={{ background: 'var(--es-card-trough)' }}
+                      role="img"
+                      aria-label={`${t.frequency}+ план ${fmtNumber(t.plan)}, факт ${fmtNumber(t.fact)}`}
+                    >
+                      {/* Plan track — solid neutral, width relative to max */}
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-[6px]"
+                        style={{
+                          width: `${planPct}%`,
+                          background: 'var(--es-card-edge)',
+                        }}
+                      />
+                      {/* Fact overlay — status-coloured, width relative to max
+                          (so over-delivery extends past the plan track edge) */}
+                      {factPct > 0 && (
+                        <div
+                          className="absolute inset-y-0 left-0 rounded-[6px]"
+                          style={{
+                            width: `${factPct}%`,
+                            background: FACT_BG[status],
+                          }}
+                        />
+                      )}
+                    </div>
 
-                  <span
-                    className="min-w-[48px] text-right text-[12px] font-semibold tabular-nums"
-                    style={{ color: 'var(--es-text)', fontFamily: 'var(--font-mono)' }}
-                  >
-                    {fmtNumber(t.fact)}
-                  </span>
+                    <div
+                      className="flex shrink-0 items-center gap-3 text-[12px]"
+                      style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      <span
+                        className="w-12 text-right font-semibold"
+                        style={{ color: 'var(--es-text-3)' }}
+                      >
+                        {fmtNumber(t.plan)}
+                      </span>
+                      <span
+                        className="w-12 text-right font-semibold"
+                        style={{ color: STATUS_TEXT[status] }}
+                      >
+                        {fmtNumber(t.fact)}
+                      </span>
+                      <span
+                        className="w-12 text-right font-semibold"
+                        style={{ color: STATUS_TEXT[status] }}
+                      >
+                        {completionPct !== null ? `${completionPct}%` : '—'}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
 
-                  <span
-                    className="min-w-[48px] rounded-[4px] px-1.5 py-0.5 text-right text-[11px] font-semibold tabular-nums"
-                    style={{ ...PILL_STYLE[status], fontFamily: 'var(--font-mono)' }}
-                  >
-                    <span className="sr-only">{srStatus} </span>
-                    {completionPct}%
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+            {/* Column headers — sit under the rows so the user can map values back to plan vs fact at a glance. */}
+            <div
+              className="mt-3 flex justify-end gap-3 text-[10px] uppercase tracking-[0.06em]"
+              style={{ color: 'var(--es-text-3)', fontFamily: 'var(--font-mono)' }}
+            >
+              <span className="w-12 text-right">{td('reachPlanLabel')}</span>
+              <span className="w-12 text-right">{td('reachFactLabel')}</span>
+              <span className="w-12 text-right">%</span>
+            </div>
+          </>
         )}
       </motion.button>
 
