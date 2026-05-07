@@ -151,6 +151,8 @@ export function CampaignForm({ locale, clients, currencies, vatRate, initial }: 
       setTotalFinal(draft.totalFinal ?? '');
       setAdditionalCurrencyId(draft.additionalCurrencyId ?? '');
       setAdditionalAmount(draft.additionalAmount ?? '');
+      if (draft.belongsToProject != null) setBelongsToProject(draft.belongsToProject);
+      if (draft.groupId) setGroupId(draft.groupId);
       if (draft.name || draft.clientId) setDraftRestored(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,12 +199,16 @@ export function CampaignForm({ locale, clients, currencies, vatRate, initial }: 
   // selection. For edits, the FK was already validated by the API; we leave
   // it alone (the project list re-fetches above and the dropdown will show
   // the FK selected if it matches an entry in the new list).
+  const prevClientIdRef = useRef(clientId);
   useEffect(() => {
-    if (!initial && clientId) {
+    const prev = prevClientIdRef.current;
+    prevClientIdRef.current = clientId;
+    if (!initial && prev && clientId && prev !== clientId) {
       setBelongsToProject(false);
       setGroupId('');
       setCreatingProject(false);
       setNewProjectName('');
+      setProjectSaveError(null);
     }
   }, [clientId, initial]);
 
