@@ -28,7 +28,7 @@ export function ImpressionsDonut({
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="mb-6">
         <div className="flex items-center gap-2">
-          <h3 className="text-[15px] font-semibold tracking-tight">{t('impressionsByTypeTitle')}</h3>
+          <h3 className="text-[18px] font-semibold tracking-tight">{t('impressionsByTypeTitle')}</h3>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
               isFact

@@ -29,7 +29,7 @@ export function BudgetByType({ data, total, currency = 'UZS' }: { data: Entry[];
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
       <div className="mb-6">
-        <h3 className="text-[15px] font-semibold tracking-tight">{t('budgetByTypeTitle')}</h3>
+        <h3 className="text-[18px] font-semibold tracking-tight">{t('budgetByTypeTitle')}</h3>
         <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('budgetByTypeSubtitle')}</p>
       </div>
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">

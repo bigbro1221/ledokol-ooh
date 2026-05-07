@@ -41,7 +41,7 @@ export function ScreensTable({ screens }: { screens: Screen[] }) {
     <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
       <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-4 sm:px-6 sm:py-5">
         <div>
-          <h3 className="text-[15px] font-semibold tracking-tight">Поверхности</h3>
+          <h3 className="text-[18px] font-semibold tracking-tight">Поверхности</h3>
           <p className="mt-0.5 text-xs text-[var(--text-3)]">
             {screens.length} поверхностей в кампании
           </p>

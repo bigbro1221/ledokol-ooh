@@ -33,7 +33,7 @@ export function TopScreensBar({ data }: { data: ScreenEntry[] }) {
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
       <div className="mb-6">
-        <h3 className="text-[15px] font-semibold tracking-tight">{t('topScreensTitle')}</h3>
+        <h3 className="text-[18px] font-semibold tracking-tight">{t('topScreensTitle')}</h3>
         <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('topScreensSubtitle')}</p>
       </div>
       <div style={{ height: Math.max(300, data.length * 28) }}>

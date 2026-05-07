@@ -98,13 +98,13 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
           <div className="min-w-0">
             <h3
               id={titleId}
-              className="m-0 text-[13px] font-normal leading-tight"
+              className="m-0 text-[18px] font-semibold leading-tight tracking-tight"
               style={{ color: 'var(--es-label)' }}
             >
               {td('reachCardTitle')}
             </h3>
             {audience && (
-              <p className="m-0 mt-1 flex items-baseline gap-1.5 text-[11px]">
+              <p className="m-0 mt-1 flex items-baseline gap-1.5 text-[12px]">
                 <span style={{ color: 'var(--es-text-3)', letterSpacing: '0.02em' }}>
                   {td('reachAudienceLabel')}
                 </span>

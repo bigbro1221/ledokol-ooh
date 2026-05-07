@@ -199,7 +199,7 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
       <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-[15px] font-semibold tracking-tight">Расположение экранов</h3>
+            <h3 className="text-[18px] font-semibold tracking-tight">Расположение экранов</h3>
             <p className="mt-0.5 text-xs text-[var(--text-3)]">{screensWithCoords.length} поверхностей с координатами</p>
           </div>
         </div>
@@ -216,7 +216,7 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
     <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-[15px] font-semibold tracking-tight">Расположение экранов</h3>
+          <h3 className="text-[18px] font-semibold tracking-tight">Расположение экранов</h3>
           <p className="mt-0.5 text-xs text-[var(--text-3)]">{screensWithCoords.length} поверхностей с координатами</p>
         </div>
       </div>

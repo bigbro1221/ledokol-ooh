@@ -10,7 +10,7 @@ export function BudgetBar({ total, spent, currency = 'UZS' }: { total: number; s
     /* mobile: <640px — 16px padding, desktop 24px */
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
       <div className="mb-4">
-        <h3 className="text-[15px] font-semibold tracking-tight">{t('campaignBudgetTitle')}</h3>
+        <h3 className="text-[18px] font-semibold tracking-tight">{t('campaignBudgetTitle')}</h3>
       </div>
       <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>

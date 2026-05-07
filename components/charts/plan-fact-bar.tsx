@@ -39,7 +39,7 @@ export function PlanFactBar({ plan, fact }: PlanFactBarProps) {
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold tracking-tight">{t('planCompletionTitle')}</h3>
+        <h3 className="text-[18px] font-semibold tracking-tight">{t('planCompletionTitle')}</h3>
         {pct !== null && (
           <span
             className="rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.04em]"

@@ -15,7 +15,7 @@ export function ImpressionsArea({ data }: { data: DayEntry[] }) {
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="mb-6">
-        <h3 className="text-[15px] font-semibold tracking-tight">{t('impressionsDailyTitle')}</h3>
+        <h3 className="text-[18px] font-semibold tracking-tight">{t('impressionsDailyTitle')}</h3>
         <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('impressionsDailySubtitle')}</p>
       </div>
       <div className="h-[200px]">

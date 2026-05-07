@@ -108,13 +108,13 @@ export function ReachModal({ campaignId, rows, audience, cardWidth, onClose }: P
           <div className="relative flex items-start justify-between gap-3 px-6 pt-5 pb-3 sm:px-7 sm:pt-6">
             <div className="min-w-0">
               <h2
-                className="m-0 text-[13px] font-normal leading-tight"
+                className="m-0 text-[18px] font-semibold leading-tight tracking-tight"
                 style={{ color: 'var(--es-label)' }}
               >
                 {td('reachCardTitle')}
               </h2>
               {audience && (
-                <p className="m-0 mt-1 flex items-baseline gap-1.5 text-[11px]">
+                <p className="m-0 mt-1 flex items-baseline gap-1.5 text-[12px]">
                   <span style={{ color: 'var(--es-text-3)', letterSpacing: '0.02em' }}>
                     {td('reachAudienceLabel')}
                   </span>
