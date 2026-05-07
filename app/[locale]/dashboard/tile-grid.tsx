@@ -29,19 +29,19 @@ export function TileGrid({ rows, locale, dateFormat }: Props) {
 
   const { projects, ungrouped } = partitionCampaigns(rows);
 
-  // Render order: projects + ungrouped mixed, sorted by start date desc
-  // (newest first). A project's start date is the earliest periodStart among
-  // its children — i.e. when the project actually began.
+  // Render order: projects + ungrouped mixed, sorted by start date desc.
+  // A project's anchor date is the *latest* periodStart among its children —
+  // it bubbles up whenever any of its campaigns has a fresh start.
   const merged: Array<
     | { kind: 'project'; id: string; name: string; children: TileGridRow[]; date: Date }
     | { kind: 'campaign'; row: TileGridRow; date: Date }
   > = [
     ...projects.map(p => {
-      const earliest = p.children.reduce<Date>(
-        (min, c) => (c.periodStart < min ? c.periodStart : min),
+      const latest = p.children.reduce<Date>(
+        (max, c) => (c.periodStart > max ? c.periodStart : max),
         p.children[0].periodStart,
       );
-      return { kind: 'project' as const, id: p.id, name: p.name, children: p.children, date: earliest };
+      return { kind: 'project' as const, id: p.id, name: p.name, children: p.children, date: latest };
     }),
     ...ungrouped.map(u => ({ kind: 'campaign' as const, row: u, date: u.periodStart })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());

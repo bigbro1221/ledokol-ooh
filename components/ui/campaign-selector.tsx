@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { ChevronDown } from 'lucide-react';
 import { type DateFormat, formatCampaignPeriod } from '@/lib/format-period';
 
@@ -26,6 +25,11 @@ function campaignLabel(c: Campaign, dateFormat: DateFormat, locale: string): str
   return c.name;
 }
 
+function startMs(c: Campaign): number {
+  const t = new Date(c.periodStart).getTime();
+  return Number.isNaN(t) ? 0 : t;
+}
+
 export function CampaignSelector({
   campaigns,
   currentId,
@@ -39,7 +43,6 @@ export function CampaignSelector({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const t = useTranslations('dashboard');
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -48,7 +51,10 @@ export function CampaignSelector({
     router.refresh();
   }
 
-  // Partition: grouped campaigns by group, ungrouped flat
+  // Partition projects vs ungrouped, then build a single date-sorted list
+  // where each item is either a top-level <option> or an <optgroup> with its
+  // own children. Project anchor = max(child.periodStart). Children inside
+  // each project also sort by periodStart desc.
   const byGroup = new Map<string, { name: string; items: Campaign[] }>();
   const ungrouped: Campaign[] = [];
   for (const c of campaigns) {
@@ -60,11 +66,19 @@ export function CampaignSelector({
       ungrouped.push(c);
     }
   }
-  const groupArr = Array.from(byGroup.entries())
-    .map(([id, { name, items }]) => ({ id, name, items }))
-    .sort((a, b) => a.name.localeCompare(b.name));
 
-  const hasGroups = groupArr.length > 0;
+  type Item =
+    | { kind: 'project'; id: string; name: string; items: Campaign[]; anchor: number }
+    | { kind: 'campaign'; c: Campaign; anchor: number };
+
+  const items: Item[] = [
+    ...Array.from(byGroup.entries()).map(([id, { name, items: children }]) => {
+      const sorted = [...children].sort((a, b) => startMs(b) - startMs(a));
+      const anchor = sorted.reduce((max, c) => Math.max(max, startMs(c)), 0);
+      return { kind: 'project' as const, id, name, items: sorted, anchor };
+    }),
+    ...ungrouped.map(c => ({ kind: 'campaign' as const, c, anchor: startMs(c) })),
+  ].sort((a, b) => b.anchor - a.anchor);
 
   return (
     <div className="relative w-full sm:w-auto">
@@ -73,28 +87,15 @@ export function CampaignSelector({
         onChange={handleChange}
         className="w-full min-h-[44px] appearance-none rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] py-2 pl-3 pr-8 text-[13px] transition-colors hover:border-[var(--border-hi)] focus:border-[var(--border-em)] focus:outline-none sm:w-auto sm:min-h-0 sm:py-1.5"
       >
-        {hasGroups ? (
-          <>
-            {groupArr.map(g => (
-              <optgroup key={g.id} label={g.name}>
-                {g.items.map(c => (
-                  <option key={c.id} value={c.id}>{campaignLabel(c, dateFormat, locale)}</option>
-                ))}
-              </optgroup>
+        {items.map(item => item.kind === 'project' ? (
+          <optgroup key={item.id} label={item.name}>
+            {item.items.map(c => (
+              <option key={c.id} value={c.id}>{campaignLabel(c, dateFormat, locale)}</option>
             ))}
-            {ungrouped.length > 0 && (
-              <optgroup label={t('selectorUngrouped')}>
-                {ungrouped.map(c => (
-                  <option key={c.id} value={c.id}>{campaignLabel(c, dateFormat, locale)}</option>
-                ))}
-              </optgroup>
-            )}
-          </>
+          </optgroup>
         ) : (
-          campaigns.map(c => (
-            <option key={c.id} value={c.id}>{campaignLabel(c, dateFormat, locale)}</option>
-          ))
-        )}
+          <option key={item.c.id} value={item.c.id}>{campaignLabel(item.c, dateFormat, locale)}</option>
+        ))}
       </select>
       <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
     </div>

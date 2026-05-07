@@ -115,17 +115,19 @@ export function ProjectModal({
                 {tc('projectEmpty')}
               </p>
             ) : (
-              campaigns.map(c => (
-                <CampaignTile
-                  key={c.id}
-                  campaign={c}
-                  href={`/${locale}/dashboard?campaign=${c.id}`}
-                  locale={locale}
-                  dateFormat={dateFormat}
-                  statusLabel={statusLabelFor(c.status)}
-                  screensLabel={screensLabel}
-                />
-              ))
+              [...campaigns]
+                .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())
+                .map(c => (
+                  <CampaignTile
+                    key={c.id}
+                    campaign={c}
+                    href={`/${locale}/dashboard?campaign=${c.id}`}
+                    locale={locale}
+                    dateFormat={dateFormat}
+                    statusLabel={statusLabelFor(c.status)}
+                    screensLabel={screensLabel}
+                  />
+                ))
             )}
           </div>
         </motion.div>
