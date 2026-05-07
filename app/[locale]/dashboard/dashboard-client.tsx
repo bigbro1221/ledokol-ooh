@@ -22,6 +22,7 @@ import { type DateFormat } from '@/lib/format-period';
 import { useTranslations } from 'next-intl';
 import { type CreativeView } from '@/components/dashboard/creatives-card';
 import { CampaignHero } from '@/components/dashboard/campaign-hero';
+import { ReachCard } from '@/components/dashboard/reach-card';
 
 const ScreenMap = dynamic(() => import('@/components/map/screen-map').then(m => ({ default: m.ScreenMap })), {
   ssr: false,
@@ -162,6 +163,8 @@ export function DashboardClient({
         creativesTitle={tCreatives('title')}
         creativesSubtitle={tCreatives('subtitle')}
       />
+
+      <ReachCard campaignId={selectedCampaignId} rows={reachEntries} />
 
       {/* Filter row — sits under the hero and contains period, type, city dropdowns */}
       <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2">
