@@ -10,6 +10,7 @@ import { DeleteCampaignButton } from '@/components/admin/delete-campaign-button'
 import { ClearScreensButton } from '@/components/admin/clear-screens-button';
 import { CampaignFinancials } from '@/components/admin/campaign-financials';
 import { RegeocodeButton } from '@/components/admin/regeocodebutton';
+import { ReachDataButton } from '@/components/admin/reach-data-button';
 import { ScreensCard, type PeriodSummary } from '@/components/admin/screens-card';
 import { PeriodsCard } from '@/components/admin/periods-card';
 import { getVatRateAt } from '@/lib/vat';
@@ -165,6 +166,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           >
             <Film size={13} strokeWidth={1.5} /> {tCreatives('button')}
           </Link>
+          <ReachDataButton campaignId={id} />
           {totalScreens > 0 && (!campaign.splitByPeriods || isOtherCarriers) && (
             <ClearScreensButton campaignId={id} />
           )}
