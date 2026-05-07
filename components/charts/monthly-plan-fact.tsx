@@ -207,7 +207,7 @@ export function MonthlyPlanFact({ data }: Props) {
   };
 
   return (
-    <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
       {/* City filter pills */}
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <button

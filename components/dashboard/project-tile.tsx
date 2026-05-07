@@ -46,19 +46,19 @@ export function ProjectTile({
           <span className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-primary-subtle)]">
             <Folder size={14} strokeWidth={2} className="text-[var(--brand-primary)]" />
           </span>
-          <h3 className="text-[16px] font-semibold tracking-tight text-[var(--text)]">
+          <h3 className="text-[18px] font-semibold tracking-tight text-[var(--text)]">
             {name}
           </h3>
         </div>
         {/* Spacer matching the period subtitle line in CampaignTile so the divider aligns across tiles. */}
-        <p aria-hidden="true" className="mt-0.5 text-[12px] invisible" style={{ fontFamily: 'var(--font-mono)' }}>
+        <p aria-hidden="true" className="mt-1 text-[13px] invisible" style={{ fontFamily: 'var(--font-mono)' }}>
           &nbsp;
         </p>
         <div className="mt-5 border-t border-[var(--border)] pt-4">
-          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
+          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text-3)]">
             {childCountLabel}
           </p>
-          <p className="mt-0.5 text-[15px] font-semibold tabular-nums" style={{ fontFamily: 'var(--font-mono)' }}>
+          <p className="mt-1 text-[18px] font-semibold tabular-nums" style={{ fontFamily: 'var(--font-mono)' }}>
             {childCount.toLocaleString('ru-RU')}
           </p>
         </div>
@@ -82,7 +82,7 @@ export function ProjectTile({
           style={{ scrollbarWidth: 'none' }}
         >
           {childItems.map(c => (
-            <li key={c.id} className="truncate text-[13px]">
+            <li key={c.id} className="truncate text-[14px]">
               <Link
                 href={c.href}
                 onClick={e => e.stopPropagation()}

@@ -103,10 +103,10 @@ export function ProjectModal({
           >
             <X size={16} strokeWidth={1.75} />
           </button>
-          <h2 className="text-[22px] font-medium tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+          <h2 className="text-[26px] font-medium tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
             {projectName}
           </h2>
-          <p className="mt-1 text-sm text-[var(--text-3)]">
+          <p className="mt-1.5 text-base text-[var(--text-3)]">
             {tc('projectChildCount', { count: campaigns.length })}
           </p>
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">

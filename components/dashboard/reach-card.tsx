@@ -1,8 +1,9 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Expand } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type ReachRow } from '@/lib/reach';
 import { ReachModal } from './reach-modal';
@@ -44,6 +45,14 @@ interface Props {
 export function ReachCard({ campaignId, rows, audience }: Props) {
   const td = useTranslations('dashboard');
   const [open, setOpen] = useState(false);
+  const [cardWidth, setCardWidth] = useState<number | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  function handleOpen() {
+    const w = buttonRef.current?.getBoundingClientRect().width;
+    if (w && w > 0) setCardWidth(Math.round(w));
+    setOpen(true);
+  }
 
   // Only pinned rows render on the dashboard. If none are pinned the whole
   // card is suppressed — even with an audience set.
@@ -63,8 +72,9 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
   return (
     <>
       <motion.button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         layoutId={`reach-${campaignId}`}
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -77,9 +87,8 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
         style={{
           visibility: open ? 'hidden' : 'visible',
           background: 'var(--es-card-bg)',
-          border: '1px solid var(--es-card-border)',
         }}
-        className="block w-full rounded-[14px] p-5 text-left transition-shadow hover:shadow-[var(--shadow-md)] sm:p-6"
+        className="block w-full rounded-[14px] border border-[var(--es-card-border)] p-5 text-left transition-colors duration-200 hover:border-[var(--border-hi)] sm:p-6"
       >
         <div className="mb-3.5 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -92,32 +101,41 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
             </h3>
             {audience && (
               <p className="m-0 mt-1 flex items-baseline gap-1.5 text-[11px]">
-                <span style={{ color: 'var(--text-3)', letterSpacing: '0.02em' }}>
+                <span style={{ color: 'var(--es-text-3)', letterSpacing: '0.02em' }}>
                   {td('reachAudienceLabel')}
                 </span>
                 <span
                   className="font-medium tabular-nums"
-                  style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
+                  style={{ color: 'var(--es-text)', fontFamily: 'var(--font-mono)' }}
                 >
                   {audience}
                 </span>
               </p>
             )}
           </div>
-          {tiers.length > 0 && (
-            <span
-              className="whitespace-nowrap text-[9.5px] uppercase tracking-[0.06em]"
-              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
-            >
-              {td('reachCompletionMeta')}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {tiers.length > 0 && (
+              <span
+                className="whitespace-nowrap text-[9.5px] uppercase tracking-[0.06em]"
+                style={{ color: 'var(--es-label)', fontFamily: 'var(--font-mono)' }}
+              >
+                {td('reachCompletionMeta')}
+              </span>
+            )}
+            {/* Click affordance — kept at title brightness so the corner reads as a unit. */}
+            <Expand
+              size={13}
+              strokeWidth={2}
+              style={{ color: 'var(--es-label)' }}
+              aria-hidden="true"
+            />
+          </div>
         </div>
 
         {tiers.length === 0 ? (
           <div
             className="grid place-items-center text-[12px]"
-            style={{ color: 'var(--text-3)', minHeight: 90 }}
+            style={{ color: 'var(--es-text-3)', minHeight: 90 }}
           >
             {td('reachEmpty')}
           </div>
@@ -144,8 +162,8 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
                   <span
                     className="rounded-[5px] px-1.5 py-1 text-center text-[12px] font-semibold tabular-nums"
                     style={{
-                      background: 'var(--surface-2)',
-                      color: 'var(--text)',
+                      background: 'var(--es-card-trough)',
+                      color: 'var(--es-text)',
                       fontFamily: 'var(--font-mono)',
                     }}
                   >
@@ -154,7 +172,7 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
 
                   <div
                     className="relative h-[26px] overflow-hidden rounded-[6px]"
-                    style={{ background: 'var(--surface-2)' }}
+                    style={{ background: 'var(--es-card-trough)' }}
                     role="img"
                     aria-label={`${t.frequency}+ план ${fmtNumber(t.plan)}, факт ${fmtNumber(t.fact)}`}
                   >
@@ -163,8 +181,8 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
                       style={{
                         width: `${planPct}%`,
                         background:
-                          'repeating-linear-gradient(45deg, var(--surface-3) 0 5px, var(--border) 5px 6px)',
-                        borderRight: '1px dashed var(--text-3)',
+                          'repeating-linear-gradient(45deg, var(--es-card-stripe) 0 5px, var(--es-card-edge) 5px 6px)',
+                        borderRight: '1px dashed var(--es-text-3)',
                       }}
                     />
                     <div
@@ -178,7 +196,7 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
 
                   <span
                     className="min-w-[48px] text-right text-[12px] font-semibold tabular-nums"
-                    style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
+                    style={{ color: 'var(--es-text)', fontFamily: 'var(--font-mono)' }}
                   >
                     {fmtNumber(t.fact)}
                   </span>
@@ -204,6 +222,7 @@ export function ReachCard({ campaignId, rows, audience }: Props) {
             campaignId={campaignId}
             rows={rows}
             audience={audience}
+            cardWidth={cardWidth}
             onClose={() => setOpen(false)}
           />
         )}

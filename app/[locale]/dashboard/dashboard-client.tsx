@@ -196,15 +196,19 @@ export function DashboardClient({
         );
       })()}
 
-      {/* Efficiency strip — Reach (Охват) leading + accented metrics row (avg OTS, CPT факт, avg impressions/day) */}
-      <div className="mb-6">
+      {/* Reach (Охват) — full-width, own row, sits above the metrics strip */}
+      <div className="mb-2">
+        <ReachCard campaignId={selectedCampaignId} rows={reachEntries} audience={reachAudience} />
+      </div>
+
+      {/* Efficiency strip — accented metrics row (avg OTS, CPT факт, avg impressions/day) */}
+      <div className="mb-2">
         <EfficiencyStrip
           totalBudgetWithoutVat={kpis.totalBudgetWithoutVat}
           totalOtsPlan={kpis.totalOtsPlan}
           totalRatingFact={kpis.totalRatingFact}
           avgImpressionsPerDay={kpis.avgImpressionsPerDay}
           totalScreens={kpis.totalScreens}
-          leading={<ReachCard campaignId={selectedCampaignId} rows={reachEntries} audience={reachAudience} />}
         />
       </div>
 
@@ -215,9 +219,17 @@ export function DashboardClient({
       </div>
       */}
 
-      {/* Row: Plan vs Fact by Type + Budget by Type donut */}
+      {/* Row: Plan vs Fact by Type + Budget by Type donut. Grid switches to a
+          single column when only one of the two has data so the visible card
+          fills the row instead of leaving an empty half. */}
       {(planVsFactByType.length > 0 || budgetByType.length > 0) && (
-        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div
+          className={`mb-2 grid gap-2 ${
+            planVsFactByType.length > 0 && budgetByType.length > 0
+              ? 'grid-cols-1 lg:grid-cols-2'
+              : 'grid-cols-1'
+          }`}
+        >
           {planVsFactByType.length > 0 && (
             <PlanFactBreakdown
               title={tc('planTitle')}
@@ -233,7 +245,7 @@ export function DashboardClient({
 
       {/* Plan vs Fact by City + monthly drill-down */}
       {planVsFactByCity.length > 0 && (
-        <div className="mb-6 space-y-3">
+        <div className="mb-2 space-y-3">
           <PlanFactBreakdown
             title={tc('planCitiesTitle')}
             subtitle={tc('planCitiesSubtitle')}
@@ -262,14 +274,14 @@ export function DashboardClient({
 
       {/* Map — only when a Yandex URL has been configured for the campaign */}
       {hasYandexMap && (
-        <div className="mb-6">
+        <div className="mb-2">
           <ScreenMap screens={mapScreens} />
         </div>
       )}
 
       {/* Heatmap (Foursquare Studio) */}
       {heatmapEmbedUrl && (
-        <div className="mb-6 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)]">
+        <div className="mb-2 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)]">
           <div className="flex items-center justify-between px-6 py-4">
             <div>
               <h3 className="text-[15px] font-semibold tracking-tight">{td('heatmapTitle')}</h3>
@@ -299,13 +311,13 @@ export function DashboardClient({
       {/* "Top screens" bar — only meaningful when there's more than one
           screen to compare. A single bar isn't useful. */}
       {topScreens.length > 1 && (
-        <div className="mb-6">
+        <div className="mb-2">
           <TopScreensBar data={topScreens} />
         </div>
       )}
 
       {/* Screens Table */}
-      <div className="mb-6">
+      <div className="mb-2">
         <ScreensTable
           campaignId={selectedCampaignId}
           locale={(locale === 'en' || locale === 'uz') ? locale : 'ru'}

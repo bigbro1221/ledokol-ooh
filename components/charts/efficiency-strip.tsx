@@ -3,11 +3,6 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
-// Optional leading slot — used to drop the Reach (Охват) card into the
-// strip's grid as the first cell so it shares chrome and column sizing
-// with the metric cards.
-type LeadingSlot = ReactNode;
-
 type Gradient = 'default' | 'warm' | 'cyan' | 'blue' | 'orange' | 'green';
 
 function shortNumber(n: number): string {
@@ -29,10 +24,6 @@ interface Props {
   avgImpressionsPerDay: number | null;
   totalScreens: number;
   currency?: string;
-  // Optional leading cell rendered at the start of the strip grid. Caller
-  // is responsible for providing strip-style chrome on the node (typically
-  // a `<ReachCard>`).
-  leading?: LeadingSlot;
 }
 
 function GradientText({ children, gradient }: { children: ReactNode; gradient: Gradient }) {
@@ -55,7 +46,6 @@ export function EfficiencyStrip({
   totalBudgetWithoutVat,
   totalOtsPlan, totalRatingFact, avgImpressionsPerDay, totalScreens,
   currency = 'UZS',
-  leading,
 }: Props) {
   const t = useTranslations('charts');
   const avgOtsPerScreen = totalScreens > 0 && totalOtsPlan > 0
@@ -92,18 +82,23 @@ export function EfficiencyStrip({
     sub: t('impressionsPerDayUnit'),
   });
 
-  const totalCells = cells.length + (leading ? 1 : 0);
-  if (totalCells === 0) return null;
+  if (cells.length === 0) return null;
 
-  const colClass = totalCells <= 3
-    ? 'grid-cols-2 sm:grid-cols-3'
-    : totalCells === 4
-    ? 'grid-cols-2 sm:grid-cols-4'
-    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5';
+  // Match column count to actual cell count so cards fill the row regardless
+  // of campaign type (OTHER_CARRIERS hides avg impressions → 2 cells; SCREENS
+  // typically has 3).
+  const colClass = (() => {
+    switch (cells.length) {
+      case 1: return 'grid-cols-1';
+      case 2: return 'grid-cols-1 sm:grid-cols-2';
+      case 3: return 'grid-cols-2 sm:grid-cols-3';
+      case 4: return 'grid-cols-2 sm:grid-cols-4';
+      default: return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5';
+    }
+  })();
 
   return (
     <div className={`grid gap-2 ${colClass}`}>
-      {leading}
       {cells.map((c, i) => (
         // Label and sub render plain white; only the numeric value gets the
         // metric's gradient (warm on the middle Avg OTS card, blue elsewhere).

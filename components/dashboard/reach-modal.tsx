@@ -11,6 +11,10 @@ interface Props {
   campaignId: string;
   rows: ReachRow[];
   audience: string | null;
+  // Width of the source card at click-time, captured via getBoundingClientRect.
+  // Used so the morph only expands vertically — no horizontal box growth.
+  // Falls back to a sensible max-width on mobile / when not provided.
+  cardWidth: number | null;
   onClose: () => void;
 }
 
@@ -42,7 +46,7 @@ function fmtNumber(v: number): string {
   return v.toLocaleString('ru-RU', { maximumFractionDigits: 1 });
 }
 
-export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
+export function ReachModal({ campaignId, rows, audience, cardWidth, onClose }: Props) {
   const td = useTranslations('dashboard');
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -87,8 +91,13 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
         style={{
           background: 'var(--es-card-bg)',
           border: '1px solid var(--es-card-border)',
+          // Match the source card width exactly so the layout morph only
+          // expands vertically. `min(95vw, ...)` clamps for mobile.
+          width: cardWidth
+            ? `min(95vw, ${cardWidth}px)`
+            : 'min(95vw, 860px)',
         }}
-        className="relative flex max-h-[85vh] w-[min(95vw,860px)] flex-col overflow-hidden rounded-[14px] shadow-2xl"
+        className="relative flex max-h-[85vh] flex-col overflow-hidden rounded-[14px] shadow-2xl"
       >
         <motion.div
           initial={{ opacity: 0 }}
@@ -107,12 +116,12 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
               </h2>
               {audience && (
                 <p className="m-0 mt-1 flex items-baseline gap-1.5 text-[11px]">
-                  <span style={{ color: 'var(--text-3)', letterSpacing: '0.02em' }}>
+                  <span style={{ color: 'var(--es-text-3)', letterSpacing: '0.02em' }}>
                     {td('reachAudienceLabel')}
                   </span>
                   <span
                     className="font-medium tabular-nums"
-                    style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
+                    style={{ color: 'var(--es-text)', fontFamily: 'var(--font-mono)' }}
                   >
                     {audience}
                   </span>
@@ -123,7 +132,7 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
               {tiers.length > 0 && (
                 <span
                   className="whitespace-nowrap text-[9.5px] uppercase tracking-[0.06em]"
-                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                  style={{ color: 'var(--es-label)', fontFamily: 'var(--font-mono)' }}
                 >
                   {td('reachCompletionMeta')}
                 </span>
@@ -133,7 +142,7 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
                 data-close
                 aria-label={td('reachModalClose')}
                 onClick={onClose}
-                className="rounded-full p-1.5 text-[var(--text-3)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+                className="rounded-full p-1.5 text-[var(--es-text-3)] hover:bg-[var(--es-card-trough)] hover:text-[var(--es-text)]"
               >
                 <X size={16} strokeWidth={1.75} />
               </button>
@@ -145,7 +154,7 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
             {tiers.length === 0 ? (
               <div
                 className="grid place-items-center py-12 text-[12px]"
-                style={{ color: 'var(--text-3)' }}
+                style={{ color: 'var(--es-text-3)' }}
               >
                 {td('reachEmpty')}
               </div>
@@ -172,8 +181,8 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
                       <span
                         className="rounded-[5px] px-1.5 py-1.5 text-center text-[14px] font-semibold tabular-nums"
                         style={{
-                          background: 'var(--surface-2)',
-                          color: 'var(--text)',
+                          background: 'var(--es-card-trough)',
+                          color: 'var(--es-text)',
                           fontFamily: 'var(--font-mono)',
                         }}
                       >
@@ -182,7 +191,7 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
 
                       <div
                         className="relative h-[32px] overflow-hidden rounded-[6px]"
-                        style={{ background: 'var(--surface-2)' }}
+                        style={{ background: 'var(--es-card-trough)' }}
                         role="img"
                         aria-label={`${t.frequency}+ план ${fmtNumber(t.plan)}, факт ${fmtNumber(t.fact)}`}
                       >
@@ -191,8 +200,8 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
                           style={{
                             width: `${planPct}%`,
                             background:
-                              'repeating-linear-gradient(45deg, var(--surface-3) 0 5px, var(--border) 5px 6px)',
-                            borderRight: '1px dashed var(--text-3)',
+                              'repeating-linear-gradient(45deg, var(--es-card-stripe) 0 5px, var(--es-card-edge) 5px 6px)',
+                            borderRight: '1px dashed var(--es-text-3)',
                           }}
                         />
                         <div
@@ -206,7 +215,7 @@ export function ReachModal({ campaignId, rows, audience, onClose }: Props) {
 
                       <span
                         className="min-w-[64px] text-right text-[14px] font-semibold tabular-nums"
-                        style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
+                        style={{ color: 'var(--es-text)', fontFamily: 'var(--font-mono)' }}
                       >
                         {fmtNumber(t.fact)}
                       </span>

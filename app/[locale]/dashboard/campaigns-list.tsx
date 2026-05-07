@@ -30,8 +30,8 @@ export async function CampaignsListView({
   if (rows.length === 0) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
-        <h2 className="text-[28px] font-medium" style={{ fontFamily: 'var(--font-display)' }}>{tc('emptyTitle')}</h2>
-        <p className="mt-3 text-sm text-[var(--text-3)]">{tc('emptyHint')}</p>
+        <h2 className="text-[32px] font-medium" style={{ fontFamily: 'var(--font-display)' }}>{tc('emptyTitle')}</h2>
+        <p className="mt-3 text-base text-[var(--text-3)]">{tc('emptyHint')}</p>
       </div>
     );
   }
@@ -44,10 +44,10 @@ export async function CampaignsListView({
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-[28px] font-medium tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="text-[32px] font-medium tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
           {tc('title')}
         </h1>
-        <p className="mt-1 text-sm text-[var(--text-3)]">{tc('subtitle')}</p>
+        <p className="mt-1.5 text-base text-[var(--text-3)]">{tc('subtitle')}</p>
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">

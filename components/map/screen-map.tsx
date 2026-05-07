@@ -196,7 +196,7 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
 
   if (!TOKEN || TOKEN.includes('placeholder')) {
     return (
-      <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-6">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-[15px] font-semibold tracking-tight">Расположение экранов</h3>
@@ -213,7 +213,7 @@ export function ScreenMap({ screens }: { screens: MapScreen[] }) {
   }
 
   return (
-    <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-6">
+    <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-[15px] font-semibold tracking-tight">Расположение экранов</h3>

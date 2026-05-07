@@ -54,6 +54,13 @@
     --es-card-border:    rgba(255, 255, 255, 0.06);
     --es-label:          #FFFFFF;
     --es-sub:            #FFFFFF;
+    /* Reach card internals — also theme-locked so bars don't go light on
+       light theme. Mirrors dark theme's surface, border and text values. */
+    --es-card-trough:    #1A1A24;
+    --es-card-stripe:    #242430;
+    --es-card-edge:      #2A2A38;
+    --es-text:           #EDEDF0;
+    --es-text-3:         #6D6D75;
     /* Value gradients: each goes left → right, fading from accent to muted.
        background-clip: text + color: transparent renders the digits with the
        gradient. */
@@ -112,6 +119,11 @@
     /* Efficiency strip — identical to light for now (will diverge later) */
     --es-card-bg:        #11141C;
     --es-card-border:    rgba(255, 255, 255, 0.06);
+    --es-card-trough:    #1A1A24;
+    --es-card-stripe:    #242430;
+    --es-card-edge:      #2A2A38;
+    --es-text:           #EDEDF0;
+    --es-text-3:         #6D6D75;
     --es-label:          #FFFFFF;
     --es-sub:            #FFFFFF;
     --es-grad-default:   linear-gradient(90deg, #FFFFFF 0%, #9BF5FF 49%, #0C5DC5 100%);

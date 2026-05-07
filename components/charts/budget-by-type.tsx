@@ -27,7 +27,7 @@ export function BudgetByType({ data, total, currency = 'UZS' }: { data: Entry[];
   if (data.length === 0 || total === 0) return null;
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
       <div className="mb-6">
         <h3 className="text-[15px] font-semibold tracking-tight">{t('budgetByTypeTitle')}</h3>
         <p className="mt-0.5 text-xs text-[var(--text-3)]">{t('budgetByTypeSubtitle')}</p>
