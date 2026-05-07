@@ -79,6 +79,7 @@
     "tableUsersCount": "Users",
     "tableRole": "Role",
     "tableCompany": "Company",
+    "tableProject": "Project",
     "tableStatus": "Status",
     "tableCreated": "Created",
     "tablePeriod": "Period",

@@ -25,6 +25,7 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
   const campaigns = await prisma.campaign.findMany({
     include: {
       client: { select: { name: true } },
+      group: { select: { name: true } },
       _count: { select: { screens: true } },
     },
     orderBy: { createdAt: 'desc' },
@@ -48,6 +49,7 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
             <tr className="bg-[var(--surface-2)]">
               <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableClientName')}</th>
               <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableCompany')}</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableProject')}</th>
               <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableStatus')}</th>
               <th className="border-b border-[var(--border)] px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tablePeriod')}</th>
               <th className="border-b border-[var(--border)] px-4 py-3 text-right text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-3)]">{t('tableScreens')}</th>
@@ -62,6 +64,9 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
                   </Link>
                 </td>
                 <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-2)]">{c.client.name}</td>
+                <td className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--text-2)]">
+                  {c.group?.name ?? '—'}
+                </td>
                 <td className="border-b border-[var(--border)] px-4 py-3">
                   <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] ${STATUS_STYLES[c.status] || ''}`}>
                     {tStatus(c.status)}
@@ -77,7 +82,7 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
             ))}
             {campaigns.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
+                <td colSpan={6} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
                   {t('noCampaignsLong')}
                 </td>
               </tr>
