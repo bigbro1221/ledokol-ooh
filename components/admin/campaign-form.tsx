@@ -325,119 +325,129 @@ export function CampaignForm({ locale, clients, currencies, vatRate, initial }: 
       </div>
 
       {/* Project (CampaignGroup) */}
-      <div>
-        <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-          <input
-            type="checkbox"
-            disabled={!clientId}
-            checked={belongsToProject}
-            onChange={e => {
-              const on = e.target.checked;
-              setBelongsToProject(on);
-              if (!on) {
-                setGroupId('');
-                setCreatingProject(false);
-                setNewProjectName('');
-                setProjectSaveError(null);
-              }
-            }}
-          />
-          {tf('belongsToProject')}
-        </label>
-
-        {belongsToProject && !creatingProject && (
-          <div className="mt-2">
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-              {tf('projectLabel')}
-            </label>
-            <select
-              required
-              value={groupId}
-              onChange={e => {
-                if (e.target.value === '__create__') {
-                  setCreatingProject(true);
-                  setProjectSaveError(null);
-                } else {
-                  setGroupId(e.target.value);
-                }
-              }}
-              className={inputCls}
-            >
-              <option value="">{tf('projectPlaceholder')}</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-              <option value="__create__">{tf('projectCreateNew')}</option>
-            </select>
-          </div>
-        )}
-
-        {belongsToProject && creatingProject && (
-          <div className="mt-2 space-y-2">
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
-              {tf('projectNewName')}
-            </label>
+      <div className={`rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] p-4 ${!clientId ? 'opacity-60' : ''}`}>
+        <label className={`flex items-start gap-3 ${clientId ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+          <div className="relative mt-0.5 shrink-0">
             <input
-              autoFocus
-              value={newProjectName}
-              onChange={e => setNewProjectName(e.target.value)}
-              className={inputCls}
-              placeholder={tf('projectNewName')}
-            />
-            {projectSaveError && (
-              <p className="text-[11px] text-[var(--danger)]">{projectSaveError}</p>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={projectSaving || newProjectName.trim().length === 0}
-                onClick={async () => {
-                  setProjectSaving(true);
-                  setProjectSaveError(null);
-                  try {
-                    const res = await fetch('/api/projects', {
-                      method: 'POST',
-                      headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify({ clientId, name: newProjectName.trim() }),
-                    });
-                    if (res.status === 409) {
-                      setProjectSaveError(tf('projectExists'));
-                      return;
-                    }
-                    if (!res.ok) {
-                      setProjectSaveError(`Error ${res.status}`);
-                      return;
-                    }
-                    const created = await res.json() as { id: string; name: string };
-                    setProjects(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-                    setGroupId(created.id);
-                    setCreatingProject(false);
-                    setNewProjectName('');
-                  } catch {
-                    setProjectSaveError('Network error');
-                  } finally {
-                    setProjectSaving(false);
-                  }
-                }}
-                className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50"
-              >
-                {tf('projectSaveNew')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
+              type="checkbox"
+              className="sr-only"
+              disabled={!clientId}
+              checked={belongsToProject}
+              onChange={e => {
+                const on = e.target.checked;
+                setBelongsToProject(on);
+                if (!on) {
+                  setGroupId('');
                   setCreatingProject(false);
                   setNewProjectName('');
                   setProjectSaveError(null);
-                }}
-                className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-1.5 text-[12px]"
-              >
-                {tf('projectCancelNew')}
-              </button>
+                }
+              }}
+            />
+            <div className={`h-5 w-9 rounded-full transition-colors ${belongsToProject ? 'bg-[var(--brand-primary)]' : 'bg-[var(--surface-3)]'}`} />
+            <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${belongsToProject ? 'translate-x-4' : 'translate-x-0.5'}`} />
+          </div>
+          <div>
+            <div className="text-sm font-medium">{tf('belongsToProject')}</div>
+            <div className="mt-0.5 text-xs text-[var(--text-3)]">
+              {tf('belongsToProjectHelp')}
             </div>
           </div>
-        )}
+        </label>
       </div>
+
+      {belongsToProject && !creatingProject && (
+        <div>
+          <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+            {tf('projectLabel')}
+          </label>
+          <select
+            required
+            value={groupId}
+            onChange={e => {
+              if (e.target.value === '__create__') {
+                setCreatingProject(true);
+                setProjectSaveError(null);
+              } else {
+                setGroupId(e.target.value);
+              }
+            }}
+            className={inputCls}
+          >
+            <option value="">{tf('projectPlaceholder')}</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+            <option value="__create__">{tf('projectCreateNew')}</option>
+          </select>
+        </div>
+      )}
+
+      {belongsToProject && creatingProject && (
+        <div className="space-y-2">
+          <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
+            {tf('projectNewName')}
+          </label>
+          <input
+            autoFocus
+            value={newProjectName}
+            onChange={e => setNewProjectName(e.target.value)}
+            className={inputCls}
+            placeholder={tf('projectNewName')}
+          />
+          {projectSaveError && (
+            <p className="text-[11px] text-[var(--danger)]">{projectSaveError}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={projectSaving || newProjectName.trim().length === 0}
+              onClick={async () => {
+                setProjectSaving(true);
+                setProjectSaveError(null);
+                try {
+                  const res = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ clientId, name: newProjectName.trim() }),
+                  });
+                  if (res.status === 409) {
+                    setProjectSaveError(tf('projectExists'));
+                    return;
+                  }
+                  if (!res.ok) {
+                    setProjectSaveError(`Error ${res.status}`);
+                    return;
+                  }
+                  const created = await res.json() as { id: string; name: string };
+                  setProjects(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+                  setGroupId(created.id);
+                  setCreatingProject(false);
+                  setNewProjectName('');
+                } catch {
+                  setProjectSaveError('Network error');
+                } finally {
+                  setProjectSaving(false);
+                }
+              }}
+              className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50"
+            >
+              {tf('projectSaveNew')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCreatingProject(false);
+                setNewProjectName('');
+                setProjectSaveError(null);
+              }}
+              className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-1.5 text-[12px]"
+            >
+              {tf('projectCancelNew')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Media type */}
       <div>

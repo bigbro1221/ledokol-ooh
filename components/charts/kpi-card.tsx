@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 
+type Gradient = 'default' | 'warm' | 'cyan' | 'blue' | 'orange' | 'green';
+
 interface KPICardProps {
   label: string;
   value: string;
@@ -9,9 +11,19 @@ interface KPICardProps {
   trend?: { label: string; direction: 'up' | 'down' | 'neutral' };
   icon: ReactNode;
   delay?: number;
+  gradient?: Gradient;
 }
 
-export function KPICard({ label, value, unit, trend, icon, delay = 0 }: KPICardProps) {
+export function KPICard({ label, value, unit, trend, icon, delay = 0, gradient }: KPICardProps) {
+  const gradientStyle = gradient
+    ? {
+        backgroundImage: `var(--es-grad-${gradient})`,
+        WebkitBackgroundClip: 'text' as const,
+        backgroundClip: 'text' as const,
+        color: 'transparent',
+        WebkitTextFillColor: 'transparent' as const,
+      }
+    : undefined;
   return (
     <div
       /* mobile: <640px — tighter padding */
@@ -30,7 +42,7 @@ export function KPICard({ label, value, unit, trend, icon, delay = 0 }: KPICardP
       </div>
       {/* mobile: <640px — 24px, desktop 32px */}
       <div className="mb-1 text-[24px] font-semibold leading-tight tracking-tight sm:mb-1.5 sm:text-[32px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
-        {value}
+        <span style={gradientStyle}>{value}</span>
         {unit && <span className="ml-1 text-[13px] font-normal text-[var(--text-3)] sm:text-sm">{unit}</span>}
       </div>
       {trend && (

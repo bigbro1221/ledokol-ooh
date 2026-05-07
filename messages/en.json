@@ -177,6 +177,7 @@
     "additionalAmount": "Additional amount",
     "mediaTypeLocked": "Clear periods and financial data before changing the campaign type",
     "belongsToProject": "Part of a project",
+    "belongsToProjectHelp": "Campaigns in the same project collapse into one tile on the client dashboard",
     "projectLabel": "Project",
     "projectPlaceholder": "Choose a project…",
     "projectCreateNew": "+ Create new",
@@ -534,6 +535,7 @@
     "colOts": "OTS plan",
     "projectTileLabel": "CAMPAIGNS",
     "projectModalClose": "Close",
+    "projectExpand": "Open project",
     "projectEmpty": "No campaigns in this project yet",
     "projectChildCount": "{count, plural, =0 {no campaigns} =1 {1 campaign} other {# campaigns}}"
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { CampaignTile, type CampaignTileData } from '@/components/dashboard/campaign-tile';
 import { ProjectTile } from '@/components/dashboard/project-tile';
@@ -28,13 +29,21 @@ export function TileGrid({ rows, locale, dateFormat }: Props) {
 
   const { projects, ungrouped } = partitionCampaigns(rows);
 
-  // Combined render order: projects + ungrouped sorted together by date desc.
+  // Render order: projects + ungrouped mixed, sorted by start date desc
+  // (newest first). A project's start date is the earliest periodStart among
+  // its children — i.e. when the project actually began.
   const merged: Array<
     | { kind: 'project'; id: string; name: string; children: TileGridRow[]; date: Date }
     | { kind: 'campaign'; row: TileGridRow; date: Date }
   > = [
-    ...projects.map(p => ({ kind: 'project' as const, id: p.id, name: p.name, children: p.children, date: p.representativeDate })),
-    ...ungrouped.map(u => ({ kind: 'campaign' as const, row: u, date: u.createdAt })),
+    ...projects.map(p => {
+      const earliest = p.children.reduce<Date>(
+        (min, c) => (c.periodStart < min ? c.periodStart : min),
+        p.children[0].periodStart,
+      );
+      return { kind: 'project' as const, id: p.id, name: p.name, children: p.children, date: earliest };
+    }),
+    ...ungrouped.map(u => ({ kind: 'campaign' as const, row: u, date: u.periodStart })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   const openProject = projects.find(p => p.id === openProjectId);
@@ -45,9 +54,17 @@ export function TileGrid({ rows, locale, dateFormat }: Props) {
         {merged.map(item => item.kind === 'project' ? (
           <ProjectTile
             key={`p-${item.id}`}
+            id={item.id}
             name={item.name}
             childCount={item.children.length}
             childCountLabel={tc('projectTileLabel')}
+            childItems={item.children.map(c => ({
+              id: c.id,
+              name: c.name,
+              href: `/${locale}/dashboard?campaign=${c.id}`,
+            }))}
+            expandLabel={tc('projectExpand')}
+            isExpanded={openProjectId === item.id}
             onOpen={() => setOpenProjectId(item.id)}
           />
         ) : (
@@ -63,17 +80,21 @@ export function TileGrid({ rows, locale, dateFormat }: Props) {
         ))}
       </div>
 
-      {openProject && (
-        <ProjectModal
-          projectName={openProject.name}
-          children={openProject.children}
-          locale={locale}
-          dateFormat={dateFormat}
-          statusLabelFor={s => tStatus(s)}
-          screensLabel={tc('colScreens')}
-          onClose={() => setOpenProjectId(null)}
-        />
-      )}
+      <AnimatePresence>
+        {openProject && (
+          <ProjectModal
+            key={openProject.id}
+            projectId={openProject.id}
+            projectName={openProject.name}
+            children={openProject.children}
+            locale={locale}
+            dateFormat={dateFormat}
+            statusLabelFor={s => tStatus(s)}
+            screensLabel={tc('colScreens')}
+            onClose={() => setOpenProjectId(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

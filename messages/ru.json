@@ -177,6 +177,7 @@
     "additionalAmount": "Сумма в доп. валюте",
     "mediaTypeLocked": "Очистите периоды и финансовые данные перед сменой типа кампании",
     "belongsToProject": "Принадлежит проекту",
+    "belongsToProjectHelp": "Кампании одного проекта свернутся в одну плитку на дашборде клиента",
     "projectLabel": "Проект",
     "projectPlaceholder": "Выберите проект…",
     "projectCreateNew": "+ Создать новый",
@@ -534,6 +535,7 @@
     "colOts": "OTS план",
     "projectTileLabel": "КАМПАНИИ",
     "projectModalClose": "Закрыть",
+    "projectExpand": "Открыть проект",
     "projectEmpty": "В этом проекте пока нет кампаний",
     "projectChildCount": "{count, plural, =0 {нет кампаний} =1 {1 кампания} few {# кампании} other {# кампаний}}"
   }
