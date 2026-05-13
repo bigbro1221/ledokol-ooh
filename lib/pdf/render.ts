@@ -64,7 +64,7 @@ export async function renderCampaignPdf(opts: RenderOptions): Promise<Buffer> {
 
     const pdfOptions: PDFOptions = {
       format: 'A4',
-      margin: { top: '20mm', bottom: '20mm', left: '16mm', right: '16mm' },
+      margin: { top: '28mm', bottom: '22mm', left: '16mm', right: '16mm' },
       displayHeaderFooter: true,
       printBackground: true,
       headerTemplate: buildHeaderTemplate(opts),

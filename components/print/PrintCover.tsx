@@ -8,8 +8,7 @@ interface Props {
   status: 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'DRAFT';
   statusLabel: string;
   clientLabel: string;
-  generatedOnLabel: string;
-  generatedAt: Date;
+  generatedOnText: string;
   locale: string;
 }
 
@@ -28,7 +27,7 @@ function fmtDate(d: Date, locale: string): string {
 
 export function PrintCover({
   clientName, campaignName, periodStart, periodEnd, status, statusLabel,
-  clientLabel, generatedOnLabel, generatedAt, locale,
+  clientLabel, generatedOnText, locale,
 }: Props) {
   const s = STATUS_STYLE[status];
   return (
@@ -36,7 +35,7 @@ export function PrintCover({
       <div className="pdf-cover-logo">
         <Image src="/ledokol-logo.svg" alt="Ledokol" width={140} height={36} priority />
       </div>
-      <div className="pdf-cover-date">{generatedOnLabel.replace('{date}', fmtDate(generatedAt, locale))}</div>
+      <div className="pdf-cover-date">{generatedOnText}</div>
 
       <div className="pdf-cover-block">
         <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#999' }}>

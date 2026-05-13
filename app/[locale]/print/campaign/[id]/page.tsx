@@ -79,8 +79,7 @@ export default async function PrintCampaignPage({ params }: Params) {
         status={campaign.status}
         statusLabel={tStatus(campaign.status)}
         clientLabel={tPdf('coverClient')}
-        generatedOnLabel={tPdf('generatedOn')}
-        generatedAt={new Date()}
+        generatedOnText={tPdf('generatedOn', { date: new Date().toLocaleDateString(locale === 'en' ? 'en-US' : locale === 'uz' ? 'uz-UZ' : 'ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) })}
         locale={locale}
       />
 
