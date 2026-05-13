@@ -1,9 +1,12 @@
 /* PDF-only styles. Loaded by app/[locale]/print/campaign/[id]/page.tsx
  * via a CSS-Module-style import. Browsers print at @page A4. */
 
+/* Margins are set authoritatively by Puppeteer's page.pdf({ margin })
+ * option in lib/pdf/render.ts. We deliberately do NOT set @page margin
+ * here because Chromium occasionally honours the CSS rule over the API
+ * option, which would clip content into the printer-unsafe edge. */
 @page {
   size: A4 portrait;
-  margin: 0;
 }
 
 /* Body fills the page edge to edge; sections add their own padding so the
