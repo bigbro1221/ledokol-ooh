@@ -1,11 +1,17 @@
 import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
 
-type CampaignDetailInclude = ReturnType<typeof buildInclude>;
-type CampaignDetailReturn = Prisma.CampaignGetPayload<{ include: CampaignDetailInclude }>;
+type CampaignDetailSelect = ReturnType<typeof buildSelect>;
+type CampaignDetailReturn = Prisma.CampaignGetPayload<{ select: CampaignDetailSelect }>;
 
-function buildInclude(screenWhere: Prisma.ScreenWhereInput | undefined) {
+function buildSelect(screenWhere: Prisma.ScreenWhereInput | undefined) {
   return {
+    id: true, name: true, status: true,
+    periodStart: true, periodEnd: true,
+    splitByPeriods: true, mediaType: true,
+    totalBudgetUzs: true, totalFinal: true,
+    heatmapUrl: true, reportsUrl: true, yandexMapUrl: true,
+    targetAudience: true,
     client: { select: { name: true } },
     periods: {
       select: { id: true, name: true, totalBudgetUzs: true, totalFinal: true, periodStart: true, periodEnd: true },
@@ -39,9 +45,8 @@ function buildInclude(screenWhere: Prisma.ScreenWhereInput | undefined) {
  * Loads a campaign with everything dashboard + print routes need.
  * Returns null if the campaign doesn't exist or the user can't access it.
  *
- * `screenWhere` is the optional filter applied by URL search params
- * (city/type/period). Pass undefined for the unfiltered version (PDF
- * route always passes undefined).
+ * Pass `screenWhere` to apply URL-filter-style screen scoping (city / type /
+ * period). Pass `undefined` to fetch all screens unfiltered.
  */
 export async function getCampaignForDashboard(
   campaignId: string,
@@ -50,7 +55,7 @@ export async function getCampaignForDashboard(
 ): Promise<CampaignDetailReturn | null> {
   return prisma.campaign.findFirst({
     where: { id: campaignId, ...userScope.clientFilter },
-    include: buildInclude(screenWhere),
+    select: buildSelect(screenWhere),
   });
 }
 
