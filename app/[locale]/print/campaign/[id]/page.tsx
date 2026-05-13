@@ -6,6 +6,9 @@ import {
   totalsForCampaign,
   buildMonthlyRows,
   buildPlanFactByType,
+  buildCityRows,
+  buildTypeSlices,
+  buildTopScreens,
 } from '@/lib/campaign-detail';
 import type { Prisma } from '@prisma/client';
 import { PrintCover } from '@/components/print/PrintCover';
@@ -16,6 +19,9 @@ import { PrintEfficiency } from '@/components/print/PrintEfficiency';
 import { PrintReach } from '@/components/print/PrintReach';
 import { PrintMonthlyChart } from '@/components/print/PrintMonthlyChart';
 import { PrintPlanFactBars } from '@/components/print/PrintPlanFactBars';
+import { PrintCityBars } from '@/components/print/PrintCityBars';
+import { PrintTypeDonut } from '@/components/print/PrintTypeDonut';
+import { PrintTopScreens } from '@/components/print/PrintTopScreens';
 import '../../print.css';
 
 export const dynamic = 'force-dynamic';
@@ -52,6 +58,10 @@ export default async function PrintCampaignPage({ params }: Params) {
 
   const monthly = buildMonthlyRows(campaign);
   const planFactByType = buildPlanFactByType(campaign, typeLabels);
+  const cityRows = buildCityRows(campaign);
+  const typeSlices = buildTypeSlices(campaign, typeLabels);
+  const topScreens = buildTopScreens(campaign, 10);
+  const hasBreakdown = planFactByType.length > 0 || cityRows.length > 0 || typeSlices.length > 0;
 
   return (
     <div className="pdf-root">
@@ -106,13 +116,29 @@ export default async function PrintCampaignPage({ params }: Params) {
           </PrintSection>
         )}
 
-        {planFactByType.length > 0 && (
+        {hasBreakdown && (
           <PrintSection title={tPdf('section.breakdown')}>
-            <PrintPlanFactBars
-              rows={planFactByType}
-              planLabel={tDash('reachPlanLabel')}
-              factLabel={tDash('reachFactLabel')}
-            />
+            {planFactByType.length > 0 && (
+              <PrintPlanFactBars
+                rows={planFactByType}
+                planLabel={tDash('reachPlanLabel')}
+                factLabel={tDash('reachFactLabel')}
+              />
+            )}
+            {(cityRows.length > 0 || typeSlices.length > 0) && (
+              <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                {cityRows.length > 0 && (
+                  <PrintCityBars rows={cityRows} label={tDash('reachPlanLabel')} />
+                )}
+                {typeSlices.length > 0 && <PrintTypeDonut slices={typeSlices} />}
+              </div>
+            )}
+          </PrintSection>
+        )}
+
+        {topScreens.length > 0 && (
+          <PrintSection title={tPdf('section.topScreens')}>
+            <PrintTopScreens rows={topScreens} label={tDash('reachPlanLabel')} />
           </PrintSection>
         )}
       </div>
