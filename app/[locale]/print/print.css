@@ -50,19 +50,21 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Cover-specific layout — full-bleed inside the @page margins */
+/* Cover-specific layout — sized to the page CONTENT area (after Puppeteer
+ * margins), not the full A4 sheet. Hardcoding height: 297mm would overflow
+ * into page 2 because the actual content area is smaller. 100vh in
+ * Chromium's print mode = the printable height. */
 .pdf-cover {
   page-break-after: always;
-  height: 297mm;
-  width: 210mm;
-  padding: 20mm 16mm;
+  min-height: 100vh;
   position: relative;
+  padding: 0;
   box-sizing: border-box;
 }
-.pdf-cover-logo { position: absolute; top: 20mm; left: 16mm; }
-.pdf-cover-date { position: absolute; top: 20mm; right: 16mm; font-size: 11px; color: #999; }
-.pdf-cover-block { position: absolute; top: 40%; left: 16mm; right: 16mm; }
-.pdf-cover-footer { position: absolute; bottom: 20mm; left: 16mm; right: 16mm; font-size: 10px; color: #999; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 3mm; }
+.pdf-cover-logo { position: absolute; top: 0; left: 0; }
+.pdf-cover-date { position: absolute; top: 0; right: 0; font-size: 11px; color: #999; }
+.pdf-cover-block { position: absolute; top: 40%; left: 0; right: 0; }
+.pdf-cover-footer { position: absolute; bottom: 0; left: 0; right: 0; font-size: 10px; color: #999; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 3mm; }
 
 /* Screens table — print scale */
 .pdf-screens-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 8mm; }
