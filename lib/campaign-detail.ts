@@ -216,3 +216,131 @@ export function buildTopScreens(
     .sort((a, b) => b.ots - a.ots)
     .slice(0, limit);
 }
+
+// ---------------------------------------------------------------------------
+// Print-focused aggregators. These intentionally do NOT honour dashboard URL
+// filters — print routes always export the whole campaign.
+// ---------------------------------------------------------------------------
+
+/** Distinct (trimmed) city count across all screens. */
+export function citiesCount(c: DashboardCampaign): number {
+  return new Set(c.screens.map(s => s.city.trim())).size;
+}
+
+/**
+ * Headline budget "including AK & VAT". Mirrors the dashboard's manualBudget
+ * resolution but without filter scaling.
+ *   1. campaign.totalFinal           (campaign-level override wins)
+ *   2. Σ periods[].totalFinal ?? totalBudgetUzs
+ *   3. Σ screenPriceTotal(screen)    (fallback — what the spreadsheet says)
+ */
+export function budgetWithFees(c: DashboardCampaign): number {
+  if (c.totalFinal) return Number(c.totalFinal);
+  const periodsSum = c.periods.reduce((s, p) => {
+    if (p.totalFinal) return s + Number(p.totalFinal);
+    if (p.totalBudgetUzs) return s + Number(p.totalBudgetUzs);
+    return s;
+  }, 0);
+  if (periodsSum > 0) return periodsSum;
+  return c.screens.reduce((s, sc) => s + screenPriceTotal(sc), 0);
+}
+
+/** Average OTS plan per surface. Returns 0 when there are no screens. */
+export function avgOtsPerSurface(c: DashboardCampaign): number {
+  const total = c.screens.reduce(
+    (s, sc) => s + sc.metrics.reduce((m, x) => m + (x.otsPlan ?? 0), 0),
+    0,
+  );
+  return c.screens.length > 0 ? total / c.screens.length : 0;
+}
+
+/**
+ * Average daily impressions across screens that have a value. Picks the
+ * latest non-null impressionsPerDay per screen (matches the dashboard's
+ * "latest flight wins" rule, see app/[locale]/dashboard/page.tsx ~L208).
+ */
+export function avgImpressionsPerDay(c: DashboardCampaign): number | null {
+  const perScreen: number[] = [];
+  for (const sc of c.screens) {
+    const vals = sc.metrics
+      .map(m => m.impressionsPerDay)
+      .filter((v): v is number => v != null && v > 0);
+    if (vals.length > 0) perScreen.push(vals[vals.length - 1]);
+  }
+  if (perScreen.length === 0) return null;
+  return Math.round(perScreen.reduce((s, v) => s + v, 0) / perScreen.length);
+}
+
+/**
+ * CPT факт — cost-per-thousand on fact ratings. Returns null when there's no
+ * fact rating recorded yet. Mirrors the SCREENS branch of the dashboard calc
+ * (see app/[locale]/dashboard/page.tsx ~L252-268):
+ *   budget without VAT = Σ (priceTotal + agencyFeeAmt)
+ * For OTHER_CARRIERS campaigns the dashboard reads campaign.totalBudgetUzs;
+ * since SCREENS is the dominant case for this print page we follow the same
+ * priceTotal+agencyFeeAmt path for both. If a future OTHER_CARRIERS variant
+ * needs distinct logic, branch on c.mediaType here.
+ */
+export function cptFact(c: DashboardCampaign): number | null {
+  const totalRatingFact = c.screens.reduce(
+    (s, sc) =>
+      s + sc.metrics.reduce((m, x) => m + (x.ratingFact ? Number(x.ratingFact) : 0), 0),
+    0,
+  );
+  if (totalRatingFact === 0) return null;
+  const budgetWithoutVat = c.screens.reduce(
+    (s, sc) =>
+      s + sc.pricing.reduce((ps, p) => {
+        const base = p.priceTotal ? Number(p.priceTotal) : 0;
+        const ak = p.agencyFeeAmt ? Number(p.agencyFeeAmt) : 0;
+        return ps + base + ak;
+      }, 0),
+    0,
+  );
+  return Math.round(budgetWithoutVat / totalRatingFact);
+}
+
+/**
+ * Budget aggregated by screen type. Each row has the (optionally translated)
+ * type label, total budget in UZS, and its share of the campaign total.
+ * Sorted by budget desc.
+ */
+export function buildBudgetByType(
+  c: DashboardCampaign,
+  typeLabels?: Record<string, string>,
+): { name: string; budget: number; share: number }[] {
+  const byType: Record<string, number> = {};
+  for (const sc of c.screens) {
+    const code = sc.screenType.code;
+    byType[code] = (byType[code] ?? 0) + screenPriceTotal(sc);
+  }
+  const total = Object.values(byType).reduce((s, v) => s + v, 0);
+  return Object.entries(byType)
+    .filter(([, v]) => v > 0)
+    .map(([code, budget]) => ({
+      name: typeLabels?.[code] ?? code,
+      budget,
+      share: total > 0 ? budget / total : 0,
+    }))
+    .sort((a, b) => b.budget - a.budget);
+}
+
+/**
+ * Plan vs fact OTS aggregated per city. Sorted by plan desc.
+ */
+export function buildCityPlanFact(
+  c: DashboardCampaign,
+): { city: string; plan: number; fact: number }[] {
+  const byCity: Record<string, { plan: number; fact: number }> = {};
+  for (const sc of c.screens) {
+    const city = sc.city.trim();
+    if (!byCity[city]) byCity[city] = { plan: 0, fact: 0 };
+    for (const m of sc.metrics) {
+      byCity[city].plan += m.otsPlan ?? 0;
+      byCity[city].fact += m.otsFact ?? 0;
+    }
+  }
+  return Object.entries(byCity)
+    .map(([city, v]) => ({ city, plan: v.plan, fact: v.fact }))
+    .sort((a, b) => b.plan - a.plan);
+}
