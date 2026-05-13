@@ -574,6 +574,7 @@
     "exportTimeout": "PDF создаётся слишком долго. Попробуйте позже.",
     "generatedOn": "Сгенерировано {date}",
     "coverClient": "Клиент",
+    "otsFact": "OTS факт",
     "pageOf": "{n} из {total}",
     "section": {
       "summary": "Сводка",

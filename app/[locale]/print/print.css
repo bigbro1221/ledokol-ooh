@@ -17,11 +17,10 @@
 }
 
 .pdf-page {
-  page-break-after: always;
-  padding: 14mm;
+  padding: 16mm;
   min-height: calc(297mm - 40mm);
 }
-.pdf-page:last-child { page-break-after: auto; }
+.pdf-page + .pdf-page { page-break-before: always; }
 
 .pdf-section {
   break-inside: avoid;
@@ -56,7 +55,7 @@
 .pdf-cover-logo { position: absolute; top: 20mm; left: 16mm; }
 .pdf-cover-date { position: absolute; top: 20mm; right: 16mm; font-size: 11px; color: #999; }
 .pdf-cover-block { position: absolute; top: 40%; left: 16mm; right: 16mm; }
-.pdf-cover-footer { position: absolute; bottom: 16mm; left: 16mm; right: 16mm; font-size: 10px; color: #999; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 3mm; }
+.pdf-cover-footer { position: absolute; bottom: 20mm; left: 16mm; right: 16mm; font-size: 10px; color: #999; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 3mm; }
 
 /* Screens table — print scale */
 .pdf-screens-table { width: 100%; border-collapse: collapse; font-size: 9px; }

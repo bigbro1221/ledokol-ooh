@@ -574,6 +574,7 @@
     "exportTimeout": "PDF generation took too long. Please try again.",
     "generatedOn": "Generated {date}",
     "coverClient": "Client",
+    "otsFact": "OTS fact",
     "pageOf": "{n} of {total}",
     "section": {
       "summary": "Summary",

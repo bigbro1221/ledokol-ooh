@@ -574,6 +574,7 @@
     "exportTimeout": "PDF yaratish juda uzoq davom etdi. Keyinroq urinib ko'ring.",
     "generatedOn": "{date} sanasida yaratilgan",
     "coverClient": "Mijoz",
+    "otsFact": "OTS fakt",
     "pageOf": "{n} / {total}",
     "section": {
       "summary": "Umumiy",

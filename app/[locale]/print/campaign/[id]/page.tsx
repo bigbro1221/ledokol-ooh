@@ -51,7 +51,8 @@ export default async function PrintCampaignPage({ params }: Params) {
   const tPdf = await getTranslations({ locale, namespace: 'pdf' });
   const tStatus = await getTranslations({ locale, namespace: 'campaignStatus' });
   const tDash = await getTranslations({ locale, namespace: 'dashboard' });
-  const tUpload = await getTranslations({ locale, namespace: 'upload' });
+  const tCp = await getTranslations({ locale, namespace: 'campaignsPage' });
+  const tUa = await getTranslations({ locale, namespace: 'uploadAdmin' });
   const tTypes = await getTranslations({ locale, namespace: 'screenTypes' });
   const typeLabels: Record<string, string> = {
     LED: tTypes('LEDscreens'),
@@ -86,10 +87,10 @@ export default async function PrintCampaignPage({ params }: Params) {
       <div className="pdf-page">
         <PrintSection title={tPdf('section.summary')}>
           <PrintKpiStrip cells={[
-            { label: tDash('kpiTotalBudget'),  value: fmtBig(totals.totalBudget),  unit: 'UZS' },
-            { label: tDash('kpiTotalScreens'), value: totals.totalScreens.toLocaleString('ru-RU'), unit: tDash('kpiScreensUnit') },
-            { label: tDash('kpiTotalOts'),     value: fmtBig(totals.otsPlan),      unit: tDash('kpiOtsUnit') },
-            { label: 'OTS Fact',               value: fmtBig(totals.otsFact),      unit: tDash('kpiOtsUnit') },
+            { label: tCp('kpiTotalBudget'),  value: fmtBig(totals.totalBudget),  unit: 'UZS' },
+            { label: tCp('kpiTotalScreens'), value: totals.totalScreens.toLocaleString('ru-RU'), unit: tCp('kpiScreensUnit') },
+            { label: tCp('kpiTotalOts'),     value: fmtBig(totals.otsPlan),      unit: tCp('kpiOtsUnit') },
+            { label: tPdf('otsFact'),        value: fmtBig(totals.otsFact),      unit: tCp('kpiOtsUnit') },
           ]} />
         </PrintSection>
 
@@ -156,13 +157,13 @@ export default async function PrintCampaignPage({ params }: Params) {
             campaign={campaign}
             labels={{
               rowNum: '#',
-              type: tUpload('colType'),
-              city: tUpload('colCity'),
-              address: tUpload('colAddress'),
+              type: tUa('colType'),
+              city: tUa('colCity'),
+              address: tUa('colAddress'),
               otsPlan: tDash('reachPlanLabel'),
               otsFact: tDash('reachFactLabel'),
-              size: tUpload('colSize'),
-              impPerDay: tUpload('colImpressions'),
+              size: tUa('colSize'),
+              impPerDay: tUa('colImpressions'),
             }}
           />
         </PrintSection>
