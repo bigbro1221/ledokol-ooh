@@ -24,6 +24,7 @@ import { PrintCityBars } from '@/components/print/PrintCityBars';
 import { PrintTypeDonut } from '@/components/print/PrintTypeDonut';
 import { PrintTopScreens } from '@/components/print/PrintTopScreens';
 import { PrintCreatives } from '@/components/print/PrintCreatives';
+import { PrintScreensTable } from '@/components/print/PrintScreensTable';
 import '../../print.css';
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +51,7 @@ export default async function PrintCampaignPage({ params }: Params) {
   const tPdf = await getTranslations({ locale, namespace: 'pdf' });
   const tStatus = await getTranslations({ locale, namespace: 'campaignStatus' });
   const tDash = await getTranslations({ locale, namespace: 'dashboard' });
+  const tUpload = await getTranslations({ locale, namespace: 'upload' });
   const tTypes = await getTranslations({ locale, namespace: 'screenTypes' });
   const typeLabels: Record<string, string> = {
     LED: tTypes('LEDscreens'),
@@ -147,6 +149,22 @@ export default async function PrintCampaignPage({ params }: Params) {
 
         <PrintSection title={tPdf('section.creatives')}>
           <PrintCreatives creatives={creatives} openLabel={tPdf('creativePlay')} />
+        </PrintSection>
+
+        <PrintSection title={tPdf('section.screens')}>
+          <PrintScreensTable
+            campaign={campaign}
+            labels={{
+              rowNum: '#',
+              type: tUpload('colType'),
+              city: tUpload('colCity'),
+              address: tUpload('colAddress'),
+              otsPlan: tDash('reachPlanLabel'),
+              otsFact: tDash('reachFactLabel'),
+              size: tUpload('colSize'),
+              impPerDay: tUpload('colImpressions'),
+            }}
+          />
         </PrintSection>
       </div>
 
