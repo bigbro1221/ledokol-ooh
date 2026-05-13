@@ -1,7 +1,12 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/lib/auth';
-import { getCampaignForDashboard, totalsForCampaign } from '@/lib/campaign-detail';
+import {
+  getCampaignForDashboard,
+  totalsForCampaign,
+  buildMonthlyRows,
+  buildPlanFactByType,
+} from '@/lib/campaign-detail';
 import type { Prisma } from '@prisma/client';
 import { PrintCover } from '@/components/print/PrintCover';
 import { PrintReadyFlag } from '@/components/print/PrintReadyFlag';
@@ -9,6 +14,8 @@ import { PrintSection } from '@/components/print/PrintSection';
 import { PrintKpiStrip, fmtBig } from '@/components/print/PrintKpiStrip';
 import { PrintEfficiency } from '@/components/print/PrintEfficiency';
 import { PrintReach } from '@/components/print/PrintReach';
+import { PrintMonthlyChart } from '@/components/print/PrintMonthlyChart';
+import { PrintPlanFactBars } from '@/components/print/PrintPlanFactBars';
 import '../../print.css';
 
 export const dynamic = 'force-dynamic';
@@ -34,6 +41,17 @@ export default async function PrintCampaignPage({ params }: Params) {
   const tPdf = await getTranslations({ locale, namespace: 'pdf' });
   const tStatus = await getTranslations({ locale, namespace: 'campaignStatus' });
   const tDash = await getTranslations({ locale, namespace: 'dashboard' });
+  const tTypes = await getTranslations({ locale, namespace: 'screenTypes' });
+  const typeLabels: Record<string, string> = {
+    LED: tTypes('LEDscreens'),
+    STATIC: tTypes('STATIC'),
+    STOP: tTypes('STOPLed'),
+    AIRPORT: tTypes('AIRPORT'),
+    BUS: tTypes('BUS'),
+  };
+
+  const monthly = buildMonthlyRows(campaign);
+  const planFactByType = buildPlanFactByType(campaign, typeLabels);
 
   return (
     <div className="pdf-root">
@@ -77,6 +95,26 @@ export default async function PrintCampaignPage({ params }: Params) {
             factLabel={tDash('reachFactLabel')}
           />
         </PrintSection>
+
+        {monthly.length > 0 && (
+          <PrintSection title={tPdf('section.monthly')}>
+            <PrintMonthlyChart
+              rows={monthly}
+              planLabel={tDash('reachPlanLabel')}
+              factLabel={tDash('reachFactLabel')}
+            />
+          </PrintSection>
+        )}
+
+        {planFactByType.length > 0 && (
+          <PrintSection title={tPdf('section.breakdown')}>
+            <PrintPlanFactBars
+              rows={planFactByType}
+              planLabel={tDash('reachPlanLabel')}
+              factLabel={tDash('reachFactLabel')}
+            />
+          </PrintSection>
+        )}
       </div>
 
       <PrintReadyFlag />

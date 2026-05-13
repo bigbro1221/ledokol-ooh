@@ -89,3 +89,104 @@ export function totalsForCampaign(c: DashboardCampaign): {
   const totalBudget = c.screens.reduce((sum, s) => sum + screenPriceTotal(s), 0);
   return { totalBudget, totalScreens, otsPlan, otsFact };
 }
+
+// ---------------------------------------------------------------------------
+// Row-shape builders shared by the dashboard and the print/PDF route. These
+// always operate on the WHOLE campaign — they intentionally do NOT honour the
+// dashboard's URL filters (city / type / selected periods). Callers that need
+// filtering should pass a pre-filtered campaign via the `screenWhere` arg of
+// `getCampaignForDashboard`, or filter the resulting rows themselves.
+// ---------------------------------------------------------------------------
+
+/**
+ * Flat per-period plan/fact totals across the whole campaign. Returns one row
+ * per `CampaignPeriod` (in chronological order, as stored on the campaign).
+ * Periods with no recorded plan or fact are omitted.
+ */
+export function buildMonthlyRows(c: DashboardCampaign): { label: string; plan: number; fact: number }[] {
+  if (!c.splitByPeriods || c.periods.length === 0) return [];
+  const totals: Record<string, { plan: number; fact: number }> = {};
+  for (const s of c.screens) {
+    for (const m of s.metrics) {
+      if (!m.periodId) continue;
+      if (!totals[m.periodId]) totals[m.periodId] = { plan: 0, fact: 0 };
+      totals[m.periodId].plan += m.otsPlan ?? 0;
+      totals[m.periodId].fact += m.otsFact ?? 0;
+    }
+  }
+  return c.periods
+    .filter(p => totals[p.id] && (totals[p.id].plan > 0 || totals[p.id].fact > 0))
+    .map(p => ({ label: p.name, plan: totals[p.id].plan, fact: totals[p.id].fact }));
+}
+
+/**
+ * Plan/Fact totals grouped by screen type code. Pass `typeLabels` to translate
+ * the raw codes (LED, STATIC, …) into human labels; omit to get the raw codes
+ * as `name`. Result is sorted by plan desc and rows with `plan === 0` filtered.
+ */
+export function buildPlanFactByType(
+  c: DashboardCampaign,
+  typeLabels?: Record<string, string>,
+): { name: string; plan: number; fact: number }[] {
+  const map: Record<string, { plan: number; fact: number }> = {};
+  for (const s of c.screens) {
+    const key = s.screenType.code;
+    if (!map[key]) map[key] = { plan: 0, fact: 0 };
+    map[key].plan += s.metrics.reduce((ms, m) => ms + (m.otsPlan ?? 0), 0);
+    map[key].fact += s.metrics.reduce((ms, m) => ms + (m.otsFact ?? 0), 0);
+  }
+  return Object.entries(map)
+    .map(([code, v]) => ({ name: typeLabels?.[code] ?? code, plan: v.plan, fact: v.fact }))
+    .filter(d => d.plan > 0)
+    .sort((a, b) => b.plan - a.plan);
+}
+
+/**
+ * City rows sorted by OTS plan desc.
+ */
+export function buildCityRows(c: DashboardCampaign): { city: string; screens: number; ots: number }[] {
+  const map: Record<string, { screens: number; ots: number }> = {};
+  for (const s of c.screens) {
+    const city = s.city.trim();
+    if (!map[city]) map[city] = { screens: 0, ots: 0 };
+    map[city].screens++;
+    map[city].ots += s.metrics.reduce((ms, m) => ms + (m.otsPlan ?? 0), 0);
+  }
+  return Object.entries(map)
+    .map(([city, d]) => ({ city, screens: d.screens, ots: d.ots }))
+    .sort((a, b) => b.ots - a.ots);
+}
+
+/**
+ * Donut slices grouped by screen type, weighted by total OTS plan. Pass
+ * `typeLabels` to translate codes into human labels.
+ */
+export function buildTypeSlices(
+  c: DashboardCampaign,
+  typeLabels?: Record<string, string>,
+): { name: string; value: number }[] {
+  const map: Record<string, number> = {};
+  for (const s of c.screens) {
+    const code = s.screenType.code;
+    const ots = s.metrics.reduce((ms, m) => ms + (m.otsPlan ?? 0), 0);
+    map[code] = (map[code] ?? 0) + ots;
+  }
+  return Object.entries(map)
+    .filter(([, v]) => v > 0)
+    .map(([code, v]) => ({ name: typeLabels?.[code] ?? code, value: v }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * Top N screens by OTS plan (desc). Screens with zero plan are dropped.
+ */
+export function buildTopScreens(
+  c: DashboardCampaign,
+  limit = 10,
+): { address: string; ots: number }[] {
+  return c.screens
+    .map(s => ({ address: s.address, ots: s.metrics.reduce((ms, m) => ms + (m.otsPlan ?? 0), 0) }))
+    .filter(s => s.ots > 0)
+    .sort((a, b) => b.ots - a.ots)
+    .slice(0, limit);
+}
