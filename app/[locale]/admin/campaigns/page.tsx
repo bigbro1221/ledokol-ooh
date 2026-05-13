@@ -28,7 +28,7 @@ export default async function CampaignsPage({ params }: { params: Promise<{ loca
       group: { select: { name: true } },
       _count: { select: { screens: true } },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ periodStart: 'desc' }, { createdAt: 'desc' }],
   });
 
   return (

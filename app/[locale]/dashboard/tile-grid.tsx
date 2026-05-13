@@ -62,6 +62,8 @@ export function TileGrid({ rows, locale, dateFormat }: Props) {
               id: c.id,
               name: c.name,
               href: `/${locale}/dashboard?campaign=${c.id}`,
+              status: c.status,
+              statusLabel: tStatus(c.status),
             }))}
             expandLabel={tc('projectExpand')}
             isExpanded={openProjectId === item.id}

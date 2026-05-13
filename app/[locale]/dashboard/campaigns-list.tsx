@@ -20,11 +20,14 @@ export async function CampaignsListView({
   rows,
   locale,
   dateFormat,
+  userRole,
 }: {
   rows: Row[];
   locale: string;
   dateFormat: DateFormat;
+  userRole: string;
 }) {
+  const showKpis = userRole !== 'ADMIN';
   const tc = await getTranslations({ locale, namespace: 'campaignsPage' });
 
   if (rows.length === 0) {
@@ -50,12 +53,14 @@ export async function CampaignsListView({
         <p className="mt-1.5 text-base text-[var(--text-3)]">{tc('subtitle')}</p>
       </div>
 
-      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label={tc('kpiTotalBudget')} value={fmtBig(totalBudget)} unit="UZS" icon={<Banknote size={16} strokeWidth={1.5} />} gradient="warm" />
-        <KPICard label={tc('kpiTotalScreens')} value={totalScreens.toLocaleString('ru-RU')} unit={tc('kpiScreensUnit')} icon={<LayoutGrid size={16} strokeWidth={1.5} />} gradient="default" />
-        <KPICard label={tc('kpiTotalOts')} value={fmtBig(totalOts)} unit={tc('kpiOtsUnit')} icon={<Eye size={16} strokeWidth={1.5} />} gradient="warm" />
-        <KPICard label={tc('kpiActiveCampaigns')} value={activeCount.toLocaleString('ru-RU')} unit={tc('kpiActiveUnit')} icon={<MapPin size={16} strokeWidth={1.5} />} gradient="default" />
-      </div>
+      {showKpis && (
+        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KPICard label={tc('kpiTotalBudget')} value={fmtBig(totalBudget)} unit="UZS" icon={<Banknote size={16} strokeWidth={1.5} />} gradient="warm" />
+          <KPICard label={tc('kpiTotalScreens')} value={totalScreens.toLocaleString('ru-RU')} unit={tc('kpiScreensUnit')} icon={<LayoutGrid size={16} strokeWidth={1.5} />} gradient="default" />
+          <KPICard label={tc('kpiTotalOts')} value={fmtBig(totalOts)} unit={tc('kpiOtsUnit')} icon={<Eye size={16} strokeWidth={1.5} />} gradient="warm" />
+          <KPICard label={tc('kpiActiveCampaigns')} value={activeCount.toLocaleString('ru-RU')} unit={tc('kpiActiveUnit')} icon={<MapPin size={16} strokeWidth={1.5} />} gradient="default" />
+        </div>
+      )}
 
       <TileGrid rows={rows} locale={locale} dateFormat={dateFormat} />
     </div>

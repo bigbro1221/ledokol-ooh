@@ -8,7 +8,16 @@ interface ChildItem {
   id: string;
   name: string;
   href: string;
+  status: string;
+  statusLabel: string;
 }
+
+const STATUS_CLASS: Record<string, string> = {
+  ACTIVE:    'bg-[rgba(16,185,129,0.12)] text-[var(--success)]',
+  PAUSED:    'bg-[rgba(234,179,8,0.12)]  text-[var(--warning)]',
+  COMPLETED: 'bg-[var(--surface-3)]      text-[var(--text-3)]',
+  DRAFT:     'bg-[var(--surface-3)]      text-[var(--text-3)]',
+};
 
 interface Props {
   id: string;
@@ -82,15 +91,20 @@ export function ProjectTile({
           style={{ scrollbarWidth: 'none' }}
         >
           {childItems.map(c => (
-            <li key={c.id} className="truncate text-[14px]">
+            <li key={c.id} className="flex items-center justify-between gap-2 text-[14px]">
               <Link
                 href={c.href}
                 onClick={e => e.stopPropagation()}
-                className="text-[var(--text-2)] transition-colors hover:text-[var(--brand-primary)]"
+                className="min-w-0 flex-1 truncate text-[var(--text-2)] transition-colors hover:text-[var(--brand-primary)]"
               >
                 <span className="mr-1.5 text-[var(--brand-primary)]">·</span>
                 {c.name}
               </Link>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] ${STATUS_CLASS[c.status] ?? STATUS_CLASS.DRAFT}`}
+              >
+                {c.statusLabel}
+              </span>
             </li>
           ))}
         </ul>

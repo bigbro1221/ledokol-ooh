@@ -53,7 +53,7 @@ export default async function DashboardPage({
   const allCampaigns = await prisma.campaign.findMany({
     where: { ...clientFilter, status: { not: 'DRAFT' } },
     select: { id: true, name: true, status: true, periodStart: true, periodEnd: true, client: { select: { name: true } }, groupId: true, group: { select: { id: true, name: true } } },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ periodStart: 'desc' }, { createdAt: 'desc' }],
   });
 
   // List view: when no campaign is selected via ?campaign=…, render the
@@ -83,7 +83,7 @@ export default async function DashboardPage({
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ periodStart: 'desc' }, { createdAt: 'desc' }],
     });
     const listPrefs = await getUserPreferences(session.user.id);
     const listDateFormat = listPrefs.dateFormat.toLowerCase() as DateFormat;
@@ -112,7 +112,7 @@ export default async function DashboardPage({
         createdAt: c.createdAt,
       };
     });
-    return <CampaignsListView rows={rows} locale={locale} dateFormat={listDateFormat} />;
+    return <CampaignsListView rows={rows} locale={locale} dateFormat={listDateFormat} userRole={session.user.role} />;
   }
 
   const selectedId = allCampaigns.some(c => c.id === campaignIdParam) ? campaignIdParam : null;
