@@ -7,6 +7,8 @@ import { PrintCover } from '@/components/print/PrintCover';
 import { PrintReadyFlag } from '@/components/print/PrintReadyFlag';
 import { PrintSection } from '@/components/print/PrintSection';
 import { PrintKpiStrip, fmtBig } from '@/components/print/PrintKpiStrip';
+import { PrintEfficiency } from '@/components/print/PrintEfficiency';
+import { PrintReach } from '@/components/print/PrintReach';
 import '../../print.css';
 
 export const dynamic = 'force-dynamic';
@@ -56,6 +58,24 @@ export default async function PrintCampaignPage({ params }: Params) {
             { label: tDash('kpiTotalOts'),     value: fmtBig(totals.otsPlan),      unit: tDash('kpiOtsUnit') },
             { label: 'OTS Fact',               value: fmtBig(totals.otsFact),      unit: tDash('kpiOtsUnit') },
           ]} />
+        </PrintSection>
+
+        <PrintSection title={tPdf('section.efficiency')}>
+          <PrintEfficiency
+            otsPlan={totals.otsPlan}
+            otsFact={totals.otsFact}
+            label={{
+              plan: tDash('reachPlanLabel'),
+              fact: tDash('reachFactLabel'),
+              completion: tDash('reachCompletionMeta'),
+            }}
+          />
+          <div style={{ height: 10 }} />
+          <PrintReach
+            entries={campaign.reachEntries.filter(e => e.pinned).map(e => ({ n: e.n, plan: e.plan, fact: e.fact }))}
+            planLabel={tDash('reachPlanLabel')}
+            factLabel={tDash('reachFactLabel')}
+          />
         </PrintSection>
       </div>
 
