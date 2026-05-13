@@ -566,5 +566,24 @@
     "projectExpand": "Loyihani ochish",
     "projectEmpty": "Ushbu loyihada hali kampaniyalar yo'q",
     "projectChildCount": "{count, plural, =0 {kampaniya yo'q} =1 {1 ta kampaniya} other {# ta kampaniya}}"
+  },
+  "pdf": {
+    "exportButton": "PDF eksport qilish",
+    "exporting": "PDF tayyorlanmoqda…",
+    "exportError": "PDF yaratib bo'lmadi. Qayta urinib ko'ring.",
+    "exportTimeout": "PDF yaratish juda uzoq davom etdi. Keyinroq urinib ko'ring.",
+    "generatedOn": "{date} sanasida yaratilgan",
+    "coverClient": "Mijoz",
+    "pageOf": "{n} / {total}",
+    "section": {
+      "summary": "Umumiy",
+      "efficiency": "Samaradorlik va qamrov",
+      "monthly": "Reja / Fakt oylar bo'yicha",
+      "breakdown": "Taqsimot",
+      "topScreens": "Eng yaxshi yuzalar",
+      "creatives": "Kreativlar",
+      "screens": "Yuzalar"
+    },
+    "creativePlay": "Ochish"
   }
 }

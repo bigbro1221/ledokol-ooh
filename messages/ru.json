@@ -566,5 +566,24 @@
     "projectExpand": "Открыть проект",
     "projectEmpty": "В этом проекте пока нет кампаний",
     "projectChildCount": "{count, plural, =0 {нет кампаний} =1 {1 кампания} few {# кампании} other {# кампаний}}"
+  },
+  "pdf": {
+    "exportButton": "Экспорт в PDF",
+    "exporting": "Готовлю PDF…",
+    "exportError": "Не удалось создать PDF. Попробуйте ещё раз.",
+    "exportTimeout": "PDF создаётся слишком долго. Попробуйте позже.",
+    "generatedOn": "Сгенерировано {date}",
+    "coverClient": "Клиент",
+    "pageOf": "{n} из {total}",
+    "section": {
+      "summary": "Сводка",
+      "efficiency": "Эффективность и охват",
+      "monthly": "План / Факт по месяцам",
+      "breakdown": "Разбивка",
+      "topScreens": "Топ поверхностей",
+      "creatives": "Креативы",
+      "screens": "Поверхности"
+    },
+    "creativePlay": "Открыть"
   }
 }

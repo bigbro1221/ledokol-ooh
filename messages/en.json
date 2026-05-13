@@ -566,5 +566,24 @@
     "projectExpand": "Open project",
     "projectEmpty": "No campaigns in this project yet",
     "projectChildCount": "{count, plural, =0 {no campaigns} =1 {1 campaign} other {# campaigns}}"
+  },
+  "pdf": {
+    "exportButton": "Export to PDF",
+    "exporting": "Preparing PDF…",
+    "exportError": "Could not generate PDF. Please try again.",
+    "exportTimeout": "PDF generation took too long. Please try again.",
+    "generatedOn": "Generated {date}",
+    "coverClient": "Client",
+    "pageOf": "{n} of {total}",
+    "section": {
+      "summary": "Summary",
+      "efficiency": "Efficiency & Reach",
+      "monthly": "Plan / Fact by month",
+      "breakdown": "Breakdown",
+      "topScreens": "Top surfaces",
+      "creatives": "Creatives",
+      "screens": "Surfaces"
+    },
+    "creativePlay": "Open"
   }
 }
