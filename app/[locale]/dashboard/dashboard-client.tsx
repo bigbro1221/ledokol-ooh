@@ -23,6 +23,7 @@ import { useTranslations } from 'next-intl';
 import { type CreativeView } from '@/components/dashboard/creatives-card';
 import { CampaignHero } from '@/components/dashboard/campaign-hero';
 import { ReachCard } from '@/components/dashboard/reach-card';
+import { ExportToPdfButton } from '@/components/dashboard/ExportToPdfButton';
 
 const ScreenMap = dynamic(() => import('@/components/map/screen-map').then(m => ({ default: m.ScreenMap })), {
   ssr: false,
@@ -106,27 +107,28 @@ export function DashboardClient({
     <>
       <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-      {/* Top row: back-to-list link (CLIENT) or project-sibling selector (ADMIN) + reports button */}
-      {(isClient || showSelector || reportsUrl) && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          {/* Wrapper is full-width on small mobile so the selector can claim
-              the whole row. On sm+ it shrinks to content and sits left of
-              the reports button as before. */}
-          <div className="flex w-full items-center gap-2 [@media(min-width:500px)]:w-auto">
-            {isClient ? (
-              <Link
-                href={`/${locale}/dashboard`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-hi)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-              >
-                <ChevronLeft size={14} strokeWidth={1.75} />
-                {td('allCampaigns')}
-              </Link>
-            ) : (
-              showSelector && (
-                <CampaignSelector campaigns={projectSiblings} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
-              )
-            )}
-          </div>
+      {/* Top row: back-to-list link (CLIENT) or project-sibling selector (ADMIN) + export PDF + reports button */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        {/* Wrapper is full-width on small mobile so the selector can claim
+            the whole row. On sm+ it shrinks to content and sits left of
+            the reports button as before. */}
+        <div className="flex w-full items-center gap-2 [@media(min-width:500px)]:w-auto">
+          {isClient ? (
+            <Link
+              href={`/${locale}/dashboard`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-hi)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            >
+              <ChevronLeft size={14} strokeWidth={1.75} />
+              {td('allCampaigns')}
+            </Link>
+          ) : (
+            showSelector && (
+              <CampaignSelector campaigns={projectSiblings} currentId={selectedCampaignId} locale={locale} dateFormat={initialDateFormat} />
+            )
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <ExportToPdfButton campaignId={selectedCampaignId} />
           {reportsUrl && (
             <a
               href={reportsUrl}
@@ -140,7 +142,7 @@ export function DashboardClient({
             </a>
           )}
         </div>
-      )}
+      </div>
 
       {/* Campaign Hero — title, status, inline stats, creatives */}
       <CampaignHero
