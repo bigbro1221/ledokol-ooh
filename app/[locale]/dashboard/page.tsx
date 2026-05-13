@@ -8,6 +8,7 @@ import type { DateFormat } from '@/lib/format-period';
 import type { ScreenRow } from '@/components/screens/screens-table';
 import { getTranslations } from 'next-intl/server';
 import { getFileUrl } from '@/lib/minio';
+import { getCampaignForDashboard } from '@/lib/campaign-detail';
 
 function screenPriceTotal(s: { pricing: { priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[] }): number {
   return s.pricing.reduce((sum, p) => {
@@ -130,42 +131,11 @@ export default async function DashboardPage({
   if (cityValues.length > 0) screenWhere.city = { in: cityValues };
 
   const [campaign, prefs] = await Promise.all([
-    prisma.campaign.findUnique({
-      where: { id: selectedId },
-      select: {
-        id: true, name: true, status: true, periodStart: true, periodEnd: true,
-        splitByPeriods: true, mediaType: true,
-        totalBudgetUzs: true, heatmapUrl: true, reportsUrl: true, yandexMapUrl: true,
-        targetAudience: true,
-        client: { select: { name: true } },
-        totalFinal: true,
-        periods: {
-          select: { id: true, name: true, totalBudgetUzs: true, totalFinal: true, periodStart: true, periodEnd: true },
-          orderBy: { periodStart: 'asc' as const },
-        },
-        reachEntries: {
-          select: { id: true, n: true, plan: true, fact: true, pinned: true },
-          orderBy: { n: 'asc' },
-        },
-        screens: {
-          where: Object.keys(screenWhere).length > 0 ? screenWhere : undefined,
-          select: {
-            id: true, externalId: true, city: true, address: true,
-            resolution: true, photoUrl: true, lat: true, lng: true,
-            screenType: { select: { code: true } },
-            metrics: {
-              select: {
-                periodId: true,
-                size: true,
-                impressionsPerDay: true,
-                otsPlan: true, ratingPlan: true, otsFact: true, ratingFact: true,
-              },
-            },
-            pricing: { select: { periodId: true, priceUnit: true, priceDiscounted: true, priceTotal: true, agencyFeeAmt: true } },
-          },
-        },
-      },
-    }),
+    getCampaignForDashboard(
+      selectedId,
+      { clientFilter },
+      screenWhere,
+    ),
     getUserPreferences(session.user.id),
   ]);
 
