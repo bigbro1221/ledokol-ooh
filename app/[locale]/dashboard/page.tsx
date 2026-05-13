@@ -8,16 +8,7 @@ import type { DateFormat } from '@/lib/format-period';
 import type { ScreenRow } from '@/components/screens/screens-table';
 import { getTranslations } from 'next-intl/server';
 import { getFileUrl } from '@/lib/minio';
-import { getCampaignForDashboard } from '@/lib/campaign-detail';
-
-function screenPriceTotal(s: { pricing: { priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[] }): number {
-  return s.pricing.reduce((sum, p) => {
-    if (p.priceDiscounted) return sum + Number(p.priceDiscounted);
-    if (p.priceTotal) return sum + Number(p.priceTotal);
-    if (p.priceUnit) return sum + Number(p.priceUnit);
-    return sum;
-  }, 0);
-}
+import { getCampaignForDashboard, screenPriceTotal } from '@/lib/campaign-detail';
 
 export default async function DashboardPage({
   params,

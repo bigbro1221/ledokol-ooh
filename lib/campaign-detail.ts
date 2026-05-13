@@ -60,3 +60,32 @@ export async function getCampaignForDashboard(
 }
 
 export type DashboardCampaign = NonNullable<Awaited<ReturnType<typeof getCampaignForDashboard>>>;
+
+export function pickLatest<T>(vals: (T | null)[]): T | null {
+  for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return vals[i];
+  return null;
+}
+
+// Structurally typed so callers with a narrower Prisma select (e.g. list-view
+// aggregation that only selects pricing.{priceUnit,priceDiscounted,priceTotal})
+// can pass their rows directly. A full Screen is structurally compatible.
+export function screenPriceTotal(s: {
+  pricing: { priceUnit: bigint | null; priceDiscounted: bigint | null; priceTotal: bigint | null }[];
+}): number {
+  return s.pricing.reduce((sum, p) => {
+    if (p.priceDiscounted) return sum + Number(p.priceDiscounted);
+    if (p.priceTotal)      return sum + Number(p.priceTotal);
+    if (p.priceUnit)       return sum + Number(p.priceUnit);
+    return sum;
+  }, 0);
+}
+
+export function totalsForCampaign(c: DashboardCampaign): {
+  totalBudget: number; totalScreens: number; otsPlan: number; otsFact: number;
+} {
+  const totalScreens = c.screens.length;
+  const otsPlan = c.screens.reduce((sum, s) => sum + s.metrics.reduce((m, x) => m + (x.otsPlan ?? 0), 0), 0);
+  const otsFact = c.screens.reduce((sum, s) => sum + s.metrics.reduce((m, x) => m + (x.otsFact ?? 0), 0), 0);
+  const totalBudget = c.screens.reduce((sum, s) => sum + screenPriceTotal(s), 0);
+  return { totalBudget, totalScreens, otsPlan, otsFact };
+}
