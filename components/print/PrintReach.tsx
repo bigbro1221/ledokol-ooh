@@ -41,11 +41,11 @@ export function PrintReach({ entries, title, planLabel, factLabel, completionLab
 
   return (
     <div style={{
-      border: '1px solid #e6e8eb', borderRadius: 8, padding: '12px 14px', background: '#fff',
+      border: '1px solid #e6e8eb', borderRadius: 8, padding: '14px 16px', background: '#fff',
     }}>
       <h3 style={{
         margin: 0, marginBottom: 10,
-        fontSize: 11, fontWeight: 600,
+        fontSize: 13, fontWeight: 600,
         letterSpacing: '0.06em', textTransform: 'uppercase',
         color: '#444',
       }}>{title}</h3>
@@ -58,17 +58,17 @@ export function PrintReach({ entries, title, planLabel, factLabel, completionLab
           const completion = t.plan > 0 ? Math.round((t.fact / t.plan) * 100) : null;
           return (
             <li key={t.n} style={{
-              display: 'grid', gridTemplateColumns: '32px 1fr 180px',
+              display: 'grid', gridTemplateColumns: '36px 1fr 200px',
               alignItems: 'center', gap: 10,
             }}>
               <span className="pdf-mono" style={{
                 background: CHIP_BG, color: '#111', borderRadius: 5,
-                padding: '4px 6px', fontSize: 11, fontWeight: 600, textAlign: 'center',
+                padding: '4px 6px', fontSize: 12, fontWeight: 600, textAlign: 'center',
               }}>{t.n}+</span>
 
               {/* Single bar trough, plan = grey track, fact = colored overlay */}
               <div style={{
-                position: 'relative', height: 22, background: TROUGH,
+                position: 'relative', height: 26, background: TROUGH,
                 borderRadius: 5, overflow: 'hidden',
               }}>
                 <div style={{
@@ -85,7 +85,7 @@ export function PrintReach({ entries, title, planLabel, factLabel, completionLab
 
               <div className="pdf-mono" style={{
                 display: 'flex', justifyContent: 'flex-end', gap: 10,
-                fontSize: 11, fontWeight: 600,
+                fontSize: 12, fontWeight: 600,
               }}>
                 <span style={{ width: 52, textAlign: 'right', color: '#6B7280' }}>
                   {fmtNumber(t.plan)}
@@ -105,7 +105,7 @@ export function PrintReach({ entries, title, planLabel, factLabel, completionLab
       <div className="pdf-mono" style={{
         marginTop: 10, paddingTop: 8, borderTop: '1px solid #f0f1f3',
         display: 'flex', justifyContent: 'flex-end', gap: 10,
-        fontSize: 9, color: '#999',
+        fontSize: 10, color: '#999',
         letterSpacing: '0.06em', textTransform: 'uppercase',
       }}>
         <span style={{ width: 52, textAlign: 'right' }}>{planLabel}</span>

@@ -23,8 +23,8 @@ export function PrintCreatives({ creatives, openLabel }: { creatives: Creative[]
             </div>
           )}
           <div style={{ padding: 6 }}>
-            <div style={{ fontSize: 9, fontWeight: 600, color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-            <a href={c.url} style={{ fontSize: 8, color: '#FF6B2C', textDecoration: 'none' }}>{openLabel} →</a>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+            <a href={c.url} style={{ fontSize: 9, color: '#FF6B2C', textDecoration: 'none' }}>{openLabel} →</a>
           </div>
         </div>
       ))}

@@ -40,11 +40,11 @@ export function PrintBudgetByType({ rows }: Props) {
               gap: 10,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#222' }}>{r.name}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#222' }}>{r.name}</span>
             <div
               style={{
                 position: 'relative',
-                height: 18,
+                height: 22,
                 background: TROUGH,
                 borderRadius: 5,
                 overflow: 'hidden',
@@ -66,7 +66,7 @@ export function PrintBudgetByType({ rows }: Props) {
                 display: 'flex',
                 justifyContent: 'flex-end',
                 gap: 8,
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 600,
                 color: '#111',
               }}

@@ -43,13 +43,13 @@ export function PrintTopScreensList({ rows }: Props) {
           >
             <span
               className="pdf-mono"
-              style={{ fontSize: 10, color: '#888', fontWeight: 600, textAlign: 'right' }}
+              style={{ fontSize: 11, color: '#888', fontWeight: 600, textAlign: 'right' }}
             >
               #{i + 1}
             </span>
             <span
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 color: '#222',
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
@@ -80,7 +80,7 @@ export function PrintTopScreensList({ rows }: Props) {
             </div>
             <span
               className="pdf-mono"
-              style={{ fontSize: 10, fontWeight: 600, color: '#111', textAlign: 'right' }}
+              style={{ fontSize: 11, fontWeight: 600, color: '#111', textAlign: 'right' }}
             >
               {fmtBig(r.ots)}
             </span>

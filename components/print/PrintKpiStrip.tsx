@@ -7,11 +7,11 @@ export function PrintKpiStrip({ cells }: { cells: Cell[] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cells.length}, 1fr)`, gap: 6 }}>
       {cells.map(c => (
-        <div key={c.label} style={{ border: '1px solid #ddd', borderRadius: 4, padding: '8px 10px' }}>
-          <div style={{ fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#888' }}>{c.label}</div>
-          <div className="pdf-mono" style={{ fontSize: 18, fontWeight: 600, color: '#111', marginTop: 4 }}>
+        <div key={c.label} style={{ border: '1px solid #ddd', borderRadius: 4, padding: '10px 14px' }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#888' }}>{c.label}</div>
+          <div className="pdf-mono" style={{ fontSize: 24, fontWeight: 600, color: '#111', marginTop: 4 }}>
             {c.value}
-            {c.unit && <span style={{ fontSize: 11, color: '#888', marginLeft: 4 }}>{c.unit}</span>}
+            {c.unit && <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>{c.unit}</span>}
           </div>
         </div>
       ))}

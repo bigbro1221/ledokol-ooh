@@ -31,7 +31,7 @@ export function PrintCityPlanFactTable({ rows, cityLabel, planLabel, factLabel }
   const max = Math.max(...rows.flatMap(r => [r.plan, r.fact]), 1);
 
   return (
-    <table className="pdf-city-plan-fact" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+    <table className="pdf-city-plan-fact" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
       <thead>
         <tr>
           <th style={headerCell('left', 110)}>{cityLabel}</th>
@@ -54,7 +54,7 @@ export function PrintCityPlanFactTable({ rows, cityLabel, planLabel, factLabel }
                 <div
                   style={{
                     position: 'relative',
-                    height: 18,
+                    height: 22,
                     background: TROUGH,
                     borderRadius: 5,
                     overflow: 'hidden',
@@ -92,7 +92,7 @@ function headerCell(align: 'left' | 'right', width?: number): React.CSSPropertie
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
     color: '#666',
-    fontSize: 9,
+    fontSize: 10,
     width,
   };
 }

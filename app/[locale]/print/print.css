@@ -36,7 +36,7 @@
 .pdf-section:last-child { margin-bottom: 0; }
 
 .pdf-section-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -65,7 +65,7 @@
 .pdf-cover-footer { position: absolute; bottom: 20mm; left: 16mm; right: 16mm; font-size: 10px; color: #999; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 3mm; }
 
 /* Screens table — print scale */
-.pdf-screens-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 8mm; }
+.pdf-screens-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 8mm; }
 .pdf-screens-table th {
   text-align: left;
   font-weight: 600;

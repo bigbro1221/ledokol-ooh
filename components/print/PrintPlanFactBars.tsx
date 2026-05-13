@@ -29,12 +29,12 @@ export function PrintPlanFactBars({ rows, planLabel, factLabel }: { rows: Row[];
         const completion = r.plan > 0 ? Math.round((r.fact / r.plan) * 100) : null;
         return (
           <div key={i} style={{
-            display: 'grid', gridTemplateColumns: '120px 1fr 64px 64px 40px',
+            display: 'grid', gridTemplateColumns: '140px 1fr 64px 64px 40px',
             alignItems: 'center', gap: 10,
             fontSize: 11,
           }}>
             <span style={{ color: '#333', fontWeight: 500 }}>{r.name}</span>
-            <div style={{ position: 'relative', height: 20, background: TROUGH, borderRadius: 5, overflow: 'hidden' }}>
+            <div style={{ position: 'relative', height: 22, background: TROUGH, borderRadius: 5, overflow: 'hidden' }}>
               <div style={{ position: 'absolute', inset: 0, width: `${planPct}%`, background: PLAN_TRACK, borderRadius: 5 }} />
               {factPct > 0 && (
                 <div style={{ position: 'absolute', inset: 0, width: `${factPct}%`, background: FACT_COLOR[status], borderRadius: 5 }} />
@@ -49,9 +49,9 @@ export function PrintPlanFactBars({ rows, planLabel, factLabel }: { rows: Row[];
         );
       })}
       <div className="pdf-mono" style={{
-        display: 'grid', gridTemplateColumns: '120px 1fr 64px 64px 40px',
+        display: 'grid', gridTemplateColumns: '140px 1fr 64px 64px 40px',
         gap: 10, marginTop: 4, paddingTop: 8, borderTop: '1px solid #f0f1f3',
-        fontSize: 9, color: '#999', letterSpacing: '0.06em', textTransform: 'uppercase',
+        fontSize: 10, color: '#999', letterSpacing: '0.06em', textTransform: 'uppercase',
       }}>
         <span></span><span></span>
         <span style={{ textAlign: 'right' }}>{planLabel}</span>
