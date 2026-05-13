@@ -45,3 +45,4 @@ npm-debug.log*
 .playwright-mcp/
 /*.png
 /*.log
+.superpowers/
