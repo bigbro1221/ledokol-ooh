@@ -5,6 +5,7 @@
  * Pure HTML/CSS — no Recharts so the rows page-break cleanly.
  */
 import { fmtBig } from './PrintKpiStrip';
+import { TROUGH } from './bar-colors';
 
 interface Row {
   name: string;
@@ -18,13 +19,12 @@ interface Props {
 }
 
 const BAR_COLOR = '#3B82F6';
-const TROUGH_COLOR = '#F1F3F6';
 
 export function PrintBudgetByType({ rows }: Props) {
   if (rows.length === 0) return null;
   const maxShare = Math.max(...rows.map(r => r.share), 0.0001);
   return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {rows.map(r => {
         // Scale relative to the top entry so the leader fills the bar (rather
         // than each row showing absolute share — which would leave a 10% slice
@@ -44,9 +44,9 @@ export function PrintBudgetByType({ rows }: Props) {
             <div
               style={{
                 position: 'relative',
-                height: 16,
-                background: TROUGH_COLOR,
-                borderRadius: 4,
+                height: 18,
+                background: TROUGH,
+                borderRadius: 5,
                 overflow: 'hidden',
               }}
             >
@@ -56,7 +56,7 @@ export function PrintBudgetByType({ rows }: Props) {
                   inset: 0,
                   width: `${widthPct}%`,
                   background: BAR_COLOR,
-                  borderRadius: 4,
+                  borderRadius: 5,
                 }}
               />
             </div>

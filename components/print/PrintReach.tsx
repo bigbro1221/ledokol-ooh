@@ -10,6 +10,8 @@
  * One row per pinned tier: [N+ chip] [overlay bar] [plan][fact][%].
  * Hidden entirely when there are no entries.
  */
+import { FACT_COLOR, PLAN_TRACK, STATUS_TEXT, TROUGH, statusFor } from './bar-colors';
+
 interface ReachRow {
   n: number;
   plan: number | null;
@@ -24,29 +26,7 @@ interface Props {
   completionLabel?: string;  // optional column header for the % col
 }
 
-type Status = 'over' | 'under' | 'on';
-
-const FACT_COLOR: Record<Status, string> = {
-  on:    '#3B82F6',
-  over:  '#10B981',
-  under: '#F59E0B',
-};
-const STATUS_TEXT: Record<Status, string> = {
-  on:    '#3B82F6',
-  over:  '#10B981',
-  under: '#F59E0B',
-};
-const TROUGH = '#F1F3F6';
-const PLAN_TRACK = '#D6D9DD';   // mid-grey for the plan portion
 const CHIP_BG = '#EEF0F4';
-
-function statusFor(plan: number, fact: number): Status {
-  if (plan <= 0) return 'on';
-  const r = fact / plan;
-  if (r >= 1.02) return 'over';
-  if (r <= 0.98) return 'under';
-  return 'on';
-}
 
 function fmtNumber(v: number): string {
   return v.toLocaleString('ru-RU', { maximumFractionDigits: 1 });

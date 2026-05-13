@@ -64,7 +64,7 @@ export async function renderCampaignPdf(opts: RenderOptions): Promise<Buffer> {
 
     const pdfOptions: PDFOptions = {
       format: 'A4',
-      margin: { top: '28mm', bottom: '24mm', left: '16mm', right: '16mm' },
+      margin: { top: '32mm', bottom: '28mm', left: '20mm', right: '20mm' },
       displayHeaderFooter: true,
       printBackground: true,
       headerTemplate: buildHeaderTemplate(opts),
@@ -81,7 +81,7 @@ export async function renderCampaignPdf(opts: RenderOptions): Promise<Buffer> {
 
 function buildHeaderTemplate(o: RenderOptions): string {
   return `
-    <div style="width:100%;font-size:9px;font-family:sans-serif;color:#999;padding:0 16mm;box-sizing:border-box;">
+    <div style="width:100%;font-size:9px;font-family:sans-serif;color:#999;padding:0 20mm;box-sizing:border-box;">
       <div style="display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding-bottom:4px;">
         <span>${escapeHtml(o.headerLeft)}</span>
         <span>${escapeHtml(o.headerRight)}</span>
@@ -92,7 +92,7 @@ function buildHeaderTemplate(o: RenderOptions): string {
 
 function buildFooterTemplate(o: RenderOptions): string {
   return `
-    <div style="width:100%;font-size:9px;font-family:sans-serif;color:#999;padding:0 16mm;box-sizing:border-box;">
+    <div style="width:100%;font-size:9px;font-family:sans-serif;color:#999;padding:0 20mm;box-sizing:border-box;">
       <div style="display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:4px;">
         <span>${escapeHtml(o.footerLeft)}</span>
         <span><span class="pageNumber"></span> / <span class="totalPages"></span></span>
