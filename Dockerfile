@@ -58,6 +58,18 @@ COPY --from=deps /app/node_modules/@prisma/engines-version ./node_modules/@prism
 # has no peer deps in this graph, so skipping the check is safe.
 RUN npm install --no-save --no-package-lock --omit=dev --legacy-peer-deps postmark@4.0.7
 
+# Chromium for PDF export (puppeteer-core uses the system binary)
+RUN apk add --no-cache \
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ca-certificates \
+      ttf-freefont
+
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
