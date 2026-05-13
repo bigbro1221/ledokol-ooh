@@ -7,8 +7,7 @@ import { getUserPreferences } from '@/lib/user-preferences';
 import type { DateFormat } from '@/lib/format-period';
 import type { ScreenRow } from '@/components/screens/screens-table';
 import { getTranslations } from 'next-intl/server';
-import { getFileUrl } from '@/lib/minio';
-import { getCampaignForDashboard, screenPriceTotal } from '@/lib/campaign-detail';
+import { getCampaignForDashboard, screenPriceTotal, loadCreatives } from '@/lib/campaign-detail';
 
 export default async function DashboardPage({
   params,
@@ -134,23 +133,7 @@ export default async function DashboardPage({
 
   const initialDateFormat = prefs.dateFormat.toLowerCase() as DateFormat;
 
-  const creativeRows = await prisma.creative.findMany({
-    where: { campaignId: selectedId },
-    orderBy: { createdAt: 'asc' },
-    select: { id: true, name: true, fileKey: true, thumbnailKey: true, mimeType: true, kind: true, width: true, height: true, sizeBytes: true, durationSec: true },
-  });
-  const creatives = await Promise.all(creativeRows.map(async c => ({
-    id: c.id,
-    name: c.name,
-    mimeType: c.mimeType,
-    kind: c.kind,
-    width: c.width,
-    height: c.height,
-    sizeBytes: Number(c.sizeBytes),
-    durationSec: c.durationSec,
-    url: await getFileUrl(c.fileKey),
-    thumbnailUrl: c.thumbnailKey ? await getFileUrl(c.thumbnailKey) : null,
-  })));
+  const creatives = await loadCreatives(selectedId);
 
   // Periods that have at least one metrics row with data
   const periodsWithData = campaign.splitByPeriods

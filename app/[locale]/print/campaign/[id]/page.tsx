@@ -9,6 +9,7 @@ import {
   buildCityRows,
   buildTypeSlices,
   buildTopScreens,
+  loadCreatives,
 } from '@/lib/campaign-detail';
 import type { Prisma } from '@prisma/client';
 import { PrintCover } from '@/components/print/PrintCover';
@@ -22,6 +23,7 @@ import { PrintPlanFactBars } from '@/components/print/PrintPlanFactBars';
 import { PrintCityBars } from '@/components/print/PrintCityBars';
 import { PrintTypeDonut } from '@/components/print/PrintTypeDonut';
 import { PrintTopScreens } from '@/components/print/PrintTopScreens';
+import { PrintCreatives } from '@/components/print/PrintCreatives';
 import '../../print.css';
 
 export const dynamic = 'force-dynamic';
@@ -44,6 +46,7 @@ export default async function PrintCampaignPage({ params }: Params) {
   if (!campaign) notFound();
 
   const totals = totalsForCampaign(campaign);
+  const creatives = await loadCreatives(campaign.id);
   const tPdf = await getTranslations({ locale, namespace: 'pdf' });
   const tStatus = await getTranslations({ locale, namespace: 'campaignStatus' });
   const tDash = await getTranslations({ locale, namespace: 'dashboard' });
@@ -141,6 +144,10 @@ export default async function PrintCampaignPage({ params }: Params) {
             <PrintTopScreens rows={topScreens} label={tDash('reachPlanLabel')} />
           </PrintSection>
         )}
+
+        <PrintSection title={tPdf('section.creatives')}>
+          <PrintCreatives creatives={creatives} openLabel={tPdf('creativePlay')} />
+        </PrintSection>
       </div>
 
       <PrintReadyFlag />

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
+import { getFileUrl } from '@/lib/minio';
 
 type CampaignDetailSelect = ReturnType<typeof buildSelect>;
 type CampaignDetailReturn = Prisma.CampaignGetPayload<{ select: CampaignDetailSelect }>;
@@ -175,6 +176,31 @@ export function buildTypeSlices(
     .filter(([, v]) => v > 0)
     .map(([code, v]) => ({ name: typeLabels?.[code] ?? code, value: v }))
     .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * Loads creatives for a campaign, projecting MinIO file keys to public-facing
+ * URLs. Shared by the dashboard and the print/PDF route so both see the same
+ * field set.
+ */
+export async function loadCreatives(campaignId: string) {
+  const rows = await prisma.creative.findMany({
+    where: { campaignId },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, name: true, fileKey: true, thumbnailKey: true, mimeType: true, kind: true, width: true, height: true, sizeBytes: true, durationSec: true },
+  });
+  return Promise.all(rows.map(async c => ({
+    id: c.id,
+    name: c.name,
+    mimeType: c.mimeType,
+    kind: c.kind,
+    width: c.width,
+    height: c.height,
+    sizeBytes: Number(c.sizeBytes),
+    durationSec: c.durationSec,
+    url: await getFileUrl(c.fileKey),
+    thumbnailUrl: c.thumbnailKey ? await getFileUrl(c.thumbnailKey) : null,
+  })));
 }
 
 /**
