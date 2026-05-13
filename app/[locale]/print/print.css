@@ -16,9 +16,13 @@
   line-height: 1.45;
 }
 
+/* No top/bottom padding here — Puppeteer's page.pdf() margins are
+ * authoritative for the physical page edges. Side padding stays 0 too
+ * because the Puppeteer left/right margins (16mm) already inset the
+ * content. Adding padding here would only apply on the first page of
+ * the section and create uneven top whitespace on page 3+. */
 .pdf-page {
-  padding: 16mm;
-  min-height: calc(297mm - 40mm);
+  padding: 0;
 }
 .pdf-page + .pdf-page { page-break-before: always; }
 
