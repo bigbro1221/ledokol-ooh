@@ -32,7 +32,7 @@ export function PrintCityPlanFactTable({ rows, cityLabel, planLabel, factLabel }
   const maxPlan = Math.max(...rows.map(r => r.plan), 1);
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+    <table className="pdf-city-plan-fact" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
       <thead>
         <tr>
           <th style={headerCell('left', 110)}>{cityLabel}</th>

@@ -123,6 +123,7 @@ export default async function PrintCampaignPage({ params }: Params) {
             <div style={{ marginTop: 10 }}>
               <PrintReach
                 entries={reachEntries}
+                title={tDash('reachCardTitle')}
                 planLabel={tDash('reachPlanLabel')}
                 factLabel={tDash('reachFactLabel')}
               />

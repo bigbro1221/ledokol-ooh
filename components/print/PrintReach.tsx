@@ -1,10 +1,13 @@
 /**
- * Compact reach widget for the PDF print layout. Visually mirrors the dashboard
- * reach card (see components/dashboard/reach-card.tsx) but renders with plain
- * static HTML/CSS so Puppeteer can paginate it cleanly — no framer-motion,
- * no client-only hooks, no CSS variables.
+ * Compact reach widget for the PDF print layout. Mirrors the dashboard
+ * reach card (see components/dashboard/reach-card.tsx) using the OVERLAY
+ * pattern: a single bar trough per row with the plan width as a neutral
+ * grey track and the fact width as a status-colored overlay on top.
  *
- * One row per pinned tier: [N+ chip] [plan/fact bars] [plan][fact][%].
+ * Light theme, plain HTML/CSS — no CSS variables (Puppeteer doesn't
+ * reliably resolve them), no framer-motion, no client-only hooks.
+ *
+ * One row per pinned tier: [N+ chip] [overlay bar] [plan][fact][%].
  * Hidden entirely when there are no entries.
  */
 interface ReachRow {
@@ -15,124 +18,102 @@ interface ReachRow {
 
 interface Props {
   entries: ReachRow[];
+  title: string;           // "Охват" — pass from page.tsx via tDash('reachCardTitle')
   planLabel: string;
   factLabel: string;
+  completionLabel?: string;  // optional column header for the % col
 }
 
-const PLAN_COLOR = '#3B82F6';
-const FACT_COLOR = '#FF6B2C';
-const TROUGH_COLOR = '#F1F3F6';
+type Status = 'over' | 'under' | 'on';
+
+const FACT_COLOR: Record<Status, string> = {
+  on:    '#3B82F6',
+  over:  '#10B981',
+  under: '#F59E0B',
+};
+const STATUS_TEXT: Record<Status, string> = {
+  on:    '#3B82F6',
+  over:  '#10B981',
+  under: '#F59E0B',
+};
+const TROUGH = '#F1F3F6';
+const PLAN_TRACK = '#D6D9DD';   // mid-grey for the plan portion
 const CHIP_BG = '#EEF0F4';
+
+function statusFor(plan: number, fact: number): Status {
+  if (plan <= 0) return 'on';
+  const r = fact / plan;
+  if (r >= 1.02) return 'over';
+  if (r <= 0.98) return 'under';
+  return 'on';
+}
 
 function fmtNumber(v: number): string {
   return v.toLocaleString('ru-RU', { maximumFractionDigits: 1 });
 }
 
-export function PrintReach({ entries, planLabel, factLabel }: Props) {
+export function PrintReach({ entries, title, planLabel, factLabel, completionLabel = '%' }: Props) {
   if (entries.length === 0) return null;
-
-  // Normalize null → 0 once; scale both bars relative to the global tier max
-  // so a 1+/3+/15+ trio reads as a meaningful gradient.
-  const tiers = entries
-    .slice()
-    .sort((a, b) => a.n - b.n)
-    .map(e => ({ n: e.n, plan: e.plan ?? 0, fact: e.fact ?? 0 }));
+  const tiers = entries.slice().sort((a, b) => a.n - b.n).map(e => ({
+    n: e.n, plan: e.plan ?? 0, fact: e.fact ?? 0,
+  }));
   const max = Math.max(...tiers.flatMap(t => [t.plan, t.fact]), 1);
 
   return (
-    <div
-      style={{
-        border: '1px solid #e6e8eb',
-        borderRadius: 8,
-        padding: '12px 14px',
-        background: '#fff',
-      }}
-    >
+    <div style={{
+      border: '1px solid #e6e8eb', borderRadius: 8, padding: '12px 14px', background: '#fff',
+    }}>
+      <h3 style={{
+        margin: 0, marginBottom: 10,
+        fontSize: 11, fontWeight: 600,
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+        color: '#444',
+      }}>{title}</h3>
+
       <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {tiers.map(t => {
+          const status = statusFor(t.plan, t.fact);
           const planPct = (t.plan / max) * 100;
           const factPct = (t.fact / max) * 100;
           const completion = t.plan > 0 ? Math.round((t.fact / t.plan) * 100) : null;
           return (
-            <li
-              key={t.n}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '32px 1fr 180px',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <span
-                className="pdf-mono"
-                style={{
-                  background: CHIP_BG,
-                  color: '#111',
-                  borderRadius: 5,
-                  padding: '4px 6px',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  textAlign: 'center',
-                }}
-              >
-                {t.n}+
-              </span>
+            <li key={t.n} style={{
+              display: 'grid', gridTemplateColumns: '32px 1fr 180px',
+              alignItems: 'center', gap: 10,
+            }}>
+              <span className="pdf-mono" style={{
+                background: CHIP_BG, color: '#111', borderRadius: 5,
+                padding: '4px 6px', fontSize: 11, fontWeight: 600, textAlign: 'center',
+              }}>{t.n}+</span>
 
-              <div
-                style={{
-                  position: 'relative',
-                  height: 22,
-                  background: TROUGH_COLOR,
-                  borderRadius: 5,
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Plan bar — solid blue, underlay */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 2,
-                    bottom: 11,
-                    left: 0,
-                    width: `${planPct}%`,
-                    background: PLAN_COLOR,
-                    borderRadius: 3,
-                  }}
-                />
-                {/* Fact bar — solid orange, sits under plan so the two strips
-                    are independently legible */}
+              {/* Single bar trough, plan = grey track, fact = colored overlay */}
+              <div style={{
+                position: 'relative', height: 22, background: TROUGH,
+                borderRadius: 5, overflow: 'hidden',
+              }}>
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  width: `${planPct}%`, background: PLAN_TRACK, borderRadius: 5,
+                }} />
                 {factPct > 0 && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 11,
-                      bottom: 2,
-                      left: 0,
-                      width: `${factPct}%`,
-                      background: FACT_COLOR,
-                      borderRadius: 3,
-                    }}
-                  />
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    width: `${factPct}%`, background: FACT_COLOR[status], borderRadius: 5,
+                  }} />
                 )}
               </div>
 
-              <div
-                className="pdf-mono"
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  gap: 10,
-                  fontSize: 11,
-                  fontWeight: 600,
-                }}
-              >
-                <span style={{ width: 52, textAlign: 'right', color: PLAN_COLOR }}>
+              <div className="pdf-mono" style={{
+                display: 'flex', justifyContent: 'flex-end', gap: 10,
+                fontSize: 11, fontWeight: 600,
+              }}>
+                <span style={{ width: 52, textAlign: 'right', color: '#6B7280' }}>
                   {fmtNumber(t.plan)}
                 </span>
-                <span style={{ width: 52, textAlign: 'right', color: FACT_COLOR }}>
+                <span style={{ width: 52, textAlign: 'right', color: STATUS_TEXT[status] }}>
                   {fmtNumber(t.fact)}
                 </span>
-                <span style={{ width: 38, textAlign: 'right', color: '#111' }}>
+                <span style={{ width: 38, textAlign: 'right', color: STATUS_TEXT[status] }}>
                   {completion !== null ? `${completion}%` : '—'}
                 </span>
               </div>
@@ -141,23 +122,15 @@ export function PrintReach({ entries, planLabel, factLabel }: Props) {
         })}
       </ul>
 
-      {/* Column legend mirrors the dashboard widget. */}
-      <div
-        className="pdf-mono"
-        style={{
-          marginTop: 8,
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 10,
-          fontSize: 9,
-          color: '#999',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-        }}
-      >
+      <div className="pdf-mono" style={{
+        marginTop: 10, paddingTop: 8, borderTop: '1px solid #f0f1f3',
+        display: 'flex', justifyContent: 'flex-end', gap: 10,
+        fontSize: 9, color: '#999',
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+      }}>
         <span style={{ width: 52, textAlign: 'right' }}>{planLabel}</span>
         <span style={{ width: 52, textAlign: 'right' }}>{factLabel}</span>
-        <span style={{ width: 38, textAlign: 'right' }}>%</span>
+        <span style={{ width: 38, textAlign: 'right' }}>{completionLabel}</span>
       </div>
     </div>
   );
