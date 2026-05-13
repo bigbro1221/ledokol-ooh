@@ -1,0 +1,81 @@
+/* PDF-only styles. Loaded by app/[locale]/print/campaign/[id]/page.tsx
+ * via a CSS-Module-style import. Browsers print at @page A4. */
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+/* Body fills the page edge to edge; sections add their own padding so the
+ * cover can claim the full sheet without inherited margins. */
+.pdf-root {
+  font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
+  color: #111;
+  background: #fff;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.pdf-page {
+  page-break-after: always;
+  padding: 14mm;
+  min-height: calc(297mm - 40mm);
+}
+.pdf-page:last-child { page-break-after: auto; }
+
+.pdf-section {
+  break-inside: avoid;
+  margin-bottom: 14mm;
+}
+.pdf-section:last-child { margin-bottom: 0; }
+
+.pdf-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #444;
+  margin-bottom: 6mm;
+}
+
+/* Mono numerics */
+.pdf-mono {
+  font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cover-specific layout — full-bleed inside the @page margins */
+.pdf-cover {
+  page-break-after: always;
+  height: 297mm;
+  width: 210mm;
+  padding: 20mm 16mm;
+  position: relative;
+  box-sizing: border-box;
+}
+.pdf-cover-logo { position: absolute; top: 20mm; left: 16mm; }
+.pdf-cover-date { position: absolute; top: 20mm; right: 16mm; font-size: 11px; color: #999; }
+.pdf-cover-block { position: absolute; top: 40%; left: 16mm; right: 16mm; }
+.pdf-cover-footer { position: absolute; bottom: 16mm; left: 16mm; right: 16mm; font-size: 10px; color: #999; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 3mm; }
+
+/* Screens table — print scale */
+.pdf-screens-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+.pdf-screens-table th {
+  text-align: left;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #666;
+  padding: 4px 6px;
+  border-bottom: 1px solid #ddd;
+}
+.pdf-screens-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pdf-screens-table tr { break-inside: avoid; }
+.pdf-screens-table .num { text-align: right; }
+.pdf-screens-table .num { font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace); }
+
+/* Hide anything not meant for print */
+.pdf-hide { display: none !important; }
