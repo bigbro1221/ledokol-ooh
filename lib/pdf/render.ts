@@ -50,13 +50,13 @@ export async function renderCampaignPdf(opts: RenderOptions): Promise<Buffer> {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
   try {
-    await page.setCookie({
-      name: opts.sessionCookie.name,
-      value: opts.sessionCookie.value,
-      domain: opts.cookieDomain,
-      path: '/',
-      httpOnly: true,
-      sameSite: 'Lax',
+    // Forward the session cookie via Cookie header instead of page.setCookie:
+    // Chromium refuses to set __Secure-prefixed cookies on non-HTTPS domains
+    // (and our internal URL is http://localhost:3000). Header injection
+    // bypasses that validation; the print route's NextAuth reads the cookie
+    // by name from the request just the same.
+    await page.setExtraHTTPHeaders({
+      Cookie: `${opts.sessionCookie.name}=${opts.sessionCookie.value}`,
     });
 
     await page.goto(opts.url, { waitUntil: 'networkidle0', timeout: opts.waitTimeoutMs ?? 30000 });
