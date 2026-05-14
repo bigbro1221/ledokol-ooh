@@ -37,7 +37,10 @@ export function CampaignTile({ campaign: c, href, locale, dateFormat, statusLabe
         {c.status === 'ACTIVE' && <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />}
         {statusLabel}
       </span>
-      <h3 className="pr-16 text-[18px] font-semibold tracking-tight text-[var(--text)] group-hover:text-[var(--brand-primary)]">
+      <h3
+        className="pr-16 text-[18px] font-semibold tracking-tight text-[var(--text)] group-hover:text-[var(--brand-primary)]"
+        style={{ whiteSpace: 'pre-line' }}
+      >
         {c.name}
       </h3>
       <p className="mt-1 text-[13px] text-[var(--text-3)]" style={{ fontFamily: 'var(--font-mono)' }}>

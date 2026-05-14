@@ -43,7 +43,7 @@ export function PrintCover({
         </div>
         <div style={{ fontSize: 22, marginTop: 4, color: '#222' }}>{clientName}</div>
 
-        <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 36, fontWeight: 500, marginTop: 24, color: '#111', lineHeight: 1.15 }}>
+        <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 36, fontWeight: 500, marginTop: 24, color: '#111', lineHeight: 1.15, whiteSpace: 'pre-line' }}>
           {campaignName}
         </div>
         <div className="pdf-mono" style={{ fontSize: 14, marginTop: 12, color: '#666' }}>

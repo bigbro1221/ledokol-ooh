@@ -57,7 +57,7 @@ export function CampaignHero({
 
             <h1
               className="mt-2.5 mb-4 text-[20px] font-medium leading-[1.15] tracking-tight sm:text-[24px] lg:mb-0 lg:text-[30px]"
-              style={{ fontFamily: 'var(--font-display)' }}
+              style={{ fontFamily: 'var(--font-display)', whiteSpace: 'pre-line' }}
             >
               {title}
             </h1>

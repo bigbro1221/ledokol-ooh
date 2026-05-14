@@ -96,6 +96,7 @@ export function ProjectTile({
                 href={c.href}
                 onClick={e => e.stopPropagation()}
                 className="min-w-0 flex-1 truncate text-[var(--text-2)] transition-colors hover:text-[var(--brand-primary)]"
+                style={{ whiteSpace: 'pre-line' }}
               >
                 <span className="mr-1.5 text-[var(--brand-primary)]">·</span>
                 {c.name}

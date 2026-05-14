@@ -52,7 +52,7 @@ export async function GET(
       sessionCookie: { name: cookieName, value: cookieValue },
       cookieDomain: 'localhost',
       locale,
-      headerLeft: `${campaign.name} · ${campaign.client.name}`,
+      headerLeft: `${campaign.name.replace(/\s*\n+\s*/g, ' / ')} · ${campaign.client.name}`,
       headerRight: periodFmt,
       footerLeft: generatedAtFmt,
     });

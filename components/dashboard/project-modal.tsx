@@ -103,7 +103,7 @@ export function ProjectModal({
           >
             <X size={16} strokeWidth={1.75} />
           </button>
-          <h2 className="text-[26px] font-medium tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+          <h2 className="text-[26px] font-medium tracking-tight" style={{ fontFamily: 'var(--font-display)', whiteSpace: 'pre-line' }}>
             {projectName}
           </h2>
           <p className="mt-1.5 text-base text-[var(--text-3)]">

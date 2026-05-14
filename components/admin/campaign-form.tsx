@@ -299,11 +299,13 @@ export function CampaignForm({ locale, clients, currencies, vatRate, initial }: 
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--text-3)]">
           {tf('campaignName')}
         </label>
-        <input
+        <textarea
           required
+          rows={2}
           value={name}
           onChange={e => setName(e.target.value)}
-          className={inputCls}
+          className={`${inputCls} resize-y min-h-[44px]`}
+          placeholder={tf('campaignName')}
         />
       </div>
 
