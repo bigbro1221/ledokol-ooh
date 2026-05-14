@@ -75,7 +75,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ l
           {campaign.name}
         </Link>
         <p className="mt-2 text-xs text-[var(--text-3)]">{t('editCampaign')}</p>
-        <h1 className="text-xl font-semibold">{campaign.name}</h1>
+        <h1 className="text-xl font-semibold" style={{ whiteSpace: 'pre-line' }}>{campaign.name}</h1>
       </div>
       <CampaignForm
         locale={locale}

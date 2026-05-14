@@ -118,7 +118,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
             {tAdmin('campaigns')}
           </Link>
           <p className="text-xs text-[var(--text-3)]">{campaign.client.name}</p>
-          <h1 className="text-xl font-semibold">{campaign.name}</h1>
+          <h1 className="text-xl font-semibold" style={{ whiteSpace: 'pre-line' }}>{campaign.name}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           <Link
